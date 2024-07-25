@@ -34,6 +34,11 @@ export const ensureNOROperators = async (
 
     expect(nodeOperatorAfter.totalVettedValidators).to.be.equal(nodeOperatorBefore.totalAddedValidators);
   }
+
+  log.debug("Checked NOR operators count", {
+    "Min operators count": minOperatorsCount,
+    "Min keys count": minOperatorKeysCount,
+  });
 };
 
 /**
@@ -52,8 +57,6 @@ const ensureNOROperatorsHaveMinKeys = async (
     const keysCount = await nor.getTotalSigningKeyCount(operatorId);
 
     if (keysCount < minKeysCount) {
-      log.warning(`Adding NOR fake keys to operator ${operatorId}`);
-
       await addNORFakeNodeOperatorKeys(ctx, {
         operatorId,
         keysToAdd: minKeysCount - keysCount,
@@ -64,11 +67,6 @@ const ensureNOROperatorsHaveMinKeys = async (
 
     expect(keysCountAfter).to.be.gte(minKeysCount);
   }
-
-  log.debug("Checked NOR operators keys count", {
-    "Min operators count": minOperatorsCount,
-    "Min keys count": minKeysCount,
-  });
 };
 
 /**
@@ -90,8 +88,6 @@ const ensureNORMinOperators = async (ctx: ProtocolContext, minOperatorsCount = M
       managerAddress: getOperatorManagerAddress(operatorId),
     };
 
-    log.warning(`Adding fake operator ${operatorId}`);
-
     await addFakeNodeOperatorToNor(ctx, operator);
     count++;
   }
@@ -100,11 +96,6 @@ const ensureNORMinOperators = async (ctx: ProtocolContext, minOperatorsCount = M
 
   expect(after).to.be.equal(before + count);
   expect(after).to.be.gte(minOperatorsCount);
-
-  log.debug("Checked NOR operators count", {
-    "Min operators count": minOperatorsCount,
-    "Operators count": after,
-  });
 };
 
 /**
@@ -122,6 +113,8 @@ export const addFakeNodeOperatorToNor = async (
   const { nor } = ctx.contracts;
   const { operatorId, name, rewardAddress, managerAddress } = params;
 
+  log.warning(`Adding fake NOR operator ${operatorId}`);
+
   const agentSigner = await ctx.getSigner("agent");
 
   const addTx = await nor.connect(agentSigner).addNodeOperator(name, rewardAddress);
@@ -133,6 +126,8 @@ export const addFakeNodeOperatorToNor = async (
     "Reward address": rewardAddress,
     "Manager address": managerAddress,
   });
+
+  log.success(`Added fake NOR operator ${operatorId}`);
 };
 
 /**
@@ -147,6 +142,8 @@ export const addNORFakeNodeOperatorKeys = async (
 ) => {
   const { nor } = ctx.contracts;
   const { operatorId, keysToAdd } = params;
+
+  log.warning(`Adding fake keys to NOR operator ${operatorId}`);
 
   const totalKeysBefore = await nor.getTotalSigningKeyCount(operatorId);
   const unusedKeysBefore = await nor.getUnusedSigningKeyCount(operatorId);
@@ -177,6 +174,8 @@ export const addNORFakeNodeOperatorKeys = async (
     "Unused keys before": unusedKeysBefore,
     "Unused keys after": unusedKeysAfter,
   });
+
+  log.success(`Added fake keys to NOR operator ${operatorId}`);
 };
 
 /**
@@ -192,10 +191,14 @@ const setNOROperatorStakingLimit = async (
   const { nor } = ctx.contracts;
   const { operatorId, limit } = params;
 
+  log.warning(`Setting NOR operator ${operatorId} staking limit`);
+
   const votingSigner = await ctx.getSigner("voting");
 
   const setLimitTx = await nor.connect(votingSigner).setNodeOperatorStakingLimit(operatorId, limit);
   await trace("nodeOperatorRegistry.setNodeOperatorStakingLimit", setLimitTx);
+
+  log.success(`Set NOR operator ${operatorId} staking limit`);
 };
 
 /**

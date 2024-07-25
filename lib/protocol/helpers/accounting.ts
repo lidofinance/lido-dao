@@ -13,9 +13,9 @@ import {
   ether,
   EXTRA_DATA_FORMAT_EMPTY,
   getCurrentBlockTimestamp,
+  HASH_CONSENSUS_FAR_FUTURE_EPOCH,
   impersonate,
   log,
-  MAX_UINT64,
   ONE_GWEI,
   trace,
 } from "lib";
@@ -625,12 +625,15 @@ export const ensureOracleCommitteeMembers = async (
 ) => {
   const { hashConsensus } = ctx.contracts;
 
-  const { addresses } = await hashConsensus.getFastLaneMembers();
-
-  let count = 0n;
+  const members = await hashConsensus.getFastLaneMembers();
+  const addresses = members.addresses.map((address) => address.toLowerCase());
 
   const agentSigner = await ctx.getSigner("agent");
 
+  const managementRole = await hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE();
+  await hashConsensus.connect(agentSigner).grantRole(managementRole, agentSigner);
+
+  let count = addresses.length;
   while (addresses.length < minMembersCount) {
     log.warning(`Adding oracle committee member ${count}`);
 
@@ -639,12 +642,18 @@ export const ensureOracleCommitteeMembers = async (
     await trace("hashConsensus.addMember", addTx);
 
     addresses.push(address);
+
+    log.success(`Added oracle committee member ${count}`);
+
     count++;
   }
+
+  await hashConsensus.connect(agentSigner).renounceRole(managementRole, agentSigner);
 
   log.debug("Checked oracle committee members count", {
     "Min members count": minMembersCount,
     "Members count": addresses.length,
+    "Members": addresses.join(", "),
   });
 
   expect(addresses.length).to.be.gte(minMembersCount);
@@ -654,22 +663,19 @@ export const ensureHashConsensusInitialEpoch = async (ctx: ProtocolContext) => {
   const { hashConsensus } = ctx.contracts;
 
   const { initialEpoch } = await hashConsensus.getFrameConfig();
-  if (initialEpoch === MAX_UINT64) {
-    log.warning("Initializing hash consensus epoch");
+  if (initialEpoch === HASH_CONSENSUS_FAR_FUTURE_EPOCH) {
+    log.warning("Initializing hash consensus epoch...");
 
     const latestBlockTimestamp = await getCurrentBlockTimestamp();
-
-    // TODO: get it from chain spec
-    const slotsPerEpoch = 32n;
-    const secondsPerSlot = 12n;
-    const genesisTime = 1639659600n;
-
+    const { genesisTime, secondsPerSlot, slotsPerEpoch } = await hashConsensus.getChainConfig();
     const updatedInitialEpoch = (latestBlockTimestamp - genesisTime) / (slotsPerEpoch * secondsPerSlot);
 
     const agentSigner = await ctx.getSigner("agent");
 
     const tx = await hashConsensus.connect(agentSigner).updateInitialEpoch(updatedInitialEpoch);
     await trace("hashConsensus.updateInitialEpoch", tx);
+
+    log.success("Hash consensus epoch initialized");
   }
 };
 
@@ -770,4 +776,4 @@ const calcReportDataHash = (items: ReturnType<typeof getReportDataItems>) => {
 /**
  * Helper function to get oracle committee member address by id.
  */
-const getOracleCommitteeMemberAddress = (id: bigint) => certainAddress(`AO:HC:OC:${id}`);
+const getOracleCommitteeMemberAddress = (id: number) => certainAddress(`AO:HC:OC:${id}`);

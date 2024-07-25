@@ -1,4 +1,4 @@
-import { log } from "lib";
+import { log, trace } from "lib";
 
 import { ProtocolContext } from "../types";
 
@@ -15,7 +15,12 @@ export const unpauseWithdrawalQueue = async (ctx: ProtocolContext) => {
     const agentSignerAddress = await agentSigner.getAddress();
 
     await withdrawalQueue.connect(agentSigner).grantRole(resumeRole, agentSignerAddress);
-    await withdrawalQueue.connect(agentSigner).resume();
+
+    const tx = await withdrawalQueue.connect(agentSigner).resume();
+    await trace("withdrawalQueue.resume", tx);
+
     await withdrawalQueue.connect(agentSigner).revokeRole(resumeRole, agentSignerAddress);
+
+    log.success("Unpaused withdrawal queue contract");
   }
 };

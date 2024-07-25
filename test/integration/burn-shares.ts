@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ether, impersonate, log, trace } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import { handleOracleReport, unpauseStaking, unpauseWithdrawalQueue } from "lib/protocol/helpers";
+import { handleOracleReport } from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
@@ -30,16 +30,6 @@ describe("Burn Shares", () => {
   });
 
   after(async () => await Snapshot.restore(snapshot));
-
-  it("Should be unpaused", async () => {
-    const { lido, withdrawalQueue } = ctx.contracts;
-
-    await unpauseStaking(ctx);
-    await unpauseWithdrawalQueue(ctx);
-
-    expect(await lido.isStakingPaused()).to.be.false;
-    expect(await withdrawalQueue.isPaused()).to.be.false;
-  });
 
   it("Should allow stranger to submit ETH", async () => {
     const { lido } = ctx.contracts;
