@@ -190,7 +190,7 @@ export const report = async (
   }
 
   if (dryRun) {
-    const report = {
+    const reportData = {
       consensusVersion: await accountingOracle.getConsensusVersion(),
       refSlot,
       numValidators: postBeaconValidators,
@@ -209,22 +209,22 @@ export const report = async (
     } as AccountingOracle.ReportDataStruct;
 
     log.debug("Final Report (Dry Run)", {
-      "Consensus version": report.consensusVersion,
-      "Ref slot": report.refSlot,
-      "CL balance": report.clBalanceGwei,
-      "Num validators": report.numValidators,
-      "Withdrawal vault balance": report.withdrawalVaultBalance,
-      "EL rewards vault balance": report.elRewardsVaultBalance,
-      "Shares requested to burn": report.sharesRequestedToBurn,
-      "Withdrawal finalization batches": report.withdrawalFinalizationBatches,
-      "Simulated share rate": report.simulatedShareRate,
-      "Is bunker mode": report.isBunkerMode,
-      "Extra data format": report.extraDataFormat,
-      "Extra data hash": report.extraDataHash,
-      "Extra data items count": report.extraDataItemsCount,
+      "Consensus version": reportData.consensusVersion,
+      "Ref slot": reportData.refSlot,
+      "CL balance": reportData.clBalanceGwei,
+      "Num validators": reportData.numValidators,
+      "Withdrawal vault balance": reportData.withdrawalVaultBalance,
+      "EL rewards vault balance": reportData.elRewardsVaultBalance,
+      "Shares requested to burn": reportData.sharesRequestedToBurn,
+      "Withdrawal finalization batches": reportData.withdrawalFinalizationBatches,
+      "Simulated share rate": reportData.simulatedShareRate,
+      "Is bunker mode": reportData.isBunkerMode,
+      "Extra data format": reportData.extraDataFormat,
+      "Extra data hash": reportData.extraDataHash,
+      "Extra data items count": reportData.extraDataItemsCount,
     });
 
-    return { report, reportTx: undefined, extraDataTx: undefined };
+    return { report: reportData, reportTx: undefined, extraDataTx: undefined };
   }
 
   const reportParams = {
@@ -534,7 +534,7 @@ export const submitReport = async (
   const consensusVersion = await accountingOracle.getConsensusVersion();
   const oracleVersion = await accountingOracle.getContractVersion();
 
-  const { report, hash } = prepareOracleReport({
+  const data = {
     consensusVersion,
     refSlot,
     clBalanceGwei: clBalance / ONE_GWEI,
@@ -550,7 +550,10 @@ export const submitReport = async (
     extraDataFormat,
     extraDataHash,
     extraDataItemsCount,
-  });
+  } as AccountingOracle.ReportDataStruct;
+
+  const items = getReportDataItems(data);
+  const hash = calcReportDataHash(items);
 
   const submitter = await reachConsensus(ctx, {
     refSlot,
@@ -558,7 +561,7 @@ export const submitReport = async (
     consensusVersion,
   });
 
-  const reportTx = await accountingOracle.connect(submitter).submitReportData(report, oracleVersion);
+  const reportTx = await accountingOracle.connect(submitter).submitReportData(data, oracleVersion);
   await trace("accountingOracle.submitReportData", reportTx);
 
   log.debug("Pushing oracle report", {
@@ -718,33 +721,24 @@ const reachConsensus = async (
 };
 
 /**
- * Helper function to prepare oracle report data in the required format with hash.
- */
-const prepareOracleReport = (report: AccountingOracle.ReportDataStruct) => {
-  const items = getReportDataItems(report);
-  const hash = calcReportDataHash(items);
-  return { report, items, hash };
-};
-
-/**
  * Helper function to get report data items in the required order.
  */
-const getReportDataItems = (report: AccountingOracle.ReportDataStruct) => [
-  report.consensusVersion,
-  report.refSlot,
-  report.numValidators,
-  report.clBalanceGwei,
-  report.stakingModuleIdsWithNewlyExitedValidators,
-  report.numExitedValidatorsByStakingModule,
-  report.withdrawalVaultBalance,
-  report.elRewardsVaultBalance,
-  report.sharesRequestedToBurn,
-  report.withdrawalFinalizationBatches,
-  report.simulatedShareRate,
-  report.isBunkerMode,
-  report.extraDataFormat,
-  report.extraDataHash,
-  report.extraDataItemsCount,
+const getReportDataItems = (data: AccountingOracle.ReportDataStruct) => [
+  data.consensusVersion,
+  data.refSlot,
+  data.numValidators,
+  data.clBalanceGwei,
+  data.stakingModuleIdsWithNewlyExitedValidators,
+  data.numExitedValidatorsByStakingModule,
+  data.withdrawalVaultBalance,
+  data.elRewardsVaultBalance,
+  data.sharesRequestedToBurn,
+  data.withdrawalFinalizationBatches,
+  data.simulatedShareRate,
+  data.isBunkerMode,
+  data.extraDataFormat,
+  data.extraDataHash,
+  data.extraDataItemsCount,
 ];
 
 /**
