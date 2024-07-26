@@ -207,7 +207,7 @@ export async function updateProxyImplementation(
 export async function parseLocalDeploymentJson() {
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error - file is missing out of the box, that's why we need to catch the error
+    // @ts-ignore - file is missing out of the box, that's why we need to catch the error
     return await import("../deployed-local.json");
   } catch (e) {
     throw new Error("Failed to parse deployed-local.json. Did you run scratch deploy?");

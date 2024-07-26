@@ -100,10 +100,12 @@ export type AragonContracts = {
   acl: LoadedContract<ACL>;
 };
 
-export type StackingModulesContracts = {
+export type StakingModuleContracts = {
   nor: LoadedContract<NodeOperatorsRegistry>;
   sdvt: LoadedContract<NodeOperatorsRegistry>;
 };
+
+export type StakingModuleName = "nor" | "sdvt";
 
 export type HashConsensusContracts = {
   hashConsensus: LoadedContract<HashConsensus>;
@@ -111,7 +113,7 @@ export type HashConsensusContracts = {
 
 export type ProtocolContracts = { locator: LoadedContract<LidoLocator> } & FoundationContracts &
   AragonContracts &
-  StackingModulesContracts &
+  StakingModuleContracts &
   HashConsensusContracts;
 
 export type ProtocolSigners = {

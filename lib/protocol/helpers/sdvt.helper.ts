@@ -1,10 +1,12 @@
 import { expect } from "chai";
 import { randomBytes } from "ethers";
 
-import { certainAddress, impersonate, log, streccak, trace } from "lib";
+import { impersonate, log, streccak, trace } from "lib";
 
 import { ether } from "../../units";
 import { ProtocolContext } from "../types";
+
+import { getOperatorManagerAddress, getOperatorName, getOperatorRewardAddress } from "./nor.helper";
 
 const MIN_OPS_COUNT = 3n;
 const MIN_OP_KEYS_COUNT = 10n;
@@ -14,12 +16,12 @@ const SIGNATURE_LENGTH = 96n;
 
 const MANAGE_SIGNING_KEYS_ROLE = streccak("MANAGE_SIGNING_KEYS");
 
-export const ensureSDVTOperators = async (
+export const sdvtEnsureOperators = async (
   ctx: ProtocolContext,
   minOperatorsCount = MIN_OPS_COUNT,
   minOperatorKeysCount = MIN_OP_KEYS_COUNT,
 ) => {
-  await ensureSDVTOperatorsHaveMinKeys(ctx, minOperatorsCount, minOperatorKeysCount);
+  await sdvtEnsureOperatorsHaveMinKeys(ctx, minOperatorsCount, minOperatorKeysCount);
 
   const { sdvt } = ctx.contracts;
 
@@ -27,7 +29,7 @@ export const ensureSDVTOperators = async (
     const nodeOperatorBefore = await sdvt.getNodeOperator(operatorId, false);
 
     if (nodeOperatorBefore.totalVettedValidators < nodeOperatorBefore.totalAddedValidators) {
-      await setSDVTOperatorStakingLimit(ctx, {
+      await sdvtSetOperatorStakingLimit(ctx, {
         operatorId,
         limit: nodeOperatorBefore.totalAddedValidators,
       });
@@ -42,12 +44,12 @@ export const ensureSDVTOperators = async (
 /**
  * Fills the Simple DVT operators with some keys to deposit in case there are not enough of them.
  */
-const ensureSDVTOperatorsHaveMinKeys = async (
+const sdvtEnsureOperatorsHaveMinKeys = async (
   ctx: ProtocolContext,
   minOperatorsCount = MIN_OPS_COUNT,
   minKeysCount = MIN_OP_KEYS_COUNT,
 ) => {
-  await ensureSDVTMinOperators(ctx, minOperatorsCount);
+  await sdvtEnsureMinOperators(ctx, minOperatorsCount);
 
   const { sdvt } = ctx.contracts;
 
@@ -57,7 +59,7 @@ const ensureSDVTOperatorsHaveMinKeys = async (
     if (unusedKeysCount < minKeysCount) {
       log.warning(`Adding SDVT fake keys to operator ${operatorId}`);
 
-      await addFakeNodeOperatorKeysToSDVT(ctx, {
+      await sdvtAddNodeOperatorKeys(ctx, {
         operatorId,
         keysToAdd: minKeysCount - unusedKeysCount,
       });
@@ -77,7 +79,7 @@ const ensureSDVTOperatorsHaveMinKeys = async (
 /**
  * Fills the Simple DVT with some operators in case there are not enough of them.
  */
-const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = MIN_OPS_COUNT) => {
+const sdvtEnsureMinOperators = async (ctx: ProtocolContext, minOperatorsCount = MIN_OPS_COUNT) => {
   const { sdvt } = ctx.contracts;
 
   const before = await sdvt.getNodeOperatorsCount();
@@ -88,14 +90,14 @@ const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
 
     const operator = {
       operatorId,
-      name: getOperatorName(operatorId),
-      rewardAddress: getOperatorRewardAddress(operatorId),
-      managerAddress: getOperatorManagerAddress(operatorId),
+      name: getOperatorName("sdvt", operatorId),
+      rewardAddress: getOperatorRewardAddress("sdvt", operatorId),
+      managerAddress: getOperatorManagerAddress("sdvt", operatorId),
     };
 
     log.warning(`Adding SDVT fake operator ${operatorId}`);
 
-    await addFakeNodeOperatorToSDVT(ctx, operator);
+    await sdvtAddNodeOperator(ctx, operator);
     count++;
   }
 
@@ -113,7 +115,7 @@ const ensureSDVTMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
 /**
  * Adds a new node operator to the Simple DVT.
  */
-const addFakeNodeOperatorToSDVT = async (
+const sdvtAddNodeOperator = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -150,7 +152,7 @@ const addFakeNodeOperatorToSDVT = async (
 /**
  * Adds some signing keys to the operator in the Simple DVT.
  */
-const addFakeNodeOperatorKeysToSDVT = async (
+const sdvtAddNodeOperatorKeys = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -195,7 +197,7 @@ const addFakeNodeOperatorKeysToSDVT = async (
 /**
  * Sets the staking limit for the operator.
  */
-const setSDVTOperatorStakingLimit = async (
+const sdvtSetOperatorStakingLimit = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -210,18 +212,3 @@ const setSDVTOperatorStakingLimit = async (
   const setLimitTx = await sdvt.connect(easyTrackExecutor).setNodeOperatorStakingLimit(operatorId, limit);
   await trace("simpleDVT.setNodeOperatorStakingLimit", setLimitTx);
 };
-
-/**
- * Helper function to get some operator name.
- */
-const getOperatorName = (id: bigint, group: bigint = 0n) => `SDVT:OP-${group}-${id}`;
-
-/**
- * Helper function to get some operator reward address.
- */
-const getOperatorRewardAddress = (id: bigint, group: bigint = 0n) => certainAddress(`SDVT:OPR:${group}:${id}`);
-
-/**
- * Helper function to get some operator manager address.
- */
-const getOperatorManagerAddress = (id: bigint, group: bigint = 0n) => certainAddress(`SDVT:OPM:${group}:${id}`);

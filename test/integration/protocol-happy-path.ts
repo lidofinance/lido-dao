@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { batch, ether, impersonate, log, trace, updateBalance } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import { ensureSDVTOperators, finalizeWithdrawalQueue, OracleReportOptions, report } from "lib/protocol/helpers";
+import { finalizeWithdrawalQueue, OracleReportOptions, report, sdvtEnsureOperators } from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
@@ -78,7 +78,7 @@ describe("Happy Path", () => {
   });
 
   it("Should have some Simple DVT operators", async () => {
-    await ensureSDVTOperators(ctx, 3n, 5n);
+    await sdvtEnsureOperators(ctx, 3n, 5n);
 
     expect(await ctx.contracts.sdvt.getNodeOperatorsCount()).to.be.least(3n);
   });

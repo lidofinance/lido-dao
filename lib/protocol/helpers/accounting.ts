@@ -113,6 +113,11 @@ export const report = async (
   const postCLBalance = beaconBalance + clDiff;
   const postBeaconValidators = beaconValidators + clAppearedValidators;
 
+  log.debug("Beacon", {
+    "Beacon validators": postBeaconValidators,
+    "Beacon balance": ethers.formatEther(postCLBalance),
+  });
+
   elRewardsVaultBalance = elRewardsVaultBalance ?? (await ethers.provider.getBalance(elRewardsVault.address));
   withdrawalVaultBalance = withdrawalVaultBalance ?? (await ethers.provider.getBalance(withdrawalVault.address));
 

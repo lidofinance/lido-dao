@@ -21,9 +21,9 @@ export {
 } from "./accounting";
 
 export {
-  ensureSDVTOperators,
+  sdvtEnsureOperators,
 } from "./sdvt.helper";
 
 export {
-  ensureNOROperators,
+  norEnsureOperators,
 } from "./nor.helper";

@@ -14,7 +14,7 @@ import {
   LoadedContract,
   ProtocolContracts,
   ProtocolSigners,
-  StackingModulesContracts,
+  StakingModuleContracts,
 } from "./types";
 
 // TODO: inflate config from whatever source is available (yaml, json, etc)
@@ -122,7 +122,7 @@ const getStakingModules = async (stakingRouter: LoadedContract<StakingRouter>, c
   return (await batch({
     nor: loadContract("NodeOperatorsRegistry", config.get("nor") || nor.stakingModuleAddress),
     sdvt: loadContract("NodeOperatorsRegistry", config.get("sdvt") || sdvt.stakingModuleAddress),
-  })) as StackingModulesContracts;
+  })) as StakingModuleContracts;
 };
 
 /**

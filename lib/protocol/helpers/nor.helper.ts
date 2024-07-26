@@ -3,7 +3,7 @@ import { randomBytes } from "ethers";
 
 import { certainAddress, log, trace } from "lib";
 
-import { ProtocolContext } from "../types";
+import { ProtocolContext, StakingModuleName } from "../types";
 
 const MIN_OPS_COUNT = 3n;
 const MIN_OP_KEYS_COUNT = 10n;
@@ -11,12 +11,12 @@ const MIN_OP_KEYS_COUNT = 10n;
 const PUBKEY_LENGTH = 48n;
 const SIGNATURE_LENGTH = 96n;
 
-export const ensureNOROperators = async (
+export const norEnsureOperators = async (
   ctx: ProtocolContext,
   minOperatorsCount = MIN_OPS_COUNT,
   minOperatorKeysCount = MIN_OP_KEYS_COUNT,
 ) => {
-  await ensureNOROperatorsHaveMinKeys(ctx, minOperatorsCount, minOperatorKeysCount);
+  await norEnsureOperatorsHaveMinKeys(ctx, minOperatorsCount, minOperatorKeysCount);
 
   const { nor } = ctx.contracts;
 
@@ -24,7 +24,7 @@ export const ensureNOROperators = async (
     const nodeOperatorBefore = await nor.getNodeOperator(operatorId, false);
 
     if (nodeOperatorBefore.totalVettedValidators < nodeOperatorBefore.totalAddedValidators) {
-      await setNOROperatorStakingLimit(ctx, {
+      await norSetOperatorStakingLimit(ctx, {
         operatorId,
         limit: nodeOperatorBefore.totalAddedValidators,
       });
@@ -44,12 +44,12 @@ export const ensureNOROperators = async (
 /**
  * Fills the Nor operators with some keys to deposit in case there are not enough of them.
  */
-const ensureNOROperatorsHaveMinKeys = async (
+const norEnsureOperatorsHaveMinKeys = async (
   ctx: ProtocolContext,
   minOperatorsCount = MIN_OPS_COUNT,
   minKeysCount = MIN_OP_KEYS_COUNT,
 ) => {
-  await ensureNORMinOperators(ctx, minOperatorsCount);
+  await norEnsureMinOperators(ctx, minOperatorsCount);
 
   const { nor } = ctx.contracts;
 
@@ -57,7 +57,7 @@ const ensureNOROperatorsHaveMinKeys = async (
     const keysCount = await nor.getTotalSigningKeyCount(operatorId);
 
     if (keysCount < minKeysCount) {
-      await addNORFakeNodeOperatorKeys(ctx, {
+      await norAddOperatorKeys(ctx, {
         operatorId,
         keysToAdd: minKeysCount - keysCount,
       });
@@ -72,7 +72,7 @@ const ensureNOROperatorsHaveMinKeys = async (
 /**
  * Fills the NOR with some operators in case there are not enough of them.
  */
-const ensureNORMinOperators = async (ctx: ProtocolContext, minOperatorsCount = MIN_OPS_COUNT) => {
+const norEnsureMinOperators = async (ctx: ProtocolContext, minOperatorsCount = MIN_OPS_COUNT) => {
   const { nor } = ctx.contracts;
 
   const before = await nor.getNodeOperatorsCount();
@@ -83,12 +83,12 @@ const ensureNORMinOperators = async (ctx: ProtocolContext, minOperatorsCount = M
 
     const operator = {
       operatorId,
-      name: getOperatorName(operatorId),
-      rewardAddress: getOperatorRewardAddress(operatorId),
-      managerAddress: getOperatorManagerAddress(operatorId),
+      name: getOperatorName("nor", operatorId),
+      rewardAddress: getOperatorRewardAddress("nor", operatorId),
+      managerAddress: getOperatorManagerAddress("nor", operatorId),
     };
 
-    await addFakeNodeOperatorToNor(ctx, operator);
+    await norAddNodeOperator(ctx, operator);
     count++;
   }
 
@@ -101,7 +101,7 @@ const ensureNORMinOperators = async (ctx: ProtocolContext, minOperatorsCount = M
 /**
  * Adds a new node operator to the NOR.
  */
-export const addFakeNodeOperatorToNor = async (
+export const norAddNodeOperator = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -133,7 +133,7 @@ export const addFakeNodeOperatorToNor = async (
 /**
  * Adds some signing keys to the operator in the NOR.
  */
-export const addNORFakeNodeOperatorKeys = async (
+export const norAddOperatorKeys = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -181,7 +181,7 @@ export const addNORFakeNodeOperatorKeys = async (
 /**
  * Sets the staking limit for the operator.
  */
-const setNOROperatorStakingLimit = async (
+const norSetOperatorStakingLimit = async (
   ctx: ProtocolContext,
   params: {
     operatorId: bigint;
@@ -201,17 +201,8 @@ const setNOROperatorStakingLimit = async (
   log.success(`Set NOR operator ${operatorId} staking limit`);
 };
 
-/**
- * Helper function to get some operator name.
- */
-const getOperatorName = (id: bigint, group: bigint = 0n) => `NOR:OP-${group}-${id}`;
+export const getOperatorName = (module: StakingModuleName, id: bigint, group: bigint = 0n) => `${module}:op-${group}-${id}`;
 
-/**
- * Helper function to get some operator reward address.
- */
-const getOperatorRewardAddress = (id: bigint, group: bigint = 0n) => certainAddress(`NOR:OPR:${group}:${id}`);
+export const getOperatorRewardAddress = (module: StakingModuleName, id: bigint, group: bigint = 0n) => certainAddress(`${module}:op:ra-${group}-${id}`);
 
-/**
- * Helper function to get some operator manager address.
- */
-const getOperatorManagerAddress = (id: bigint, group: bigint = 0n) => certainAddress(`NOR:OPM:${group}:${id}`);
+export const getOperatorManagerAddress = (module: StakingModuleName, id: bigint, group: bigint = 0n) => certainAddress(`${module}:op:ma-${group}-${id}`);
