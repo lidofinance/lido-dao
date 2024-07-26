@@ -2,6 +2,7 @@ import {
   ensureHashConsensusInitialEpoch,
   ensureNOROperators,
   ensureOracleCommitteeMembers,
+  ensureStakeLimit,
   unpauseStaking,
   unpauseWithdrawalQueue,
 } from "./helpers";
@@ -21,4 +22,6 @@ export const provision = async (ctx: ProtocolContext) => {
   await unpauseWithdrawalQueue(ctx);
 
   await ensureNOROperators(ctx, 3n, 5n);
+
+  await ensureStakeLimit(ctx);
 };

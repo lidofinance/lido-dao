@@ -4,9 +4,9 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { batch, ether, impersonate, log, trace } from "lib";
+import { batch, ether, impersonate, log, trace, updateBalance } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import { ensureSDVTOperators, report } from "lib/protocol/helpers";
+import { ensureSDVTOperators, finalizeWithdrawalQueue, OracleReportOptions, report } from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
@@ -28,16 +28,20 @@ describe("Happy Path", () => {
   let uncountedStETHShares: bigint;
   let amountWithRewards: bigint;
 
+  let withSimpleDVT: boolean;
+
   before(async () => {
     ctx = await getProtocolContext();
 
-    const signers = await ethers.getSigners();
+    [stEthHolder, ethHolder, stranger] = await ethers.getSigners();
 
-    [ethHolder, stEthHolder, stranger] = await Promise.all([
-      impersonate(signers[0].address, ether("1000000")),
-      impersonate(signers[1].address, ether("1000000")),
-      impersonate(signers[2].address, ether("1000000")),
-    ]);
+    const modules = await ctx.contracts.stakingRouter.getStakingModules();
+    withSimpleDVT = modules.length > 1;
+
+    log.debug("Modules", {
+      "Modules count": modules.length,
+      "With Simple DVT": withSimpleDVT,
+    });
 
     snapshot = await Snapshot.take();
   });
@@ -52,48 +56,25 @@ describe("Happy Path", () => {
     });
   };
 
-  it("Should be able to finalize the withdrawal queue", async () => {
+  it("Should finalize withdrawal queue", async () => {
     const { lido, withdrawalQueue } = ctx.contracts;
 
-    const stEthHolderAmount = ether("10000");
-    const tx = await stEthHolder.sendTransaction({ to: lido.address, value: stEthHolderAmount });
-    await trace("stEthHolder.sendTransaction", tx);
+    await finalizeWithdrawalQueue(ctx, stEthHolder, ethHolder);
 
-    let lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
-    let lastRequestId = await withdrawalQueue.getLastRequestId();
-
-    while (lastFinalizedRequestId != lastRequestId) {
-      await report(ctx);
-
-      lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
-      lastRequestId = await withdrawalQueue.getLastRequestId();
-
-      log.debug("Withdrawal queue", {
-        "Last finalized request ID": lastFinalizedRequestId,
-        "Last request ID": lastRequestId,
-      });
-
-      const submitTx = await ctx.contracts.lido
-        .connect(ethHolder)
-        .submit(ZeroAddress, { value: ether("10000") });
-
-      await trace("lido.submit", submitTx);
-    }
-
-    const submitTx = await ctx.contracts.lido
-      .connect(ethHolder)
-      .submit(ZeroAddress, { value: ether("10000") });
-
-    await trace("lido.submit", submitTx);
+    const lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
+    const lastRequestId = await withdrawalQueue.getLastRequestId();
 
     // Will be used in finalization part
     uncountedStETHShares = await lido.sharesOf(withdrawalQueue.address);
 
+    // Added to facilitate the burner transfers
     const approveTx = await lido.connect(stEthHolder).approve(withdrawalQueue.address, 1000n);
     await trace("lido.approve", approveTx);
 
     const requestWithdrawalsTx = await withdrawalQueue.connect(stEthHolder).requestWithdrawals([1000n], stEthHolder);
     await trace("withdrawalQueue.requestWithdrawals", requestWithdrawalsTx);
+
+    expect(lastFinalizedRequestId).to.be.equal(lastRequestId);
   });
 
   it("Should have some Simple DVT operators", async () => {
@@ -104,6 +85,8 @@ describe("Happy Path", () => {
 
   it("Should allow ETH holders to submit stake", async () => {
     const { lido } = ctx.contracts;
+
+    await updateBalance(stranger.address, ether("1000000"));
 
     const strangerBalancesBeforeSubmit = await getBalances(stranger);
 
@@ -117,6 +100,12 @@ describe("Happy Path", () => {
     expect(strangerBalancesBeforeSubmit.ETH).to.be.equal(ether("1000000"), "ETH balance before submit");
 
     const stakeLimitInfoBefore = await lido.getStakeLimitFullInfo();
+
+    log.debug("Stake limit info before submit", {
+      "Max stake limit": ethers.formatEther(stakeLimitInfoBefore.maxStakeLimit),
+      "Max stake limit growth blocks": stakeLimitInfoBefore.maxStakeLimitGrowthBlocks,
+    });
+
     const growthPerBlock = stakeLimitInfoBefore.maxStakeLimit / stakeLimitInfoBefore.maxStakeLimitGrowthBlocks;
 
     const totalSupplyBeforeSubmit = await lido.totalSupply();
@@ -199,7 +188,7 @@ describe("Happy Path", () => {
     const { lido, withdrawalQueue } = ctx.contracts;
 
     const { depositSecurityModule } = ctx.contracts;
-    const { depositedValidators: depositedValidatorsBeforeDeposit } = await lido.getBeaconStat();
+    const { depositedValidators: depositedValidatorsBefore } = await lido.getBeaconStat();
     const withdrawalsUninitializedStETH = await withdrawalQueue.unfinalizedStETH();
     const depositableEther = await lido.getDepositableEther();
     const bufferedEtherBeforeDeposit = await lido.getBufferedEther();
@@ -219,35 +208,37 @@ describe("Happy Path", () => {
     const depositNorTx = await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, CURATED_MODULE_ID, ZERO_HASH);
     const depositNorReceipt = await trace<ContractTransactionReceipt>("lido.deposit (Curated Module)", depositNorTx);
 
-    const depositSdvtTx = await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
-    const depositSdvtReceipt = await trace<ContractTransactionReceipt>("lido.deposit (Simple DVT)", depositSdvtTx);
+    const unbufferedEventNor = ctx.getEvents(depositNorReceipt, "Unbuffered")[0];
+    const unbufferedAmountNor = unbufferedEventNor.args[0];
+
+    const depositCountsNor = unbufferedAmountNor / ether("32");
+    let expectedBufferedEtherAfterDeposit = bufferedEtherBeforeDeposit - unbufferedAmountNor;
+
+    if (withSimpleDVT) {
+      const depositSdvtTx = await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
+      const depositSdvtReceipt = await trace<ContractTransactionReceipt>("lido.deposit (Simple DVT)", depositSdvtTx);
+
+      const unbufferedEventSdvt = ctx.getEvents(depositSdvtReceipt, "Unbuffered")[0];
+      const depositedValidatorsChangedEventSdvt = ctx.getEvents(depositSdvtReceipt, "DepositedValidatorsChanged")[0];
+
+      const unbufferedAmountSdvt = unbufferedEventSdvt.args[0];
+      const newValidatorsCountSdvt = depositedValidatorsChangedEventSdvt.args[0];
+
+      const depositCountsTotal = depositCountsNor + unbufferedAmountSdvt / ether("32");
+      expectedBufferedEtherAfterDeposit -= unbufferedAmountSdvt;
+
+      expect(depositCountsTotal).to.be.gt(0n, "Deposit counts");
+      expect(newValidatorsCountSdvt).to.be.equal(depositedValidatorsBefore + depositCountsTotal, "New validators count after deposit");
+    }
 
     const bufferedEtherAfterDeposit = await lido.getBufferedEther();
 
-    const unbufferedEventNor = ctx.getEvents(depositNorReceipt, "Unbuffered")[0];
-    const unbufferedEventSdvt = ctx.getEvents(depositSdvtReceipt, "Unbuffered")[0];
-    const depositedValidatorsChangedEventSdvt = ctx.getEvents(depositSdvtReceipt, "DepositedValidatorsChanged")[0];
-
-    const unbufferedAmountNor = unbufferedEventNor.args[0];
-    const unbufferedAmountSdvt = unbufferedEventSdvt.args[0];
-    const newValidatorsCountSdvt = depositedValidatorsChangedEventSdvt.args[0];
-
-    const depositCounts = unbufferedAmountNor / ether("32") + unbufferedAmountSdvt / ether("32");
-
-    expect(bufferedEtherAfterDeposit).to.be.equal(
-      bufferedEtherBeforeDeposit - unbufferedAmountNor - unbufferedAmountSdvt,
-      "Buffered ether after deposit",
-    );
-    expect(newValidatorsCountSdvt).to.be.equal(
-      depositedValidatorsBeforeDeposit + depositCounts,
-      "New validators count after deposit",
-    );
+    expect(depositCountsNor).to.be.gt(0n, "Deposit counts");
+    expect(bufferedEtherAfterDeposit).to.be.equal(expectedBufferedEtherAfterDeposit, "Buffered ether after deposit");
 
     log.debug("After deposit", {
       "Buffered ether": ethers.formatEther(bufferedEtherAfterDeposit),
       "Unbuffered amount (NOR)": ethers.formatEther(unbufferedAmountNor),
-      "Unbuffered amount (SDVT)": ethers.formatEther(unbufferedAmountSdvt),
-      "New validators count (SDVT)": newValidatorsCountSdvt,
     });
   });
 
@@ -281,18 +272,32 @@ describe("Happy Path", () => {
     };
 
     const norStatus = await getNodeOperatorsStatus(nor);
-    const sdvtStatus = await getNodeOperatorsStatus(sdvt);
+
+    let expectedBurnerTransfers = norStatus.hasPenalizedOperators ? 1n : 0n;
+    let expectedTransfers = norStatus.activeOperators;
+
+    let sdvtStatusLog = {};
+    if (withSimpleDVT) {
+      const sdvtStatus = await getNodeOperatorsStatus(sdvt);
+
+      expectedBurnerTransfers += sdvtStatus.hasPenalizedOperators ? 1n : 0n;
+      expectedTransfers += sdvtStatus.activeOperators;
+
+      sdvtStatusLog = {
+        "SDVT active operators": sdvtStatus.activeOperators,
+        "SDVT (transfer to burner)": sdvtStatus.hasPenalizedOperators,
+      };
+    }
 
     log.debug("Expected distributions", {
       "NOR active operators": norStatus.activeOperators,
       "NOR (transfer to burner)": norStatus.hasPenalizedOperators,
-      "SDVT active operators": sdvtStatus.activeOperators,
-      "SDVT (transfer to burner)": sdvtStatus.hasPenalizedOperators,
+      ...sdvtStatusLog,
     });
 
     const treasuryBalanceBeforeRebase = await lido.sharesOf(treasuryAddress);
 
-    const reportParams = { clDiff: ether("100") };
+    const reportParams = { clDiff: ether("100") } as OracleReportOptions;
     const { reportTx, extraDataTx } = (await report(ctx, reportParams)) as {
       reportTx: TransactionResponse;
       extraDataTx: TransactionResponse;
@@ -316,8 +321,8 @@ describe("Happy Path", () => {
     const transferEvents = ctx.getEvents(reportTxReceipt, "Transfer");
 
     expect(transferEvents.length).to.be.equal(4, "Transfer events count");
-    expect(transferEvents[0].args.from).to.be.equal(withdrawalQueue.address, "Transfer from (Burner)");
-    expect(transferEvents[0].args.to).to.be.equal(ctx.contracts.burner.address, "Transfer to (Burner)");
+    expect(transferEvents[0].args.from).to.be.equal(withdrawalQueue.address, "Transfer from (WQ => Burner)");
+    expect(transferEvents[0].args.to).to.be.equal(ctx.contracts.burner.address, "Transfer to (WQ => Burner)");
     expect(transferEvents[1].args.from).to.be.equal(ZeroAddress, "Transfer from (NOR deposit)");
     expect(transferEvents[1].args.to).to.be.equal(nor.address, "Transfer to (NOR deposit)");
     expect(transferEvents[2].args.from).to.be.equal(ZeroAddress, "Transfer from (sDVT deposit)");
@@ -339,18 +344,15 @@ describe("Happy Path", () => {
       "Stranger stETH balance after rebase increased",
     );
 
-    const expectedBurnerTransfers = (norStatus.hasPenalizedOperators ? 1n : 0n) + (sdvtStatus.hasPenalizedOperators ? 1n : 0n);
     const transfers = ctx.getEvents(extraDataTxReceipt, "Transfer");
     const burnerTransfers = transfers.filter(e => e?.args[1] == burner.address).length;
 
     expect(burnerTransfers).to.be.equal(expectedBurnerTransfers, "Burner transfers is correct");
 
-    const expectedTransfers = norStatus.activeOperators + sdvtStatus.activeOperators + expectedBurnerTransfers;
-
-    expect(transfers.length).to.be.equal(expectedTransfers, "All active operators received transfers");
+    expect(transfers.length).to.be.equal(expectedTransfers + expectedBurnerTransfers, "All active operators received transfers");
 
     log.debug("Transfers", {
-      "Transfers to operators": norStatus.activeOperators + sdvtStatus.activeOperators,
+      "Transfers to operators": expectedTransfers,
       "Burner transfers": burnerTransfers,
     });
 

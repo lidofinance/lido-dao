@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { ether, impersonate, log, trace } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import { handleOracleReport } from "lib/protocol/helpers";
+import { finalizeWithdrawalQueue, handleOracleReport } from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
@@ -14,6 +14,8 @@ describe("Burn Shares", () => {
   let ctx: ProtocolContext;
   let snapshot: string;
 
+  let ethHolder: HardhatEthersSigner;
+  let stEthHolder: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
   const amount = ether("1");
@@ -24,12 +26,23 @@ describe("Burn Shares", () => {
   before(async () => {
     ctx = await getProtocolContext();
 
-    [, , stranger] = await ethers.getSigners();
+    [stEthHolder, ethHolder, stranger] = await ethers.getSigners();
 
     snapshot = await Snapshot.take();
   });
 
   after(async () => await Snapshot.restore(snapshot));
+
+  it("Should finalize withdrawal queue", async () => {
+    const { withdrawalQueue } = ctx.contracts;
+
+    await finalizeWithdrawalQueue(ctx, stEthHolder, ethHolder);
+
+    const lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
+    const lastRequestId = await withdrawalQueue.getLastRequestId();
+
+    expect(lastFinalizedRequestId).to.be.equal(lastRequestId);
+  });
 
   it("Should allow stranger to submit ETH", async () => {
     const { lido } = ctx.contracts;

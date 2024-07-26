@@ -22,7 +22,7 @@ import {
 
 import { ProtocolContext } from "../types";
 
-type OracleReportPrepareOptions = {
+export type OracleReportOptions = {
   clDiff: bigint;
   clAppearedValidators: bigint;
   elRewardsVaultBalance: bigint | null;
@@ -46,7 +46,7 @@ type OracleReportPrepareOptions = {
   silent: boolean;
 };
 
-type OracleReportPushOptions = {
+export type OracleReportPushOptions = {
   refSlot: bigint;
   clBalance: bigint;
   numValidators: bigint;
@@ -95,7 +95,7 @@ export const report = async (
     numExitedValidatorsByStakingModule = [],
     reportElVault = true,
     reportWithdrawalsVault = true,
-  } = {} as Partial<OracleReportPrepareOptions>,
+  } = {} as Partial<OracleReportOptions>,
 ) => {
   const { hashConsensus, lido, elRewardsVault, withdrawalVault, burner, accountingOracle } = ctx.contracts;
 

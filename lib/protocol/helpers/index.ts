@@ -1,13 +1,17 @@
 export {
   unpauseStaking,
+  ensureStakeLimit,
 } from "./staking";
 
 
 export {
   unpauseWithdrawalQueue,
+  finalizeWithdrawalQueue,
 } from "./withdrawal";
 
 export {
+  OracleReportOptions,
+  OracleReportPushOptions,
   ensureHashConsensusInitialEpoch,
   ensureOracleCommitteeMembers,
   waitNextAvailableReportTime,
