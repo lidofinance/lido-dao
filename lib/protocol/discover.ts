@@ -9,7 +9,7 @@ import {
   AragonContracts,
   ContractName,
   ContractType,
-  FoundationContracts,
+  CoreContracts,
   HashConsensusContracts,
   LoadedContract,
   ProtocolContracts,
@@ -100,7 +100,7 @@ const getFoundationContracts = async (locator: LoadedContract<LidoLocator>, conf
       "OracleDaemonConfig",
       config.get("oracleDaemonConfig") || await locator.oracleDaemonConfig(),
     ),
-  })) as FoundationContracts;
+  })) as CoreContracts;
 
 /**
  * Load Aragon contracts required for protocol.

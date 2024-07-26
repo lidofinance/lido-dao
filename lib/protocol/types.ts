@@ -80,7 +80,7 @@ export type LoadedContract<T extends BaseContract = BaseContract> = T & {
   address: string;
 };
 
-export type FoundationContracts = {
+export type CoreContracts = {
   accountingOracle: LoadedContract<AccountingOracle>;
   depositSecurityModule: LoadedContract<DepositSecurityModule>;
   elRewardsVault: LoadedContract<LidoExecutionLayerRewardsVault>;
@@ -111,10 +111,11 @@ export type HashConsensusContracts = {
   hashConsensus: LoadedContract<HashConsensus>;
 };
 
-export type ProtocolContracts = { locator: LoadedContract<LidoLocator> } & FoundationContracts &
-  AragonContracts &
-  StakingModuleContracts &
-  HashConsensusContracts;
+export type ProtocolContracts = { locator: LoadedContract<LidoLocator> }
+  & CoreContracts
+  & AragonContracts
+  & StakingModuleContracts
+  & HashConsensusContracts;
 
 export type ProtocolSigners = {
   agent: string;
