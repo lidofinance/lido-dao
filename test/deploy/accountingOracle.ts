@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-import { AccountingOracle, HashConsensusTimeTravellable, LegacyOracle } from "typechain-types";
+import { AccountingOracle, HashConsensusTimeTravellable, LegacyOracle, MockReportProcessor } from "typechain-types";
 
 import {
   CONSENSUS_VERSION,
@@ -28,7 +28,7 @@ export async function deployMockLegacyOracle({
   genesisTime = GENESIS_TIME,
   lastCompletedEpochId = V1_ORACLE_LAST_COMPLETED_EPOCH,
 } = {}) {
-  const legacyOracle = await ethers.deployContract("MockLegacyOracle");
+  const legacyOracle = await ethers.deployContract("LegacyOracle__MockForAccountingOracle");
   await legacyOracle.setParams(epochsPerFrame, slotsPerEpoch, secondsPerSlot, genesisTime, lastCompletedEpochId);
   return legacyOracle;
 }
@@ -75,7 +75,7 @@ export async function deployAccountingOracleSetup(
   ]);
 
   const { consensus } = await deployHashConsensus(admin, {
-    reportProcessor: oracle,
+    reportProcessor: oracle as unknown as MockReportProcessor,
     epochsPerFrame,
     slotsPerEpoch,
     secondsPerSlot,
