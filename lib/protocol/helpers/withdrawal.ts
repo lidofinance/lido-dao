@@ -1,3 +1,4 @@
+import { expect } from "chai";
 import { ZeroAddress } from "ethers";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -42,8 +43,13 @@ export const finalizeWithdrawalQueue = async (
   await updateBalance(stEthHolder.address, ether("1000000"));
 
   const stEthHolderAmount = ether("10000");
+
+  // Here sendTransaction is used to validate native way of submitting ETH for stETH
   const tx = await stEthHolder.sendTransaction({ to: lido.address, value: stEthHolderAmount });
   await trace("stEthHolder.sendTransaction", tx);
+
+  const stEthHolderBalance = await lido.balanceOf(stEthHolder.address);
+  expect(stEthHolderBalance).to.approximately(stEthHolderAmount, 10n, "stETH balance increased");
 
   let lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
   let lastRequestId = await withdrawalQueue.getLastRequestId();

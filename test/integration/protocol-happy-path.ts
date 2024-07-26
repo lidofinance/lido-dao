@@ -152,15 +152,17 @@ describe("Happy Path", () => {
     const sharesToBeMinted = await lido.getSharesByPooledEth(AMOUNT);
     const mintedShares = await lido.sharesOf(stranger);
 
-    expect(submittedEvent).not.to.be.undefined;
-    expect(submittedEvent.args[0]).to.equal(stranger, "Submitted event sender");
-    expect(submittedEvent.args[1]).to.equal(AMOUNT, "Submitted event amount");
-    expect(submittedEvent.args[2]).to.equal(ZeroAddress, "Submitted event referral");
+    expect(submittedEvent?.args.toObject()).to.deep.equal({
+      sender: stranger.address,
+      amount: AMOUNT,
+      referral: ZeroAddress,
+    }, "Submitted event");
 
-    expect(transferSharesEvent).not.to.be.undefined;
-    expect(transferSharesEvent.args[0]).to.equal(ZeroAddress, "TransferShares event sender");
-    expect(transferSharesEvent.args[1]).to.equal(stranger, "TransferShares event recipient");
-    expect(transferSharesEvent.args[2]).to.be.approximately(sharesToBeMinted, 10n, "TransferShares event amount");
+    expect(transferSharesEvent?.args.toObject()).to.deep.equal({
+      from: ZeroAddress,
+      to: stranger.address,
+      sharesValue: sharesToBeMinted,
+    }, "TransferShares event");
 
     expect(mintedShares).to.equal(sharesToBeMinted, "Minted shares");
 
@@ -297,8 +299,14 @@ describe("Happy Path", () => {
 
     const treasuryBalanceBeforeRebase = await lido.sharesOf(treasuryAddress);
 
-    const reportParams = { clDiff: ether("100") } as OracleReportOptions;
-    const { reportTx, extraDataTx } = (await report(ctx, reportParams)) as {
+    // Stranger deposited 100 ETH, enough to deposit 3 validators, need to reflect this in the report
+    // 0.01 ETH is added to the clDiff to simulate some rewards
+    const reportData: Partial<OracleReportOptions> = {
+      clDiff: ether("96.01"),
+      clAppearedValidators: 3n,
+    };
+
+    const { reportTx, extraDataTx } = (await report(ctx, reportData)) as {
       reportTx: TransactionResponse;
       extraDataTx: TransactionResponse;
     };
@@ -320,17 +328,38 @@ describe("Happy Path", () => {
 
     const transferEvents = ctx.getEvents(reportTxReceipt, "Transfer");
 
-    expect(transferEvents.length).to.equal(4, "Transfer events count");
-    expect(transferEvents[0].args.from).to.equal(withdrawalQueue.address, "Transfer from (WQ => Burner)");
-    expect(transferEvents[0].args.to).to.equal(ctx.contracts.burner.address, "Transfer to (WQ => Burner)");
-    expect(transferEvents[1].args.from).to.equal(ZeroAddress, "Transfer from (NOR deposit)");
-    expect(transferEvents[1].args.to).to.equal(nor.address, "Transfer to (NOR deposit)");
-    expect(transferEvents[2].args.from).to.equal(ZeroAddress, "Transfer from (sDVT deposit)");
-    expect(transferEvents[2].args.to).to.equal(sdvt.address, "Transfer to (sDVT deposit)");
-    expect(transferEvents[3].args.from).to.equal(ZeroAddress, "Transfer from (Treasury)");
-    expect(transferEvents[3].args.to).to.equal(treasuryAddress, "Transfer to (Treasury)");
+    const toBurnerTransfer = transferEvents[0];
+    const toNorTransfer = transferEvents[1];
+    const toSdvtTransfer = withSimpleDVT ? transferEvents[2] : undefined;
+    const toTreasuryTransfer = withSimpleDVT ? transferEvents[3] : transferEvents[2];
 
-    const treasurySharesMinted = await lido.getSharesByPooledEth(transferEvents[3].args.value);
+    const expectedTransferEvents = withSimpleDVT ? 4 : 3;
+
+    expect(transferEvents.length).to.equal(expectedTransferEvents, "Transfer events count");
+
+    expect(toBurnerTransfer?.args.toObject()).to.include({
+      from: withdrawalQueue.address,
+      to: burner.address,
+    }, "Transfer to burner");
+
+    expect(toNorTransfer?.args.toObject()).to.include({
+      from: ZeroAddress,
+      to: nor.address,
+    }, "Transfer to NOR");
+
+    if (withSimpleDVT) {
+      expect(toSdvtTransfer?.args.toObject()).to.include({
+        from: ZeroAddress,
+        to: sdvt.address,
+      }, "Transfer to SDVT");
+    }
+
+    expect(toTreasuryTransfer?.args.toObject()).to.include({
+      from: ZeroAddress,
+      to: treasuryAddress,
+    }, "Transfer to Treasury");
+
+    const treasurySharesMinted = await lido.getSharesByPooledEth(toTreasuryTransfer.args.value);
 
     expect(treasuryBalanceAfterRebase).to.be.approximately(
       treasuryBalanceBeforeRebase + treasurySharesMinted,
@@ -358,6 +387,7 @@ describe("Happy Path", () => {
 
     expect(ctx.getEvents(reportTxReceipt, "TokenRebased")[0]).not.to.be.undefined;
     expect(ctx.getEvents(reportTxReceipt, "WithdrawalsFinalized")[0]).not.to.be.undefined;
+
     const burntSharesEvent = ctx.getEvents(reportTxReceipt, "StETHBurnt")[0];
 
     expect(burntSharesEvent).not.to.be.undefined;
@@ -391,10 +421,11 @@ describe("Happy Path", () => {
 
     const approveEvent = ctx.getEvents(approveTxReceipt, "Approval")[0];
 
-    expect(approveEvent).not.to.be.undefined;
-    expect(approveEvent.args.owner).to.equal(stranger, "Approval event owner");
-    expect(approveEvent.args.spender).to.equal(withdrawalQueue.address, "Approval event spender");
-    expect(approveEvent.args.value).to.equal(amountWithRewards, "Approval event value");
+    expect(approveEvent?.args.toObject()).to.deep.include({
+      owner: stranger.address,
+      spender: withdrawalQueue.address,
+      value: amountWithRewards,
+    }, "Approval event");
 
     const lastRequestIdBefore = await withdrawalQueue.getLastRequestId();
 
@@ -403,21 +434,30 @@ describe("Happy Path", () => {
 
     const withdrawalEvent = ctx.getEvents(withdrawalTxReceipt, "WithdrawalRequested")[0];
 
-    expect(withdrawalEvent).not.to.be.undefined;
-    expect(withdrawalEvent.args.requestor).to.equal(stranger, "WithdrawalRequested event requestor");
-    expect(withdrawalEvent.args.owner).to.equal(stranger, "WithdrawalRequested event owner");
-    expect(withdrawalEvent.args.amountOfStETH).to.equal(amountWithRewards, "WithdrawalRequested event amountOfStETH");
+    expect(withdrawalEvent?.args.toObject()).to.deep.include({
+      requestor: stranger.address,
+      owner: stranger.address,
+      amountOfStETH: amountWithRewards,
+    }, "WithdrawalRequested event");
 
     const requestId = withdrawalEvent.args.requestId;
     const withdrawalTransferEvents = ctx.getEvents(withdrawalTxReceipt, "Transfer");
 
     expect(withdrawalTransferEvents.length).to.be.least(2, "Transfer events count");
-    expect(withdrawalTransferEvents[0].args.from).to.equal(stranger, "Transfer stETH from (Stranger)");
-    expect(withdrawalTransferEvents[0].args.to).to.equal(withdrawalQueue.address, "Transfer stETH to (WithdrawalQueue)");
-    expect(withdrawalTransferEvents[0].args.value).to.equal(amountWithRewards, "Transfer stETH value");
-    expect(withdrawalTransferEvents[1].args.tokenId).to.equal(requestId, "Transfer unstETH tokenId");
-    expect(withdrawalTransferEvents[1].args.from).to.equal(ZeroAddress, "Transfer unstETH from (ZeroAddress)");
-    expect(withdrawalTransferEvents[1].args.to).to.equal(stranger, "Transfer unstETH to (Stranger)");
+
+    const [stEthTransfer, unstEthTransfer] = withdrawalTransferEvents;
+
+    expect(stEthTransfer?.args.toObject()).to.deep.include({
+      from: stranger.address,
+      to: withdrawalQueue.address,
+      value: amountWithRewards,
+    }, "Transfer stETH");
+
+    expect(unstEthTransfer?.args.toObject()).to.deep.include({
+      from: ZeroAddress,
+      to: stranger.address,
+      tokenId: requestId,
+    }, "Transfer unstETH");
 
     const balanceAfterRequest = await getBalances(stranger);
 
@@ -476,10 +516,11 @@ describe("Happy Path", () => {
 
     const withdrawalFinalizedEvent = ctx.getEvents(reportTxReceipt, "WithdrawalsFinalized")[0];
 
-    expect(withdrawalFinalizedEvent).not.to.be.undefined;
-    expect(withdrawalFinalizedEvent.args.amountOfETHLocked).to.equal(amountWithRewards, "WithdrawalFinalized event amountOfETHLocked");
-    expect(withdrawalFinalizedEvent.args.from).to.equal(requestId, "WithdrawalFinalized event from");
-    expect(withdrawalFinalizedEvent.args.to).to.equal(requestId, "WithdrawalFinalized event to");
+    expect(withdrawalFinalizedEvent?.args.toObject()).to.deep.include({
+      amountOfETHLocked: amountWithRewards,
+      from: requestId,
+      to: requestId,
+    }, "WithdrawalFinalized event");
 
     const withdrawalQueueBalanceAfterFinalization = await lido.balanceOf(withdrawalQueue.address);
     const uncountedStETHBalanceAfterFinalization = await lido.getPooledEthByShares(uncountedStETHShares);
@@ -514,18 +555,20 @@ describe("Happy Path", () => {
 
     const claimEvent = ctx.getEvents(claimTxReceipt, "WithdrawalClaimed")[0];
 
-    expect(claimEvent).not.to.be.undefined;
-    expect(claimEvent.args.requestId).to.equal(requestId, "WithdrawalClaimed event requestId");
-    expect(claimEvent.args.owner).to.equal(stranger, "WithdrawalClaimed event owner");
-    expect(claimEvent.args.receiver).to.equal(stranger, "WithdrawalClaimed event receiver");
-    expect(claimEvent.args.amountOfETH).to.equal(amountWithRewards, "WithdrawalClaimed event amountOfETH");
+    expect(claimEvent?.args.toObject()).to.deep.include({
+      requestId,
+      owner: stranger.address,
+      receiver: stranger.address,
+      amountOfETH: amountWithRewards,
+    }, "WithdrawalClaimed event");
 
     const transferEvent = ctx.getEvents(claimTxReceipt, "Transfer")[0];
 
-    expect(transferEvent).not.to.be.undefined;
-    expect(transferEvent.args.from).to.equal(stranger.address, "Transfer from (Stranger)");
-    expect(transferEvent.args.to).to.equal(ZeroAddress, "Transfer to (ZeroAddress)");
-    expect(transferEvent.args.tokenId).to.equal(requestId, "Transfer value");
+    expect(transferEvent?.args.toObject()).to.deep.include({
+      from: stranger.address,
+      to: ZeroAddress,
+      tokenId: requestId,
+    }, "Transfer event");
 
     const balanceAfterClaim = await getBalances(stranger);
 

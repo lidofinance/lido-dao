@@ -325,41 +325,36 @@ const simulateReport = async (
 
   const accountingOracleAccount = await impersonate(accountingOracle.address, ether("100"));
 
-  try {
-    log.debug("Simulating oracle report", {
-      "Ref Slot": refSlot,
-      "Beacon Validators": beaconValidators,
-      "CL Balance": ethers.formatEther(clBalance),
-      "Withdrawal Vault Balance": ethers.formatEther(withdrawalVaultBalance),
-      "El Rewards Vault Balance": ethers.formatEther(elRewardsVaultBalance),
-    });
+  log.debug("Simulating oracle report", {
+    "Ref Slot": refSlot,
+    "Beacon Validators": beaconValidators,
+    "CL Balance": ethers.formatEther(clBalance),
+    "Withdrawal Vault Balance": ethers.formatEther(withdrawalVaultBalance),
+    "El Rewards Vault Balance": ethers.formatEther(elRewardsVaultBalance),
+  });
 
-    const [postTotalPooledEther, postTotalShares, withdrawals, elRewards] = await lido
-      .connect(accountingOracleAccount)
-      .handleOracleReport.staticCall(
-        reportTimestamp,
-        1n * 24n * 60n * 60n, // 1 day
-        beaconValidators,
-        clBalance,
-        withdrawalVaultBalance,
-        elRewardsVaultBalance,
-        0n,
-        [],
-        0n,
-      );
+  const [postTotalPooledEther, postTotalShares, withdrawals, elRewards] = await lido
+    .connect(accountingOracleAccount)
+    .handleOracleReport.staticCall(
+      reportTimestamp,
+      1n * 24n * 60n * 60n, // 1 day
+      beaconValidators,
+      clBalance,
+      withdrawalVaultBalance,
+      elRewardsVaultBalance,
+      0n,
+      [],
+      0n,
+    );
 
-    log.debug("Simulation result", {
-      "Post Total Pooled Ether": ethers.formatEther(postTotalPooledEther),
-      "Post Total Shares": postTotalShares,
-      "Withdrawals": ethers.formatEther(withdrawals),
-      "El Rewards": ethers.formatEther(elRewards),
-    });
+  log.debug("Simulation result", {
+    "Post Total Pooled Ether": ethers.formatEther(postTotalPooledEther),
+    "Post Total Shares": postTotalShares,
+    "Withdrawals": ethers.formatEther(withdrawals),
+    "El Rewards": ethers.formatEther(elRewards),
+  });
 
-    return { postTotalPooledEther, postTotalShares, withdrawals, elRewards };
-  } catch (error) {
-    log.error("Error", (error as Error).message ?? "Unknown error during oracle report simulation");
-    expect(error).to.be.undefined;
-  }
+  return { postTotalPooledEther, postTotalShares, withdrawals, elRewards };
 };
 
 export const handleOracleReport = async (
@@ -566,6 +561,8 @@ export const submitReport = async (
     consensusVersion,
   });
 
+  log.debug("Pushing oracle report", data);
+
   const reportTx = await accountingOracle.connect(submitter).submitReportData(data, oracleVersion);
   await trace("accountingOracle.submitReportData", reportTx);
 
@@ -720,11 +717,6 @@ const reachConsensus = async (
   }
 
   const { consensusReport } = await hashConsensus.getConsensusState();
-
-  log.debug("Reaching consensus", {
-    "Consensus report": consensusReport,
-    "Report hash": reportHash,
-  });
 
   expect(consensusReport).to.equal(reportHash, "Consensus report hash is incorrect");
 
