@@ -41,7 +41,7 @@ describe("Burn Shares", () => {
     const lastFinalizedRequestId = await withdrawalQueue.getLastFinalizedRequestId();
     const lastRequestId = await withdrawalQueue.getLastRequestId();
 
-    expect(lastFinalizedRequestId).to.be.equal(lastRequestId);
+    expect(lastFinalizedRequestId).to.equal(lastRequestId);
   });
 
   it("Should allow stranger to submit ETH", async () => {
@@ -101,8 +101,8 @@ describe("Burn Shares", () => {
       "Total shares": totalSharesAfter,
     });
 
-    expect(sharesToBurnAfter).to.be.equal(0n, "Incorrect shares balance after burn");
-    expect(totalEthAfter).to.be.equal(totalEth, "Incorrect total ETH supply after burn");
-    expect(totalSharesAfter).to.be.equal(totalShares - sharesToBurn, "Incorrect total shares after burn");
+    expect(sharesToBurnAfter).to.equal(0n, "Incorrect shares balance after burn");
+    expect(totalEthAfter).to.equal(totalEth, "Incorrect total ETH supply after burn");
+    expect(totalSharesAfter).to.equal(totalShares - sharesToBurn, "Incorrect total shares after burn");
   });
 });

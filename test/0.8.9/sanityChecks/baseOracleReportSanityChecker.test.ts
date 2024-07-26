@@ -907,10 +907,10 @@ describe("OracleReportSanityChecker.sol", () => {
         await oracleReportSanityChecker.smoothenTokenRebase(
           ...(Object.values(defaultRebaseParams) as SmoothenTokenRebaseParameters),
         );
-      expect(withdrawals).to.be.equal(0);
-      expect(elRewards).to.be.equal(0);
-      expect(simulatedSharesToBurn).to.be.equal(0);
-      expect(sharesToBurn).to.be.equal(ether("10"));
+      expect(withdrawals).to.equal(0);
+      expect(elRewards).to.equal(0);
+      expect(simulatedSharesToBurn).to.equal(0);
+      expect(sharesToBurn).to.equal(ether("10"));
       // el rewards
       ({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
         await oracleReportSanityChecker.smoothenTokenRebase(
@@ -919,10 +919,10 @@ describe("OracleReportSanityChecker.sol", () => {
             elRewardsVaultBalance: ether("5"),
           }) as SmoothenTokenRebaseParameters),
         ));
-      expect(withdrawals).to.be.equal(0);
-      expect(elRewards).to.be.equal(ether("2"));
-      expect(simulatedSharesToBurn).to.be.equal(0);
-      expect(sharesToBurn).to.be.equal("9615384615384615384"); // 100. - 94. / 1.04
+      expect(withdrawals).to.equal(0);
+      expect(elRewards).to.equal(ether("2"));
+      expect(simulatedSharesToBurn).to.equal(0);
+      expect(sharesToBurn).to.equal("9615384615384615384"); // 100. - 94. / 1.04
       // withdrawals
       ({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
         await oracleReportSanityChecker.smoothenTokenRebase(
@@ -931,10 +931,10 @@ describe("OracleReportSanityChecker.sol", () => {
             withdrawalVaultBalance: ether("5"),
           }) as SmoothenTokenRebaseParameters),
         ));
-      expect(withdrawals).to.be.equal(ether("2"));
-      expect(elRewards).to.be.equal(0);
-      expect(simulatedSharesToBurn).to.be.equal(0);
-      expect(sharesToBurn).to.be.equal("9615384615384615384"); // 100. - 94. / 1.04
+      expect(withdrawals).to.equal(ether("2"));
+      expect(elRewards).to.equal(0);
+      expect(simulatedSharesToBurn).to.equal(0);
+      expect(sharesToBurn).to.equal("9615384615384615384"); // 100. - 94. / 1.04
       // withdrawals + el rewards
       ({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
         await oracleReportSanityChecker.smoothenTokenRebase(
@@ -944,10 +944,10 @@ describe("OracleReportSanityChecker.sol", () => {
             elRewardsVaultBalance: ether("5"),
           }) as SmoothenTokenRebaseParameters),
         ));
-      expect(withdrawals).to.be.equal(ether("2"));
-      expect(elRewards).to.be.equal(0);
-      expect(simulatedSharesToBurn).to.be.equal(0);
-      expect(sharesToBurn).to.be.equal("9615384615384615384"); // 100. - 94. / 1.04
+      expect(withdrawals).to.equal(ether("2"));
+      expect(elRewards).to.equal(0);
+      expect(simulatedSharesToBurn).to.equal(0);
+      expect(sharesToBurn).to.equal("9615384615384615384"); // 100. - 94. / 1.04
       // shares requested to burn
       ({ withdrawals, elRewards, simulatedSharesToBurn, sharesToBurn } =
         await oracleReportSanityChecker.smoothenTokenRebase(
@@ -956,10 +956,10 @@ describe("OracleReportSanityChecker.sol", () => {
             sharesRequestedToBurn: ether("5"),
           }) as SmoothenTokenRebaseParameters),
         ));
-      expect(withdrawals).to.be.equal(0);
-      expect(elRewards).to.be.equal(0);
-      expect(simulatedSharesToBurn).to.be.equal("1923076923076923076"); // ether("100. - (102. / 1.04))
-      expect(sharesToBurn).to.be.equal("11538461538461538461"); // ether("100. - (92. / 1.04))
+      expect(withdrawals).to.equal(0);
+      expect(elRewards).to.equal(0);
+      expect(simulatedSharesToBurn).to.equal("1923076923076923076"); // ether("100. - (102. / 1.04))
+      expect(sharesToBurn).to.equal("11538461538461538461"); // ether("100. - (92. / 1.04))
     });
 
     it("share rate ~1 case with huge withdrawal", async () => {
@@ -1031,7 +1031,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .withArgs(oldChurnLimit, oldChurnLimit + 1n);
 
       const { churnValidatorsPerDayLimit } = await oracleReportSanityChecker.getOracleReportLimits();
-      expect(churnValidatorsPerDayLimit).to.be.equal(oldChurnLimit);
+      expect(churnValidatorsPerDayLimit).to.equal(oldChurnLimit);
 
       const newChurnLimit = 30;
       expect(newChurnLimit).to.not.equal(oldChurnLimit);
@@ -1049,7 +1049,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
       await expect(tx).to.emit(oracleReportSanityChecker, "ChurnValidatorsPerDayLimitSet").withArgs(newChurnLimit);
       // assert.emits(tx, 'ChurnValidatorsPerDayLimitSet', { churnValidatorsPerDayLimit: newChurnLimit })
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit).to.be.equal(
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).churnValidatorsPerDayLimit).to.equal(
         newChurnLimit,
       );
 
@@ -1063,7 +1063,7 @@ describe("OracleReportSanityChecker.sol", () => {
       const churnLimit = defaultLimitsList.churnValidatorsPerDayLimit;
 
       const { churnValidatorsPerDayLimit } = await oracleReportSanityChecker.getOracleReportLimits();
-      expect(churnValidatorsPerDayLimit).to.be.equal(churnLimit);
+      expect(churnValidatorsPerDayLimit).to.equal(churnLimit);
 
       await oracleReportSanityChecker.checkAccountingOracleReport(
         ...(Object.values({
@@ -1094,7 +1094,7 @@ describe("OracleReportSanityChecker.sol", () => {
     it("checkExitBusOracleReport works", async () => {
       const maxRequests = defaultLimitsList.maxValidatorExitRequestsPerReport;
 
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.be.equal(
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.equal(
         maxRequests,
       );
 
@@ -1110,7 +1110,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(oracleReportSanityChecker.checkExitBusOracleReport(oldMaxRequests + 1n))
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectNumberOfExitRequestsPerReport")
         .withArgs(oldMaxRequests);
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.be.equal(
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.equal(
         oldMaxRequests,
       );
 
@@ -1131,7 +1131,7 @@ describe("OracleReportSanityChecker.sol", () => {
       await expect(tx)
         .to.emit(oracleReportSanityChecker, "MaxValidatorExitRequestsPerReportSet")
         .withArgs(newMaxRequests);
-      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.be.equal(
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxValidatorExitRequestsPerReport).to.equal(
         newMaxRequests,
       );
 
@@ -1165,7 +1165,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .setMaxNodeOperatorsPerExtraDataItemCount(newValue);
       expect(
         (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
-      ).to.be.equal(newValue);
+      ).to.equal(newValue);
       await expect(tx)
         .to.emit(oracleReportSanityChecker, "MaxNodeOperatorsPerExtraDataItemCountSet")
         .withArgs(newValue);
@@ -1187,7 +1187,7 @@ describe("OracleReportSanityChecker.sol", () => {
         .setMaxAccountingExtraDataListItemsCount(newValue);
       expect(
         (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
-      ).to.be.equal(newValue);
+      ).to.equal(newValue);
       await expect(tx).to.emit(oracleReportSanityChecker, "MaxAccountingExtraDataListItemsCountSet").withArgs(newValue);
     });
 

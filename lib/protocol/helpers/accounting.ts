@@ -299,7 +299,7 @@ export const waitNextAvailableReportTime = async (ctx: ProtocolContext): Promise
     "Ref slot": nextFrame.refSlot,
   });
 
-  expect(nextFrame.refSlot).to.be.equal(refSlot + slotsPerFrame, "Next frame refSlot is incorrect");
+  expect(nextFrame.refSlot).to.equal(refSlot + slotsPerFrame, "Next frame refSlot is incorrect");
 };
 
 /**
@@ -597,17 +597,17 @@ export const submitReport = async (
     "State extra data items submitted": state.extraDataItemsSubmitted,
   });
 
-  expect(state.currentFrameRefSlot).to.be.equal(refSlot, "Processing state ref slot is incorrect");
-  expect(state.mainDataHash).to.be.equal(hash, "Processing state main data hash is incorrect");
+  expect(state.currentFrameRefSlot).to.equal(refSlot, "Processing state ref slot is incorrect");
+  expect(state.mainDataHash).to.equal(hash, "Processing state main data hash is incorrect");
   expect(state.mainDataSubmitted).to.be.true;
-  expect(state.extraDataHash).to.be.equal(extraDataHash, "Processing state extra data hash is incorrect");
-  expect(state.extraDataFormat).to.be.equal(extraDataFormat, "Processing state extra data format is incorrect");
+  expect(state.extraDataHash).to.equal(extraDataHash, "Processing state extra data hash is incorrect");
+  expect(state.extraDataFormat).to.equal(extraDataFormat, "Processing state extra data format is incorrect");
   expect(state.extraDataSubmitted).to.be.true;
-  expect(state.extraDataItemsCount).to.be.equal(
+  expect(state.extraDataItemsCount).to.equal(
     extraDataItemsCount,
     "Processing state extra data items count is incorrect",
   );
-  expect(state.extraDataItemsSubmitted).to.be.equal(
+  expect(state.extraDataItemsSubmitted).to.equal(
     extraDataItemsCount,
     "Processing state extra data items submitted is incorrect",
   );
@@ -726,7 +726,7 @@ const reachConsensus = async (
     "Report hash": reportHash,
   });
 
-  expect(consensusReport).to.be.equal(reportHash, "Consensus report hash is incorrect");
+  expect(consensusReport).to.equal(reportHash, "Consensus report hash is incorrect");
 
   return submitter as HardhatEthersSigner;
 };

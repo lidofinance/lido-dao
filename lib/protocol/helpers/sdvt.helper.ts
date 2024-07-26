@@ -37,7 +37,7 @@ export const sdvtEnsureOperators = async (
 
     const nodeOperatorAfter = await sdvt.getNodeOperator(operatorId, false);
 
-    expect(nodeOperatorAfter.totalVettedValidators).to.be.equal(nodeOperatorBefore.totalAddedValidators);
+    expect(nodeOperatorAfter.totalVettedValidators).to.equal(nodeOperatorBefore.totalAddedValidators);
   }
 };
 
@@ -103,7 +103,7 @@ const sdvtEnsureMinOperators = async (ctx: ProtocolContext, minOperatorsCount = 
 
   const after = await sdvt.getNodeOperatorsCount();
 
-  expect(after).to.be.equal(before + count);
+  expect(after).to.equal(before + count);
   expect(after).to.be.gte(minOperatorsCount);
 
   log.debug("Checked SDVT operators count", {
@@ -181,8 +181,8 @@ const sdvtAddNodeOperatorKeys = async (
   const totalKeysAfter = await sdvt.getTotalSigningKeyCount(operatorId);
   const unusedKeysAfter = await sdvt.getUnusedSigningKeyCount(operatorId);
 
-  expect(totalKeysAfter).to.be.equal(totalKeysBefore + keysToAdd);
-  expect(unusedKeysAfter).to.be.equal(unusedKeysBefore + keysToAdd);
+  expect(totalKeysAfter).to.equal(totalKeysBefore + keysToAdd);
+  expect(unusedKeysAfter).to.equal(unusedKeysBefore + keysToAdd);
 
   log.debug("Added SDVT fake signing keys", {
     "Operator ID": operatorId,

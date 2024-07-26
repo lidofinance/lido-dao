@@ -32,7 +32,7 @@ export const norEnsureOperators = async (
 
     const nodeOperatorAfter = await nor.getNodeOperator(operatorId, false);
 
-    expect(nodeOperatorAfter.totalVettedValidators).to.be.equal(nodeOperatorBefore.totalAddedValidators);
+    expect(nodeOperatorAfter.totalVettedValidators).to.equal(nodeOperatorBefore.totalAddedValidators);
   }
 
   log.debug("Checked NOR operators count", {
@@ -94,7 +94,7 @@ const norEnsureMinOperators = async (ctx: ProtocolContext, minOperatorsCount = M
 
   const after = await nor.getNodeOperatorsCount();
 
-  expect(after).to.be.equal(before + count);
+  expect(after).to.equal(before + count);
   expect(after).to.be.gte(minOperatorsCount);
 };
 
@@ -163,8 +163,8 @@ export const norAddOperatorKeys = async (
   const totalKeysAfter = await nor.getTotalSigningKeyCount(operatorId);
   const unusedKeysAfter = await nor.getUnusedSigningKeyCount(operatorId);
 
-  expect(totalKeysAfter).to.be.equal(totalKeysBefore + keysToAdd);
-  expect(unusedKeysAfter).to.be.equal(unusedKeysBefore + keysToAdd);
+  expect(totalKeysAfter).to.equal(totalKeysBefore + keysToAdd);
+  expect(unusedKeysAfter).to.equal(unusedKeysBefore + keysToAdd);
 
   log.debug("Added NOR fake signing keys", {
     "Operator ID": operatorId,
