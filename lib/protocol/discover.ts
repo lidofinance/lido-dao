@@ -17,8 +17,6 @@ import {
   StakingModuleContracts,
 } from "./types";
 
-// TODO: inflate config from whatever source is available (yaml, json, etc)
-
 const guard = (address: string, env: string) => {
   if (!address) throw new Error(`${address} address is not set, please set it in the environment variables: ${env}`);
 };

@@ -1,8 +1,16 @@
 import * as process from "node:process";
 
-import { parseLocalDeploymentJson } from "lib";
-
 import { ProtocolNetworkItems } from "./types";
+
+export async function parseLocalDeploymentJson() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - file is missing out of the box, that's why we need to catch the error
+    return await import("../../deployed-local.json");
+  } catch (e) {
+    throw new Error("Failed to parse deployed-local.json. Did you run scratch deploy?");
+  }
+}
 
 export class ProtocolNetworkConfig {
   constructor(

@@ -1,6 +1,19 @@
 declare namespace NodeJS {
   export interface ProcessEnv {
-    /* for local development and testing */
+    /* forking url for hardhat internal node, required for tracing e.g. */
+    HARDHAT_FORKING_URL?: string;
+
+    /* logging verbosity */
+    LOG_LEVEL?: "all" | "debug" | "info" | "warn" | "error" | "none";
+
+    /* flags for changing the behavior of the integration tests */
+    INTEGRATION_SIMPLE_DVT_MODULE?: "on" | "off";
+
+    /**
+     * Network configuration for the protocol discovery.
+     */
+
+    /* for local development */
     LOCAL_RPC_URL: string;
     LOCAL_LOCATOR_ADDRESS: string;
     LOCAL_AGENT_ADDRESS: string;
@@ -24,8 +37,7 @@ declare namespace NodeJS {
     LOCAL_WITHDRAWAL_QUEUE_ADDRESS?: string;
     LOCAL_WITHDRAWAL_VAULT_ADDRESS?: string;
 
-
-    /* for mainnet testing */
+    /* for mainnet fork testing */
     MAINNET_RPC_URL: string;
     MAINNET_LOCATOR_ADDRESS: string;
     MAINNET_AGENT_ADDRESS: string;
@@ -48,8 +60,5 @@ declare namespace NodeJS {
     MAINNET_VALIDATORS_EXIT_BUS_ORACLE_ADDRESS?: string;
     MAINNET_WITHDRAWAL_QUEUE_ADDRESS?: string;
     MAINNET_WITHDRAWAL_VAULT_ADDRESS?: string;
-
-    HARDHAT_FORKING_URL?: string;
-    LOG_LEVEL?: "all" | "debug" | "info" | "warn" | "error" | "none";
   }
 }

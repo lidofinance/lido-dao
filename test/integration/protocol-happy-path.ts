@@ -34,20 +34,10 @@ describe("Happy Path", () => {
   let uncountedStETHShares: bigint;
   let amountWithRewards: bigint;
 
-  let withSimpleDVT: boolean;
-
   before(async () => {
     ctx = await getProtocolContext();
 
     [stEthHolder, ethHolder, stranger] = await ethers.getSigners();
-
-    const modules = await ctx.contracts.stakingRouter.getStakingModules();
-    withSimpleDVT = modules.length > 1;
-
-    log.debug("Modules", {
-      "Modules count": modules.length,
-      "With Simple DVT": withSimpleDVT,
-    });
 
     snapshot = await Snapshot.take();
   });
@@ -87,7 +77,7 @@ describe("Happy Path", () => {
     await norEnsureOperators(ctx, 3n, 5n);
     expect(await ctx.contracts.nor.getNodeOperatorsCount()).to.be.at.least(3n);
 
-    if (withSimpleDVT) {
+    if (ctx.flags.withSimpleDvtModule) {
       await sdvtEnsureOperators(ctx, 3n, 5n);
       expect(await ctx.contracts.sdvt.getNodeOperatorsCount()).to.be.at.least(3n);
     }
@@ -226,7 +216,7 @@ describe("Happy Path", () => {
     const depositCountsNor = unbufferedAmountNor / ether("32");
     let expectedBufferedEtherAfterDeposit = bufferedEtherBeforeDeposit - unbufferedAmountNor;
 
-    if (withSimpleDVT) {
+    if (ctx.flags.withSimpleDvtModule) {
       const depositSdvtTx = await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, SIMPLE_DVT_MODULE_ID, ZERO_HASH);
       const depositSdvtReceipt = await trace<ContractTransactionReceipt>("lido.deposit (Simple DVT)", depositSdvtTx);
 
@@ -289,7 +279,7 @@ describe("Happy Path", () => {
     let expectedTransfers = norStatus.activeOperators;
 
     let sdvtStatusLog = {};
-    if (withSimpleDVT) {
+    if (ctx.flags.withSimpleDvtModule) {
       const sdvtStatus = await getNodeOperatorsStatus(sdvt);
 
       expectedBurnerTransfers += sdvtStatus.hasPenalizedOperators ? 1n : 0n;
@@ -340,10 +330,10 @@ describe("Happy Path", () => {
 
     const toBurnerTransfer = transferEvents[0];
     const toNorTransfer = transferEvents[1];
-    const toSdvtTransfer = withSimpleDVT ? transferEvents[2] : undefined;
-    const toTreasuryTransfer = withSimpleDVT ? transferEvents[3] : transferEvents[2];
+    const toSdvtTransfer = ctx.flags.withSimpleDvtModule ? transferEvents[2] : undefined;
+    const toTreasuryTransfer = ctx.flags.withSimpleDvtModule ? transferEvents[3] : transferEvents[2];
 
-    const expectedTransferEvents = withSimpleDVT ? 4 : 3;
+    const expectedTransferEvents = ctx.flags.withSimpleDvtModule ? 4 : 3;
 
     expect(transferEvents.length).to.equal(expectedTransferEvents, "Transfer events count");
 
@@ -357,7 +347,7 @@ describe("Happy Path", () => {
       to: nor.address,
     }, "Transfer to NOR");
 
-    if (withSimpleDVT) {
+    if (ctx.flags.withSimpleDvtModule) {
       expect(toSdvtTransfer?.args.toObject()).to.include({
         from: ZeroAddress,
         to: sdvt.address,

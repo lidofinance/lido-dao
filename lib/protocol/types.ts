@@ -125,10 +125,15 @@ export type ProtocolSigners = {
 
 export type Signer = keyof ProtocolSigners;
 
+export type ProtocolContextFlags = {
+  withSimpleDvtModule: boolean;
+}
+
 export type ProtocolContext = {
   contracts: ProtocolContracts;
   signers: ProtocolSigners;
   interfaces: Array<BaseContract["interface"]>;
+  flags: ProtocolContextFlags;
   getSigner: (signer: Signer, balance?: bigint) => Promise<HardhatEthersSigner>;
   getEvents: (receipt: ContractTransactionReceipt, eventName: string) => LogDescription[];
 };
