@@ -1,6 +1,6 @@
 name: Integration Tests
 
-on: [ push ]
+on: [push]
 
 jobs:
   test_hardhat_integration:
@@ -28,4 +28,4 @@ jobs:
       - name: Run integration tests
         run: yarn test:integration:fork
         env:
-          DEBUG_LOGS: true
+          LOG_LEVEL: debug

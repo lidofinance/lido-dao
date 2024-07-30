@@ -50,5 +50,6 @@ declare namespace NodeJS {
     MAINNET_WITHDRAWAL_VAULT_ADDRESS?: string;
 
     HARDHAT_FORKING_URL?: string;
+    LOG_LEVEL?: "all" | "debug" | "info" | "warn" | "error" | "none";
   }
 }
