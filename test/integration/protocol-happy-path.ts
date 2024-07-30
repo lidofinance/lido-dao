@@ -6,7 +6,13 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { batch, ether, impersonate, log, trace, updateBalance } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import { finalizeWithdrawalQueue, OracleReportOptions, report, sdvtEnsureOperators } from "lib/protocol/helpers";
+import {
+  finalizeWithdrawalQueue,
+  norEnsureOperators,
+  OracleReportOptions,
+  report,
+  sdvtEnsureOperators,
+} from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
@@ -77,13 +83,17 @@ describe("Happy Path", () => {
     expect(lastFinalizedRequestId).to.equal(lastRequestId);
   });
 
-  it("Should have some Simple DVT operators", async () => {
-    await sdvtEnsureOperators(ctx, 3n, 5n);
+  it("Should have at least 3 node operators in every module", async () => {
+    await norEnsureOperators(ctx, 3n, 5n);
+    expect(await ctx.contracts.nor.getNodeOperatorsCount()).to.be.at.least(3n);
 
-    expect(await ctx.contracts.sdvt.getNodeOperatorsCount()).to.be.least(3n);
+    if (withSimpleDVT) {
+      await sdvtEnsureOperators(ctx, 3n, 5n);
+      expect(await ctx.contracts.sdvt.getNodeOperatorsCount()).to.be.at.least(3n);
+    }
   });
 
-  it("Should allow ETH holders to submit stake", async () => {
+  it("Should allow ETH holders to submit 100 ETH stake", async () => {
     const { lido } = ctx.contracts;
 
     await updateBalance(stranger.address, ether("1000000"));
@@ -186,7 +196,7 @@ describe("Happy Path", () => {
     }
   });
 
-  it("Should deposit ETH to node operators", async () => {
+  it("Should deposit 100 ETH to node operators", async () => {
     const { lido, withdrawalQueue } = ctx.contracts;
 
     const { depositSecurityModule } = ctx.contracts;
@@ -398,7 +408,7 @@ describe("Happy Path", () => {
     expect(postTotalShares).to.equal(preTotalShares + sharesMintedAsFees - burntShares, "Post total shares");
   });
 
-  it("Should allow request withdrawals", async () => {
+  it("Should allow stETH holder to request withdrawals", async () => {
     const { lido, withdrawalQueue } = ctx.contracts;
 
     const withdrawalsFromStrangerBeforeRequest = await withdrawalQueue.connect(stranger).getWithdrawalRequests(stranger);
@@ -502,7 +512,7 @@ describe("Happy Path", () => {
 
     const lockedEtherAmountBeforeFinalization = await withdrawalQueue.getLockedEtherAmount();
 
-    const reportParams = { clDiff: ether("100") };
+    const reportParams = { clDiff: ether("0.0005") }; // simulate some rewards
     const { reportTx } = (await report(ctx, reportParams)) as { reportTx: TransactionResponse };
 
     const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
@@ -511,6 +521,12 @@ describe("Happy Path", () => {
 
     const lockedEtherAmountAfterFinalization = await withdrawalQueue.getLockedEtherAmount();
     const expectedLockedEtherAmountAfterFinalization = lockedEtherAmountAfterFinalization - amountWithRewards;
+
+    log.debug("Locked ether amount", {
+      "Before finalization": ethers.formatEther(lockedEtherAmountBeforeFinalization),
+      "After finalization": ethers.formatEther(lockedEtherAmountAfterFinalization),
+      "Amount with rewards": ethers.formatEther(amountWithRewards),
+    });
 
     expect(lockedEtherAmountBeforeFinalization).to.equal(expectedLockedEtherAmountAfterFinalization, "Locked ether amount after finalization");
 
