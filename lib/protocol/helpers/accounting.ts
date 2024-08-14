@@ -559,12 +559,13 @@ export const submitReport = async (
     consensusVersion,
   });
 
-  log.debug("Pushing oracle report", data);
+  log.debug("Pushing oracle report 2", data);
 
   const reportTx = await accountingOracle.connect(submitter).submitReportData(data, oracleVersion);
+
   await trace("accountingOracle.submitReportData", reportTx);
 
-  log.debug("Pushing oracle report", {
+  log.debug("Pushing oracle report 3", {
     "Ref slot": refSlot,
     "Consensus version": consensusVersion,
     "Report hash": hash,
