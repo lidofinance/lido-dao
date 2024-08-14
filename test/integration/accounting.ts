@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ContractTransactionReceipt, LogDescription } from "ethers";
 import { ethers } from "hardhat";
 
-import { ether, findEventsWithInterfaces, impersonate, ONE_GWEI } from "lib";
+import { ether, findEventsWithInterfaces, impersonate, ONE_GWEI, updateBalance } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
 import { report } from "lib/protocol/helpers";
 
@@ -74,9 +74,9 @@ describe("Accounting integration", () => {
     expect(tokenRebasedEvent.args.preTotalEther).to.be.greaterThanOrEqual(0);
     expect(tokenRebasedEvent.args.postTotalEther).to.be.greaterThanOrEqual(0);
     return [
-      tokenRebasedEvent.args.preTotalEther * SHARE_RATE_PRECISION / tokenRebasedEvent.args.preTotalShares,
-      tokenRebasedEvent.args.postTotalEther * SHARE_RATE_PRECISION / tokenRebasedEvent.args.postTotalShares
-    ]
+      (tokenRebasedEvent.args.preTotalEther * SHARE_RATE_PRECISION) / tokenRebasedEvent.args.preTotalShares,
+      (tokenRebasedEvent.args.postTotalEther * SHARE_RATE_PRECISION) / tokenRebasedEvent.args.postTotalShares,
+    ];
   };
 
   // Get shares burn limit from oracle report sanity checker contract when NO changes in pooled Ether are expected
@@ -84,9 +84,8 @@ describe("Accounting integration", () => {
     const rebaseLimit = await ctx.contracts.oracleReportSanityChecker.getMaxPositiveTokenRebase();
     const rebaseLimitPlus1 = rebaseLimit + LIMITER_PRECISION_BASE;
 
-    return (await ctx.contracts.lido.getTotalShares()) * rebaseLimit / rebaseLimitPlus1;
-  }
-
+    return ((await ctx.contracts.lido.getTotalShares()) * rebaseLimit) / rebaseLimitPlus1;
+  };
 
   it("Should account correctly with no CL rebase", async () => {
     const { lido, accountingOracle } = ctx.contracts;
@@ -298,9 +297,7 @@ describe("Accounting integration", () => {
   it("Should account correctly normal EL rewards", async () => {
     const { lido, accountingOracle, elRewardsVault } = ctx.contracts;
 
-    const accounts = await ethers.getSigners();
-    // Transfer 1 ETH to the elVault
-    await accounts[0].sendTransaction({ to: elRewardsVault.address, value: ether("1.0") });
+    await updateBalance(elRewardsVault.address, ether("1"));
 
     const elRewards = await ethers.provider.getBalance(elRewardsVault.address);
     expect(elRewards).to.be.greaterThan(0);
@@ -455,5 +452,219 @@ describe("Accounting integration", () => {
 
     expect(getEvents(reportTxReceipt, "WithdrawalsReceived").length).be.equal(0);
     expect(getEvents(reportTxReceipt, "ELRewardsReceived").length).be.equal(0);
+  });
+
+  it("Should account correctly with withdrawals at limits", async () => {
+    const { lido, accountingOracle, withdrawalVault, stakingRouter } = ctx.contracts;
+
+    const withdrawals = await rebaseLimitWei();
+    await impersonate(withdrawalVault.address, withdrawals);
+
+    const lastProcessingRefSlotBefore = await accountingOracle.getLastProcessingRefSlot();
+    const totalELRewardsCollectedBefore = await lido.getTotalELRewardsCollected();
+    const totalPooledEtherBefore = await lido.getTotalPooledEther();
+    const totalSharesBefore = await lido.getTotalShares();
+
+    const { reportTx } = await report(ctx, { clDiff: 0n, reportElVault: false, reportWithdrawalsVault: true });
+
+    const reportTxReceipt = (await reportTx!.wait()) as ContractTransactionReceipt;
+
+    const { amountOfETHLocked, sharesBurntAmount } = getWithdrawalParams(reportTxReceipt);
+
+    const lastProcessingRefSlotAfter = await accountingOracle.getLastProcessingRefSlot();
+    expect(lastProcessingRefSlotBefore).to.be.lessThan(lastProcessingRefSlotAfter);
+
+    const totalELRewardsCollectedAfter = await lido.getTotalELRewardsCollected();
+    expect(totalELRewardsCollectedBefore).to.equal(totalELRewardsCollectedAfter);
+
+    const totalPooledEtherAfter = await lido.getTotalPooledEther();
+    expect(totalPooledEtherBefore + withdrawals).to.equal(totalPooledEtherAfter + amountOfETHLocked);
+
+    const sharesAsFeesList = (await getEvents(reportTxReceipt, "TransferShares")).map((e) => e.args.sharesValue);
+
+    let mintedSharesSum = 0n;
+
+    if (amountOfETHLocked == 0) {
+      // no withdrawals processed
+      // Expected transfer of shares to NodeOperatorsRegistry, sDVT and DAO
+      expect(sharesAsFeesList.length).to.equal(3);
+
+      const simpleDVTStats = await stakingRouter.getStakingModule(2);
+      const simpleDVTTreasuryFee =
+        (((sharesAsFeesList[1] * 10000n) / simpleDVTStats.stakingModuleFee) * simpleDVTStats.treasuryFee) / 10000n;
+
+      // Shares minted to DAO and NodeOperatorsRegistry mismatch
+      expect(sharesAsFeesList[0] + simpleDVTTreasuryFee).to.approximately(sharesAsFeesList[2], 100);
+
+      mintedSharesSum = sharesAsFeesList[0] + sharesAsFeesList[1] + sharesAsFeesList[2];
+    } else {
+      const stakingModulesCount = await stakingRouter.getStakingModulesCount();
+
+      // Expected transfer of shares to NodeOperatorsRegistry and DAO
+      expect(sharesAsFeesList.length).to.equal(2n + stakingModulesCount);
+
+      const simpleDVTStats = await stakingRouter.getStakingModule(2);
+      const simpleDVTTreasuryFee =
+        (((sharesAsFeesList[2] * 10000n) / simpleDVTStats.stakingModuleFee) * simpleDVTStats.treasuryFee) / 10000n;
+
+      // Shares minted to DAO and NodeOperatorsRegistry mismatch
+      expect(sharesAsFeesList[1] + simpleDVTTreasuryFee).to.approximately(
+        sharesAsFeesList[Number(stakingModulesCount) + 1],
+        100,
+      );
+
+      mintedSharesSum = sharesAsFeesList[1] + sharesAsFeesList[2] + sharesAsFeesList[3];
+    }
+
+    const tokenRebasedEvent = getFirstEvent(reportTxReceipt, "TokenRebased");
+    expect(tokenRebasedEvent.args.sharesMintedAsFees).to.equal(mintedSharesSum);
+
+    const totalSharesAfter = await lido.getTotalShares();
+    expect(totalSharesBefore + mintedSharesSum).to.equal(totalSharesAfter + sharesBurntAmount);
+
+    const [sharesRateBefore, sharesRateAfter] = sharesRateFromEvent(reportTxReceipt);
+    expect(sharesRateAfter).to.be.greaterThan(sharesRateBefore);
+
+    const withdrawalsReceivedEvent = getEvents(reportTxReceipt, "WithdrawalsReceived")[0];
+    expect(withdrawalsReceivedEvent.args.amount).to.equal(withdrawals);
+
+    const withdrawalVaultBalanceAfter = await ethers.provider.getBalance(withdrawalVault.address);
+    expect(withdrawalVaultBalanceAfter).to.equal(0);
+  });
+
+  it("Should account correctly with withdrawals above limits", async () => {
+    const { lido, accountingOracle, withdrawalVault, stakingRouter } = ctx.contracts;
+
+    const expectedWithdrawals = await rebaseLimitWei();
+    const withdrawalsExcess = ether("10");
+    const withdrawals = expectedWithdrawals + withdrawalsExcess;
+    await impersonate(withdrawalVault.address, withdrawals);
+
+    const lastProcessingRefSlotBefore = await accountingOracle.getLastProcessingRefSlot();
+    const totalELRewardsCollectedBefore = await lido.getTotalELRewardsCollected();
+    const totalPooledEtherBefore = await lido.getTotalPooledEther();
+    const totalSharesBefore = await lido.getTotalShares();
+
+    const { reportTx } = await report(ctx, { clDiff: 0n, reportElVault: false, reportWithdrawalsVault: true });
+
+    const reportTxReceipt = (await reportTx!.wait()) as ContractTransactionReceipt;
+
+    const { amountOfETHLocked, sharesBurntAmount } = getWithdrawalParams(reportTxReceipt);
+
+    const lastProcessingRefSlotAfter = await accountingOracle.getLastProcessingRefSlot();
+    expect(lastProcessingRefSlotBefore).to.be.lessThan(lastProcessingRefSlotAfter);
+
+    const totalELRewardsCollectedAfter = await lido.getTotalELRewardsCollected();
+    expect(totalELRewardsCollectedBefore).to.equal(totalELRewardsCollectedAfter);
+
+    const totalPooledEtherAfter = await lido.getTotalPooledEther();
+    expect(totalPooledEtherBefore + expectedWithdrawals).to.equal(totalPooledEtherAfter + amountOfETHLocked);
+
+    const sharesAsFeesList = (await getEvents(reportTxReceipt, "TransferShares")).map((e) => e.args.sharesValue);
+
+    let mintedSharesSum = 0n;
+
+    if (amountOfETHLocked == 0) {
+      // no withdrawals processed
+      // Expected transfer of shares to NodeOperatorsRegistry, sDVT and DAO
+      expect(sharesAsFeesList.length).to.equal(3);
+
+      const simpleDVTStats = await stakingRouter.getStakingModule(2);
+      const simpleDVTTreasuryFee =
+        (((sharesAsFeesList[1] * 10000n) / simpleDVTStats.stakingModuleFee) * simpleDVTStats.treasuryFee) / 10000n;
+
+      // Shares minted to DAO and NodeOperatorsRegistry mismatch
+      expect(sharesAsFeesList[0] + simpleDVTTreasuryFee).to.approximately(sharesAsFeesList[2], 100);
+
+      mintedSharesSum = sharesAsFeesList[0] + sharesAsFeesList[1] + sharesAsFeesList[2];
+    } else {
+      const stakingModulesCount = await stakingRouter.getStakingModulesCount();
+
+      // Expected transfer of shares to NodeOperatorsRegistry and DAO
+      expect(sharesAsFeesList.length).to.equal(2n + stakingModulesCount);
+
+      // transfer recipients:
+      // 0 - burner
+      // 1 - staking_modules[0] : node operators registry
+      // 2 - staking_modules[1] : simple DVT
+      // 3 - treasury
+
+      // the staking modules ids starts from 1, so SDVT has id = 2
+      const simpleDVTStats = await stakingRouter.getStakingModule(2);
+      const simpleDVTTreasuryFee =
+        (((sharesAsFeesList[2] * 10000n) / simpleDVTStats.stakingModuleFee) * simpleDVTStats.treasuryFee) / 10000n;
+
+      // Shares minted to DAO and NodeOperatorsRegistry mismatch
+      expect(sharesAsFeesList[1] + simpleDVTTreasuryFee).to.approximately(
+        sharesAsFeesList[Number(stakingModulesCount) + 1],
+        100,
+      );
+
+      mintedSharesSum = sharesAsFeesList[1] + sharesAsFeesList[2] + sharesAsFeesList[3];
+    }
+
+    const tokenRebasedEvent = getFirstEvent(reportTxReceipt, "TokenRebased");
+    expect(tokenRebasedEvent.args.sharesMintedAsFees).to.equal(mintedSharesSum);
+
+    const totalSharesAfter = await lido.getTotalShares();
+    expect(totalSharesBefore + mintedSharesSum).to.equal(totalSharesAfter + sharesBurntAmount);
+
+    const [sharesRateBefore, sharesRateAfter] = sharesRateFromEvent(reportTxReceipt);
+    expect(sharesRateAfter).to.be.greaterThan(sharesRateBefore);
+
+    const withdrawalsReceivedEvent = getFirstEvent(reportTxReceipt, "WithdrawalsReceived");
+    expect(withdrawalsReceivedEvent.args.amount).to.equal(expectedWithdrawals);
+
+    const withdrawalVaultBalanceAfter = await ethers.provider.getBalance(withdrawalVault.address);
+    expect(withdrawalVaultBalanceAfter).to.equal(withdrawalsExcess);
+  });
+
+  it("Should account correctly shares burn at limits", async () => {
+    const { lido, burner, wstETH } = ctx.contracts;
+
+    const sharesLimit = await sharesBurnLimitNoPooledEtherChanges();
+    const initialBurnerBalance = await lido.sharesOf(burner.address);
+    expect(await lido.sharesOf(wstETH.address)).to.be.greaterThan(sharesLimit);
+
+    const stethOfShares = await lido.getPooledEthByShares(sharesLimit);
+    const wstEthSigner = await impersonate(wstETH.address, ether("1"));
+    await lido.connect(wstEthSigner).approve(burner.address, stethOfShares);
+
+    const coverShares = sharesLimit / 3n;
+    const noCoverShares = sharesLimit - sharesLimit / 3n;
+
+    const lidoSigner = await impersonate(lido.address);
+
+    const tx1 = await burner.connect(lidoSigner).requestBurnShares(wstETH.address, noCoverShares);
+    const tx1Receipt = (await tx1.wait()) as ContractTransactionReceipt;
+    const sharesBurntRequestEvent1 = getFirstEvent(tx1Receipt, "StETHBurnRequested");
+    expect(sharesBurntRequestEvent1.args.amountOfShares).to.equal(noCoverShares);
+    expect(sharesBurntRequestEvent1.args.isCover).to.be.false;
+    expect(await lido.sharesOf(burner.address)).to.equal(noCoverShares + initialBurnerBalance);
+
+    const tx2 = await burner.connect(lidoSigner).requestBurnSharesForCover(wstETH.address, coverShares);
+    const tx2Receipt = (await tx2.wait()) as ContractTransactionReceipt;
+    const sharesBurntRequestEvent2 = getFirstEvent(tx2Receipt, "StETHBurnRequested");
+    expect(sharesBurntRequestEvent2.args.amountOfShares).to.equal(coverShares);
+    expect(sharesBurntRequestEvent2.args.isCover).to.be.true;
+    expect(await lido.sharesOf(burner.address)).to.equal(sharesLimit + initialBurnerBalance);
+
+    const totalSharesBefore = await lido.getTotalShares();
+
+    const { reportTx } = await report(ctx, { clDiff: 0n, excludeVaultsBalances: true });
+
+    const reportTxReceipt = (await reportTx!.wait()) as ContractTransactionReceipt;
+
+    const { sharesBurntAmount, sharesToBurn } = getWithdrawalParams(reportTxReceipt);
+
+    const burntDueToWithdrawals = sharesToBurn - (await lido.sharesOf(burner.address)) + initialBurnerBalance;
+    expect(burntDueToWithdrawals).to.be.greaterThan(0);
+
+    expect(sharesBurntAmount - burntDueToWithdrawals).to.equal(sharesLimit);
+    const [sharesRateBefore, sharesRateAfter] = sharesRateFromEvent(reportTxReceipt);
+
+    expect(sharesRateAfter).to.be.greaterThan(sharesRateBefore);
+
+    expect(totalSharesBefore - sharesLimit).to.equal((await lido.getTotalShares()) + burntDueToWithdrawals);
   });
 });
