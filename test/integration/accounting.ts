@@ -30,6 +30,12 @@ describe("Accounting integration", () => {
     return findEventsWithInterfaces(receipt, eventName, ctx.interfaces);
   };
 
+  const getFirstEvent = (receipt: ContractTransactionReceipt, eventName: string) => {
+    const events = getEvents(receipt, eventName);
+    expect(events.length).to.be.greaterThan(0);
+    return events[0];
+  };
+
   const shareRateFromEvent = (tokenRebasedEvent: LogDescription) => {
     const sharesRateBefore =
       (tokenRebasedEvent.args.preTotalEther * SHARE_RATE_PRECISION) / tokenRebasedEvent.args.preTotalShares;
@@ -47,18 +53,40 @@ describe("Accounting integration", () => {
 
     const maxPositiveTokeRebase = await oracleReportSanityChecker.getMaxPositiveTokenRebase();
     const totalPooledEther = await lido.getTotalPooledEther();
+    expect(maxPositiveTokeRebase).to.be.greaterThanOrEqual(0);
+    expect(totalPooledEther).to.be.greaterThanOrEqual(0);
     return (maxPositiveTokeRebase * totalPooledEther) / LIMITER_PRECISION_BASE;
   };
 
   const getWithdrawalParams = (tx: ContractTransactionReceipt) => {
     const withdrawalsFinalized = getEvents(tx, "WithdrawalsFinalized");
     const amountOfETHLocked = withdrawalsFinalized.length > 0 ? withdrawalsFinalized[0].args.amountOfETHLocked : 0n;
+    const sharesToBurn = withdrawalsFinalized.length > 0 ? withdrawalsFinalized[0].args.sharesToBurn : 0n;
 
     const sharesBurnt = getEvents(tx, "SharesBurnt");
     const sharesBurntAmount = sharesBurnt.length > 0 ? sharesBurnt[0].args.sharesAmount : 0n;
 
-    return { amountOfETHLocked, sharesBurntAmount };
+    return { amountOfETHLocked, sharesBurntAmount, sharesToBurn };
   };
+
+  const sharesRateFromEvent = (tx: ContractTransactionReceipt) => {
+    const tokenRebasedEvent = getFirstEvent(tx, "TokenRebased");
+    expect(tokenRebasedEvent.args.preTotalEther).to.be.greaterThanOrEqual(0);
+    expect(tokenRebasedEvent.args.postTotalEther).to.be.greaterThanOrEqual(0);
+    return [
+      tokenRebasedEvent.args.preTotalEther * SHARE_RATE_PRECISION / tokenRebasedEvent.args.preTotalShares,
+      tokenRebasedEvent.args.postTotalEther * SHARE_RATE_PRECISION / tokenRebasedEvent.args.postTotalShares
+    ]
+  };
+
+  // Get shares burn limit from oracle report sanity checker contract when NO changes in pooled Ether are expected
+  const sharesBurnLimitNoPooledEtherChanges = async () => {
+    const rebaseLimit = await ctx.contracts.oracleReportSanityChecker.getMaxPositiveTokenRebase();
+    const rebaseLimitPlus1 = rebaseLimit + LIMITER_PRECISION_BASE;
+
+    return (await ctx.contracts.lido.getTotalShares()) * rebaseLimit / rebaseLimitPlus1;
+  }
+
 
   it("Should account correctly with no CL rebase", async () => {
     const { lido, accountingOracle } = ctx.contracts;
