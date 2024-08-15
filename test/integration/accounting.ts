@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ContractTransactionReceipt, LogDescription, ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
+import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import { ether, findEventsWithInterfaces, impersonate, ONE_GWEI, updateBalance } from "lib";
@@ -19,9 +20,12 @@ const MAX_BASIS_POINTS = 10000n;
 describe("Accounting integration", () => {
   let ctx: ProtocolContext;
   let snapshot: string;
+  let ethHolder: HardhatEthersSigner;
 
   beforeEach(async () => {
     ctx = await getProtocolContext();
+
+    [ethHolder] = await ethers.getSigners();
 
     snapshot = await Snapshot.take();
   });
@@ -673,11 +677,9 @@ describe("Accounting integration", () => {
   it("Should account correctly shares burn above limits", async () => {
     const { lido, burner, wstETH, withdrawalQueue } = ctx.contracts;
 
-    const [ethWhale] = await ethers.getSigners();
-
     while ((await withdrawalQueue.getLastRequestId()) != (await withdrawalQueue.getLastFinalizedRequestId())) {
       await report(ctx);
-      await lido.connect(ethWhale).submit(ZeroAddress, { value: ether("10000") });
+      await lido.connect(ethHolder).submit(ZeroAddress, { value: ether("10000") });
     }
 
     const sharesLimit = await sharesBurnLimitNoPooledEtherChanges();
@@ -743,11 +745,9 @@ describe("Accounting integration", () => {
   it("Should account correctly overfill both vaults", async () => {
     const { lido, withdrawalQueue, withdrawalVault, elRewardsVault } = ctx.contracts;
 
-    const [ethWhale] = await ethers.getSigners();
-
     while ((await withdrawalQueue.getLastRequestId()) != (await withdrawalQueue.getLastFinalizedRequestId())) {
       await report(ctx);
-      await lido.connect(ethWhale).submit(ZeroAddress, { value: ether("10000") });
+      await lido.connect(ethHolder).submit(ZeroAddress, { value: ether("10000") });
     }
 
     const limit = await rebaseLimitWei();
