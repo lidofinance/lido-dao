@@ -26,6 +26,7 @@ describe("Accounting integration", () => {
     ctx = await getProtocolContext();
 
     [ethHolder] = await ethers.getSigners();
+    await setBalance(ethHolder.address, ether("1000000"));
 
     snapshot = await Snapshot.take();
   });
