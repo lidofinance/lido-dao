@@ -42,6 +42,7 @@ export type ProtocolNetworkItems = {
   withdrawalQueue: string;
   withdrawalVault: string;
   oracleDaemonConfig: string;
+  wstETH: string;
   // aragon contracts
   kernel: string;
   acl: string;
@@ -70,7 +71,7 @@ export interface ContractTypes {
   ACL: ACL;
   HashConsensus: HashConsensus;
   NodeOperatorsRegistry: NodeOperatorsRegistry;
-  wstETH: WstETH;
+  WstETH: WstETH;
 }
 
 export type ContractName = keyof ContractTypes;
