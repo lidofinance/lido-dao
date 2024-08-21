@@ -27,7 +27,7 @@ appreciated.
 
 For expansive documentation, visit the [Lido Docs repo](https://github.com/lidofinance/docs).
 
-### Contributing to codebase
+### Contributing to the codebase
 
 Contributing by resolving open issues is a valuable way to help improve the project. Look through the existing issues
 for something that interests you or matches your expertise. Don't hesitate to ask for more information or clarification
@@ -46,18 +46,18 @@ to [Lido Forum](https://research.lido.fi/).
 - [Foundry](https://book.getfoundry.sh/) latest available version
 
 > [!NOTE]
-> On macOS with Homebrew it is recommended to install Node.js using [`n`](https://github.com/tj/n)
+> On macOS with Homebrew, it is recommended to install Node.js using [`n`](https://github.com/tj/n)
 > or [`nvm`](https://github.com/nvm-sh/nvm) version managers.  
 > Example setup process using `n` package manager for zsh users:
 >
-> ```
-> $ brew install n
-> $ echo "\n\nexport N_PREFIX=\$HOME/.local\nexport PATH=\$N_PREFIX/bin:\$PATH" >> ~/.zshrc
-> $ source ~/.zshrc
-> $ n lts
-> $ corepack enable
-> $ cd /path/to/core
-> $ yarn
+> ```bash
+> brew install n
+> echo "\n\nexport N_PREFIX=\$HOME/.local\nexport PATH=\$N_PREFIX/bin:\$PATH" >> ~/.zshrc
+> source ~/.zshrc
+> n lts
+> corepack enable
+> cd /path/to/core
+> yarn
 > ```
 
 ### Setup
@@ -104,7 +104,7 @@ pull request.
 
 The production branch of the protocol and the default branch of the repository.
 The [deployed protocol contracts](https://docs.lido.fi/deployed-contracts/) must match what is stored in
-the `/contracts` directory. Pull requests to `master` must originate from `develop` branch and have at least one
+the `/contracts` directory. Pull requests to `master` must originate from the `develop` branch and have at least one
 approving review before merging.
 
 ### `develop`
@@ -116,7 +116,7 @@ appropriate, delete the feature branch after merging to `develop`.
 
 ### Contracts
 
-All production contracts are located in `/contracts` in the root of the project. The subdirectory names indicate the
+All production contracts are located in `/contracts` at the root of the project. The subdirectory names indicate the
 Solidity version of the contracts inside, e.g. the contracts in `/contracts/0.4.24` are all written in Solidity v0.4.24.
 Common interfaces and libraries shared by contracts with different versions are located in `/contracts/common`
 subdirectory.
@@ -126,16 +126,15 @@ subdirectory.
 This repository features a Hardhat-Foundry dual setup:
 
 - Hardhat gives much more flexibility when writing complex tests;
-- Foundry's anvil is faster than the Hardhat Network;
-- Foundry fuzzing capabilities allows for a better edge-case coverage.
+- The Foundry's fuzzing capabilities enable better coverage of edge cases.
 
 #### Tracing
 
 `hardhat-tracer` is used to trace contract calls and state changes during tests.
-Full scale transaction tracing is disabled by default because it can significantly slow down the tests.
+Full-scale transaction tracing is disabled by default because it can significantly slow down the tests.
 
-To enable tracing, you need wrap the code you want to trace with `Tracer.enable()` and `Tracer.disable()` functions and
-run the tests with commands that have the `:trace` or `:fulltrace` postfix.
+To enable tracing, you need to wrap the code you want to trace with the `Tracer.enable()` and `Tracer.disable()`
+functions:
 
 ```typescript
 import { Tracer } from 'test/suite';
@@ -149,7 +148,7 @@ describe('MyContract', () => {
 });
 ```
 
-And then run the tests with the following commands:
+Then run the tests with the following commands:
 
 ```bash
 yarn test:trace                   # Run all tests with trace logging (calls only)
@@ -159,14 +158,14 @@ yarn test:integration:fulltrace   # Run all integration tests with full trace lo
 ```
 
 > [!NOTE]
-> Tracing is not supported in Foundry tests and integration tests other that Hardhat mainnet fork tests.
+> Tracing is not supported in Foundry tests and integration tests other than Hardhat mainnet fork tests.
 
 #### Hardhat
 
-Hardhat tests are all located in ` / tests` in the root of the project.
-Each subdirectory name corresponds to the version of the contract being tested, mirroring the ` / contracts` directory
-structure. Integration, regression and other non-unit tests are placed into corresponding subdirectories,
-e.g. ` / tests / integration / `, ` / tests / regression`, etc.
+Hardhat tests are all located in `/tests` at the root of the project.
+Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory
+structure. Integration, regression, and other non-unit tests are placed into corresponding subdirectories,
+e.g. `/tests/integration/`, ` /tests/regression`, etc.
 
 ```bash
 yarn test               # Run all tests in parallel
@@ -194,7 +193,7 @@ yarn test:foundry        # Run all Foundry tests
 
 #### Integration tests
 
-Integration tests are located in ` / tests / integration` in the root of the project.
+Integration tests are located in `/tests/integration` at the root of the project.
 These tests are used to verify the interaction between different contracts and their behavior in a real-world scenario.
 
 You can run integration tests in multiple ways, but for all of them, you need to have a `.env` file in the root of
@@ -232,7 +231,7 @@ yarn test:integration:fork
 
 #### Coverage
 
-Project uses `hardhat-coverage` plugin to generate coverage reports.
+The project uses the `hardhat-coverage` plugin to generate coverage reports.
 Foundry tests are not included in the coverage.
 
 To generate coverage reports, run the following command:
@@ -250,12 +249,13 @@ in `/tests/0.4.24/contracts`.
 
 ### Library
 
-TypeScript utilities and helpers are located in `/lib` in the root of the project. When adding a new file to this
-directory, please re-export everything from the `/lib/index.ts` file to keep import statement clean.
+TypeScript utilities and helpers are located in `/lib` at the root of the project. When adding a new file to this
+directory, please re-export everything from the `/lib/index.ts` file to keep the import statement clean.
 
 ### Typechain types
 
-All typechain types are placed in `/typechain-types` in the root of the project. DO NOT manually edit in this directory.
+All the Typechain types are placed in `/typechain-types` at the root of the project. DO NOT manually edit in this
+directory.
 These types are autogenerated on each compilation.
 
 There have been issues with IDEs failing to properly index this directory resulting in import errors. If you are
@@ -266,7 +266,7 @@ experiencing similar issues, the solutions above should resolve them:
 
 ### Config files
 
-All configuration files are located in the root of the project.
+All configuration files are located at the root of the project.
 
 ## Code of Conduct
 
