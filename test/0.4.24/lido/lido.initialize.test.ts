@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setStorageAt, time } from "@nomicfoundation/hardhat-network-helpers";
 
-import { Lido, Lido__factory, LidoLocator } from "typechain-types";
+import { Lido, LidoLocator } from "typechain-types";
 
 import { certainAddress, INITIAL_STETH_HOLDER, proxify, streccak } from "lib";
 
@@ -21,8 +21,7 @@ describe("Lido:initialize", () => {
 
   before(async () => {
     [deployer] = await ethers.getSigners();
-    const factory = new Lido__factory(deployer);
-    const impl = await factory.deploy();
+    const impl = await ethers.deployContract("Lido", deployer);
 
     expect(await impl.getInitializationBlock()).to.equal(MaxUint256);
     [lido] = await proxify({ impl, admin: deployer });

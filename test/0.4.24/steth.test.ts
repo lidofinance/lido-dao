@@ -5,7 +5,7 @@ import { beforeEach } from "mocha";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { Steth__MinimalMock, Steth__MinimalMock__factory } from "typechain-types";
+import { StETH__Harness } from "typechain-types";
 
 import { batch, ether, impersonate, ONE_ETHER } from "lib";
 
@@ -23,16 +23,14 @@ describe("StETH:non-ERC-20 behavior", () => {
   const holderBalance = ether("10.0");
   const totalSupply = holderBalance;
 
-  let steth: Steth__MinimalMock;
+  let steth: StETH__Harness;
 
   beforeEach(async () => {
     zeroAddressSigner = await impersonate(ZeroAddress, ONE_ETHER);
 
-    const signers = await ethers.getSigners();
-    [deployer, holder, recipient, spender] = signers;
+    [deployer, holder, recipient, spender] = await ethers.getSigners();
 
-    const factory = new Steth__MinimalMock__factory(deployer);
-    steth = await factory.deploy(holder, { value: holderBalance });
+    steth = await ethers.deployContract("StETH__Harness", [holder], { value: holderBalance, from: deployer });
     steth = steth.connect(holder);
   });
 

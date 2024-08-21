@@ -6,13 +6,9 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import {
   Lido__MockForElRewardsVault,
-  Lido__MockForElRewardsVault__factory,
   LidoExecutionLayerRewardsVault,
-  LidoExecutionLayerRewardsVault__factory,
   NFT__GeneralMock,
-  NFT__GeneralMock__factory,
-  Steth__MinimalMock,
-  Steth__MinimalMock__factory,
+  StETH__Harness,
 } from "typechain-types";
 
 import { batch, certainAddress, ether, impersonate } from "lib";
@@ -29,8 +25,8 @@ describe("LidoExecutionLayerRewardsVault", () => {
   beforeEach(async () => {
     [deployer, anyone] = await ethers.getSigners();
 
-    lido = await new Lido__MockForElRewardsVault__factory(deployer).deploy();
-    vault = await new LidoExecutionLayerRewardsVault__factory(deployer).deploy(lido, treasury);
+    lido = await ethers.deployContract("Lido__MockForElRewardsVault", deployer);
+    vault = await ethers.deployContract("LidoExecutionLayerRewardsVault", [await lido.getAddress(), treasury], deployer);
 
     lidoAsSigner = await impersonate(await lido.getAddress(), ether("100.0"));
   });
@@ -38,12 +34,14 @@ describe("LidoExecutionLayerRewardsVault", () => {
   context("constructor", () => {
     it("Reverts if Lido is zero address", async () => {
       await expect(
-        new LidoExecutionLayerRewardsVault__factory(deployer).deploy(ZeroAddress, treasury),
+        ethers.deployContract("LidoExecutionLayerRewardsVault", [ZeroAddress, treasury], deployer),
       ).to.be.revertedWith("LIDO_ZERO_ADDRESS");
     });
 
     it("Reverts if Treasury is zero address", async () => {
-      await expect(new LidoExecutionLayerRewardsVault__factory(deployer).deploy(lido, ZeroAddress)).to.be.revertedWith(
+      await expect(
+        ethers.deployContract("LidoExecutionLayerRewardsVault", [await lido.getAddress(), ZeroAddress], deployer),
+      ).to.be.revertedWith(
         "TREASURY_ZERO_ADDRESS",
       );
     });
@@ -224,11 +222,11 @@ describe("LidoExecutionLayerRewardsVault", () => {
   });
 
   context("recoverERC20", () => {
-    let token: Steth__MinimalMock;
+    let token: StETH__Harness;
 
     beforeEach(async () => {
       const tokensToMint = ether("10.0");
-      token = await new Steth__MinimalMock__factory(deployer).deploy(vault, { value: tokensToMint });
+      token = await ethers.deployContract("StETH__Harness", [vault], { value: tokensToMint, from: deployer });
 
       expect(await token.balanceOf(vault)).to.equal(tokensToMint);
 
@@ -266,7 +264,7 @@ describe("LidoExecutionLayerRewardsVault", () => {
     const tokenId = 1n;
 
     beforeEach(async () => {
-      nft = await new NFT__GeneralMock__factory(deployer).deploy("NFTMock", "NFT");
+      nft = await ethers.deployContract("NFT__GeneralMock", ["NFTMock", "NFT"], deployer);
       await nft.mint(vault, tokenId);
       expect(await nft.ownerOf(tokenId)).to.equal(await vault.getAddress());
 
