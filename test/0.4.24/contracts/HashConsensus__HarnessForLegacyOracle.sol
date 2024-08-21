@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 // for testing purposes only
-pragma solidity >=0.4.24 <0.9.0;
+
+pragma solidity 0.4.24;
 
 import {IHashConsensus} from "contracts/0.4.24/oracle/LegacyOracle.sol";
 
-contract HashConsensus__MockForLegacyOracle is IHashConsensus {
+contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
 
     uint256 internal _time = 2513040315;
 
