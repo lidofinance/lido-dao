@@ -65,6 +65,11 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
       accounts: loadAccounts("sepolia"),
     },
+    "mainnet": {
+      url: RPC_URL,
+      chainId: 1,
+      accounts: loadAccounts("mainnet"),
+    },
   },
   solidity: {
     compilers: [
