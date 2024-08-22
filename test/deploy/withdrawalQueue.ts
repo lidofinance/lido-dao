@@ -8,7 +8,7 @@ import {
   OssifiableProxy,
   StETHPermit__HarnessForWithdrawalQueueDeploy,
   WithdrawalQueueERC721,
-  WstETH__MockForWithdrawalQueueDeploy,
+  WstETH__HarnessForWithdrawalQueue,
 } from "typechain-types";
 
 import { ONE_ETHER, proxify, WITHDRAWAL_QUEUE_NAME, WITHDRAWAL_QUEUE_SYMBOL } from "lib";
@@ -67,7 +67,7 @@ async function deployStEthMock(stEthSettings: StEthDeploymentParams) {
 }
 
 async function deployWstEthMock(stEthAddress: string) {
-  const wstEth = await ethers.deployContract("WstETH__MockForWithdrawalQueueDeploy", [stEthAddress]);
+  const wstEth = await ethers.deployContract("WstETH__HarnessForWithdrawalQueue", [stEthAddress]);
   return { wstEth, wstEthAddress: await wstEth.getAddress() };
 }
 
@@ -119,7 +119,7 @@ export async function deployWithdrawalQueue({
   initTx: ContractTransactionResponse | null;
   stEth: StETHPermit__HarnessForWithdrawalQueueDeploy;
   stEthAddress: string;
-  wstEth: WstETH__MockForWithdrawalQueueDeploy;
+  wstEth: WstETH__HarnessForWithdrawalQueue;
   wstEthAddress: string;
   nftDescriptor: NFTDescriptor__MockForWithdrawalQueue;
   nftDescriptorAddress: string;
