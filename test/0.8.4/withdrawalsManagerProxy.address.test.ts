@@ -6,31 +6,33 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getStorageAt, setCode } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
-  Address__Harness,
-  Address__Harness__factory,
-  Recipient__MockForAddress,
-  Recipient__MockForAddress__factory,
-} from "typechain-types";
+import { Address__Harness, Recipient__MockForAddress } from "typechain-types";
 
 import { batch, certainAddress } from "lib";
+
+import { Snapshot } from "test/suite";
 
 // this contract code reverts any call to it
 const INVALID_BYTECODE = "0xFE";
 
-// TODO: refactor similar tests for similar functions
-describe("Address", () => {
+describe("WithdrawalsManagerProxy.sol:address", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
 
   let address: Address__Harness;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     [deployer, user] = await ethers.getSigners();
 
-    address = await new Address__Harness__factory(deployer).deploy();
+    address = await ethers.deployContract("Address__Harness", deployer);
     address = address.connect(user);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("isContract", () => {
     it("Returns true if the account is a contract", async () => {
@@ -84,8 +86,8 @@ describe("Address", () => {
   context("functionCall", () => {
     let recipient: Recipient__MockForAddress;
 
-    beforeEach(async () => {
-      recipient = await new Recipient__MockForAddress__factory(deployer).deploy();
+    before(async () => {
+      recipient = await ethers.deployContract("Recipient__MockForAddress", deployer);
     });
 
     context("functionCall(address,bytes)", () => {
@@ -257,8 +259,8 @@ describe("Address", () => {
   context("functionCallWithValue", () => {
     let recipient: Recipient__MockForAddress;
 
-    beforeEach(async () => {
-      recipient = await new Recipient__MockForAddress__factory(deployer).deploy();
+    before(async () => {
+      recipient = await ethers.deployContract("Recipient__MockForAddress", deployer);
     });
 
     it("Reverts if there's not enough ether", async () => {

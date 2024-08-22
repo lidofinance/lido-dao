@@ -6,14 +6,11 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { getStorageAt } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
-  Impl__MockForERC1967Proxy,
-  Impl__MockForERC1967Proxy__factory,
-  Proxy__Harness,
-  Proxy__Harness__factory,
-} from "typechain-types";
+import { Proxy__Harness, WithdrawalsManagerProxy__Mock } from "typechain-types";
 
 import { ether } from "lib";
+
+import { Snapshot } from "test/suite";
 
 // This is a test suite for a low-level OZ contract located in
 // contracts/0.8.4/WithdrawalsManagerProxy.sol:Proxy
@@ -22,21 +19,27 @@ import { ether } from "lib";
 // as opposed to fetching from the OZ repository.
 // This means that it is accounted for in test coverage and
 // to get 100% coverage, we have to have a test suite for this contract
-describe("WithdrawalsManagerProxy:Proxy", () => {
+describe("WithdrawalsManagerProxy.sol:proxy", () => {
   let deployer: HardhatEthersSigner;
   let sender: HardhatEthersSigner;
 
   let proxy: Proxy__Harness;
-  let impl: Impl__MockForERC1967Proxy;
+  let impl: WithdrawalsManagerProxy__Mock;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     [deployer, sender] = await ethers.getSigners();
 
-    impl = await new Impl__MockForERC1967Proxy__factory(deployer).deploy();
-    proxy = await new Proxy__Harness__factory(deployer).deploy();
+    impl = await ethers.deployContract("WithdrawalsManagerProxy__Mock", deployer);
+    proxy = await ethers.deployContract("Proxy__Harness", deployer);
 
     proxy = proxy.connect(sender);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("implementation", () => {
     it("Returns implementation", async () => {

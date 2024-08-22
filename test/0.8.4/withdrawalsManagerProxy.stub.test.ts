@@ -3,20 +3,20 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { WithdrawalsManagerStub, WithdrawalsManagerStub__factory } from "typechain-types";
+import { WithdrawalsManagerStub } from "typechain-types";
 
 import { ether } from "lib";
 
-describe("WithdrawalsManagerStub", () => {
+describe("WithdrawalsManagerProxy.sol:stub", () => {
   let deployer: HardhatEthersSigner;
   let sender: HardhatEthersSigner;
 
   let stub: WithdrawalsManagerStub;
 
-  beforeEach(async () => {
+  before(async () => {
     [deployer, sender] = await ethers.getSigners();
 
-    stub = await new WithdrawalsManagerStub__factory(deployer).deploy();
+    stub = await ethers.deployContract("WithdrawalsManagerStub", deployer);
   });
 
   context("receive", () => {

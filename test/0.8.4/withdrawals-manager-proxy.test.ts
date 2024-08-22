@@ -7,16 +7,15 @@ import { getStorageAt } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   WithdrawalsManagerProxy,
-  WithdrawalsManagerProxy__factory,
   WithdrawalsManagerStub,
-  WithdrawalsManagerStub__factory,
   WithdrawalsVault__MockForWithdrawalManagerProxy,
-  WithdrawalsVault__MockForWithdrawalManagerProxy__factory,
 } from "typechain-types";
 
 import { certainAddress, streccak } from "lib";
 
-describe("WithdrawalsManagerProxy", () => {
+import { Snapshot } from "test/suite";
+
+describe("WithdrawalsManagerProxy.sol", () => {
   let deployer: HardhatEthersSigner;
   let voting: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
@@ -25,16 +24,22 @@ describe("WithdrawalsManagerProxy", () => {
   let proxy: WithdrawalsManagerProxy;
   let newImpl: WithdrawalsVault__MockForWithdrawalManagerProxy;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     [deployer, voting, stranger] = await ethers.getSigners();
 
-    stub = await new WithdrawalsManagerStub__factory(deployer).deploy();
-    proxy = await new WithdrawalsManagerProxy__factory(deployer).deploy(voting, stub);
+    stub = await ethers.deployContract("WithdrawalsManagerStub", deployer);
+    proxy = await ethers.deployContract("WithdrawalsManagerProxy", [voting, stub], deployer);
 
     proxy = proxy.connect(voting);
 
-    newImpl = await new WithdrawalsVault__MockForWithdrawalManagerProxy__factory(deployer).deploy();
+    newImpl = await ethers.deployContract("WithdrawalsVault__MockForWithdrawalManagerProxy", deployer);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("implementation", () => {
     it("Returns the addres of the current implementation", async () => {
