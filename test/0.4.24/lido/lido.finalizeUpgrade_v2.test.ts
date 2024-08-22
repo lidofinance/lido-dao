@@ -10,8 +10,9 @@ import { Lido__HarnessForFinalizeUpgradeV2, LidoLocator } from "typechain-types"
 import { certainAddress, INITIAL_STETH_HOLDER, ONE_ETHER, proxify } from "lib";
 
 import { deployLidoLocator } from "test/deploy";
+import { Snapshot } from "test/suite";
 
-describe("Lido:finalizeUpgrade_v2", () => {
+describe("Lido.sol:finalizeUpgrade_v2", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
 
@@ -27,7 +28,9 @@ describe("Lido:finalizeUpgrade_v2", () => {
   let burnerAddress: string;
   const eip712helperAddress = certainAddress("lido:initialize:eip712helper");
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     [deployer, user] = await ethers.getSigners();
     impl = await ethers.deployContract("Lido__HarnessForFinalizeUpgradeV2");
     [lido] = await proxify({ impl, admin: deployer });
@@ -35,6 +38,10 @@ describe("Lido:finalizeUpgrade_v2", () => {
     locator = await deployLidoLocator();
     [withdrawalQueueAddress, burnerAddress] = await Promise.all([locator.withdrawalQueue(), locator.burner()]);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   it("Reverts if contract version does not equal zero", async () => {
     const unexpectedVersion = 1n;
@@ -57,7 +64,7 @@ describe("Lido:finalizeUpgrade_v2", () => {
   });
 
   context("contractVersion equals 0", () => {
-    beforeEach(async () => {
+    before(async () => {
       const latestBlock = BigInt(await time.latestBlock());
 
       await expect(lido.harness__initialize(initialVersion, { value: initialValue }))

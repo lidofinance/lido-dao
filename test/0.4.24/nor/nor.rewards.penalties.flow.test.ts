@@ -19,7 +19,7 @@ import {
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry:rewards-penalties", () => {
+describe("NodeOperatorsRegistry.sol:rewards-penalties", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;

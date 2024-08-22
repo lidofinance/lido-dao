@@ -21,12 +21,11 @@ import {
 import { certainAddress, ether, getNextBlockTimestamp, impersonate, streccak } from "lib";
 
 import { deployLidoDao, updateLidoLocatorImplementation } from "test/deploy";
-
-import { Snapshot } from "../../suite";
+import { Snapshot } from "test/suite";
 
 // TODO: improve coverage
 // TODO: more math-focused tests
-describe("Lido:report", () => {
+describe("Lido.sol:report", () => {
   let deployer: HardhatEthersSigner;
   let accountingOracle: HardhatEthersSigner;
   let stethWhale: HardhatEthersSigner;

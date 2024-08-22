@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { OssifiableProxy, Versioned__Harness0424, Versioned__Harness0424__factory } from "typechain-types";
+import { OssifiableProxy, Versioned__Harness0424 } from "typechain-types";
 
 // TODO: rewrite to be reusable for any derived contract
 describe("Versioned", () => {
@@ -23,7 +23,7 @@ describe("Versioned", () => {
     // which for some reason loses the typing
     impl = await ethers.deployContract("Versioned__Harness0424");
     proxy = await ethers.deployContract("OssifiableProxy", [await impl.getAddress(), admin.address, new Uint8Array()], { from: admin });
-    versioned = Versioned__Harness0424__factory.connect(await proxy.getAddress(), user);
+    versioned = await ethers.getContractAt("Versioned__Harness0424", await proxy.getAddress(), user);
   });
 
   it("Implementation is petrified.", async () => {

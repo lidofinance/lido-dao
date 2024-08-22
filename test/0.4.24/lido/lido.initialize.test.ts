@@ -12,7 +12,7 @@ import { certainAddress, INITIAL_STETH_HOLDER, proxify, streccak } from "lib";
 import { deployLidoLocator } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("Lido:initialize", () => {
+describe("Lido.sol:initialize", () => {
   let deployer: HardhatEthersSigner;
 
   let lido: Lido;
@@ -41,7 +41,7 @@ describe("Lido:initialize", () => {
 
     let locator: LidoLocator;
 
-    beforeEach(async () => {
+    before(async () => {
       locator = await deployLidoLocator({ lido });
       [withdrawalQueueAddress, burnerAddress] = await Promise.all([locator.withdrawalQueue(), locator.burner()]);
     });

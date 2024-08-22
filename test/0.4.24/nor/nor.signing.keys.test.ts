@@ -4,15 +4,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
-  ACL,
-  Kernel,
-  Lido,
-  LidoLocator,
-  LidoLocator__factory,
-  NodeOperatorsRegistry__Harness,
-  NodeOperatorsRegistry__Harness__factory,
-} from "typechain-types";
+import { ACL, Kernel, Lido, LidoLocator, NodeOperatorsRegistry__Harness } from "typechain-types";
 
 import {
   addNodeOperator,
@@ -30,7 +22,7 @@ import {
 import { addAragonApp, deployLidoDao } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry:signing-keys", () => {
+describe("NodeOperatorsRegistry.sol:signing-keys", () => {
   const UINT64_MAX = 2n ** 64n - 1n;
 
   let deployer: HardhatEthersSigner;
@@ -125,7 +117,7 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
       },
     }));
 
-    impl = await new NodeOperatorsRegistry__Harness__factory(deployer).deploy();
+    impl = await ethers.deployContract("NodeOperatorsRegistry__Harness", deployer);
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
@@ -133,7 +125,7 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
       rootAccount: deployer,
     });
 
-    nor = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
+    nor = await ethers.getContractAt("NodeOperatorsRegistry__Harness", appProxy, deployer);
 
     await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
@@ -146,7 +138,7 @@ describe("NodeOperatorsRegistry:signing-keys", () => {
     // inside the testing_requestValidatorsKeysForDeposits() method
     await acl.grantPermission(nor, nor, await nor.STAKING_ROUTER_ROLE());
 
-    locator = LidoLocator__factory.connect(await lido.getLidoLocator(), user);
+    locator = await ethers.getContractAt("LidoLocator", await lido.getLidoLocator(), deployer);
 
     // Initialize the nor's proxy.
     await expect(nor.initialize(locator, moduleType, penaltyDelay))
