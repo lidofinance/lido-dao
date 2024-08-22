@@ -9,10 +9,12 @@ import { StETH__Harness } from "typechain-types";
 
 import { batch, ether, impersonate, ONE_ETHER } from "lib";
 
+import { Snapshot } from "test/suite";
+
 const ONE_STETH = 10n ** 18n;
 const ONE_SHARE = 10n ** 18n;
 
-describe("StETH:non-ERC-20 behavior", () => {
+describe("StETH.sol:non-ERC-20 behavior", () => {
   let deployer: HardhatEthersSigner;
   let holder: HardhatEthersSigner;
   let recipient: HardhatEthersSigner;
@@ -25,7 +27,9 @@ describe("StETH:non-ERC-20 behavior", () => {
 
   let steth: StETH__Harness;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     zeroAddressSigner = await impersonate(ZeroAddress, ONE_ETHER);
 
     [deployer, holder, recipient, spender] = await ethers.getSigners();
@@ -33,6 +37,11 @@ describe("StETH:non-ERC-20 behavior", () => {
     steth = await ethers.deployContract("StETH__Harness", [holder], { value: holderBalance, from: deployer });
     steth = steth.connect(holder);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
+
 
   context("getTotalPooledEther", () => {
     it("Returns the amount of ether sent upon construction", async () => {

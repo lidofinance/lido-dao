@@ -3,13 +3,21 @@ import { ethers } from "hardhat";
 
 import { Pausable__Harness } from "typechain-types";
 
-describe("Pausable", () => {
+import { Snapshot } from "test/suite";
+
+describe("Pausable.sol", () => {
   let pausable: Pausable__Harness;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     pausable = await ethers.deployContract("Pausable__Harness");
     expect(await pausable.isStopped()).to.equal(true);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("isStopped", () => {
     it("Returns true if stopped", async () => {

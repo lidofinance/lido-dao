@@ -10,7 +10,7 @@ import { certainAddress, days, ether, Permit, signPermit, stethDomain } from "li
 
 import { Snapshot } from "test/suite";
 
-describe("Permit", () => {
+describe("StETHPermit.sol", () => {
   let deployer: Signer;
   let signer: Signer;
 

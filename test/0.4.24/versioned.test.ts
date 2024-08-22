@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { OssifiableProxy, Versioned__Harness0424 } from "typechain-types";
 
 // TODO: rewrite to be reusable for any derived contract
-describe("Versioned", () => {
+describe("Versioned.sol", () => {
   let admin: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let proxy: OssifiableProxy;
