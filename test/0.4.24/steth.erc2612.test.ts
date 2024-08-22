@@ -10,12 +10,12 @@ testERC2612Compliance({
     const [deployer, owner] = await ethers.getSigners();
 
     const value = ether("1.0");
-    const steth = await ethers.deployContract("StETHPermit__HarnessWithEip712Initialization", [owner.address], {
+    const steth = await ethers.deployContract("StETHPermit__HarnessWithEip712Initialization", [owner], {
       value,
       from: deployer,
     });
 
-    const eip712helper = await ethers.deployContract("EIP712StETH", [await steth.getAddress()], deployer);
+    const eip712helper = await ethers.deployContract("EIP712StETH", [steth], deployer);
     await steth.initializeEIP712StETH(eip712helper);
 
     return {
@@ -38,10 +38,10 @@ testERC2612Compliance({
       from: deployer,
     });
 
-    const eip712helper = await ethers.deployContract("EIP712StETH", [await steth.getAddress()], deployer);
+    const eip712helper = await ethers.deployContract("EIP712StETH", [steth], deployer);
     await steth.initializeEIP712StETH(eip712helper);
 
-    const wallet = await ethers.deployContract("ERC1271Wallet", [owner.address], deployer);
+    const wallet = await ethers.deployContract("ERC1271Wallet", [owner], deployer);
     await steth.connect(owner).transfer(await wallet.getAddress(), await steth.balanceOf(owner));
 
     return {

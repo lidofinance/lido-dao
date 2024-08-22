@@ -85,7 +85,7 @@ describe("StETHPermit.sol", () => {
 
   context("Initialized", () => {
     beforeEach(async () => {
-      const eip712helper = await ethers.deployContract("EIP712StETH", [await steth.getAddress()], deployer);
+      const eip712helper = await ethers.deployContract("EIP712StETH", [steth], deployer);
       await steth.initializeEIP712StETH(eip712helper);
     });
 

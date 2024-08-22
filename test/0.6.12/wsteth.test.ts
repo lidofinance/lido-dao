@@ -23,7 +23,7 @@ describe("WstETH.sol", () => {
     [deployer, user] = await ethers.getSigners();
 
     steth = await ethers.deployContract("StETH__HarnessForWstETH", [user], { value: ether("1.0"), from: deployer });
-    wsteth = await ethers.deployContract("WstETH", [await steth.getAddress()], deployer);
+    wsteth = await ethers.deployContract("WstETH", [steth], deployer);
 
     steth = steth.connect(user);
     wsteth = wsteth.connect(user);

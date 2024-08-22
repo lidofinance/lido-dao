@@ -11,9 +11,9 @@ testERC20Compliance({
     const totalSupply = ether("10.0");
 
     const steth = await ethers.deployContract("StETH__Harness", [holder], { value: totalSupply, from: deployer });
-    const wsteth = await ethers.deployContract("WstETH", [await steth.getAddress()], { from: deployer });
+    const wsteth = await ethers.deployContract("WstETH", [steth], deployer);
 
-    await steth.connect(holder).approve(await wsteth.getAddress(), totalSupply);
+    await steth.connect(holder).approve(wsteth, totalSupply);
     await wsteth.connect(holder).wrap(totalSupply);
 
     return {

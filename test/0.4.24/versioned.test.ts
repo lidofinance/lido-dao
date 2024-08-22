@@ -22,8 +22,8 @@ describe("Versioned.sol", () => {
     // because we have two VersionMocks, we have to specify the full path to the contract
     // which for some reason loses the typing
     impl = await ethers.deployContract("Versioned__Harness0424");
-    proxy = await ethers.deployContract("OssifiableProxy", [await impl.getAddress(), admin.address, new Uint8Array()], { from: admin });
-    versioned = await ethers.getContractAt("Versioned__Harness0424", await proxy.getAddress(), user);
+    proxy = await ethers.deployContract("OssifiableProxy", [impl, admin, new Uint8Array()], { from: admin });
+    versioned = await ethers.getContractAt("Versioned__Harness0424", proxy, user);
   });
 
   it("Implementation is petrified.", async () => {

@@ -11,9 +11,9 @@ testERC2612Compliance({
     const totalSupply = ether("10.0");
 
     const steth = await ethers.deployContract("StETH__Harness", [owner], { value: totalSupply, from: deployer });
-    const wsteth = await ethers.deployContract("WstETH", [await steth.getAddress()], { from: deployer });
+    const wsteth = await ethers.deployContract("WstETH", [steth], deployer);
 
-    await steth.connect(owner).approve(await wsteth.getAddress(), totalSupply);
+    await steth.connect(owner).approve(wsteth, totalSupply);
     await wsteth.connect(owner).wrap(totalSupply);
 
     return {
