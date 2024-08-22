@@ -1,10 +1,9 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
 // for testing purposes only
 
 pragma solidity 0.8.9;
 
-contract LidoMockForDepositSecurityModule {
+contract Lido__MockForDepositSecurityModule {
     bool internal canDepositState;
 
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
@@ -22,12 +21,12 @@ contract LidoMockForDepositSecurityModule {
         uint256 maxDepositsCount,
         uint256 stakingModuleId,
         bytes calldata depositCalldata
-    ) external returns(uint256 keysCount) {
+    ) external returns (uint256 keysCount) {
         emit StakingModuleDeposited(maxDepositsCount, uint24(stakingModuleId), depositCalldata);
         return maxDepositsCount;
     }
 
-    function canDeposit() external view returns(bool) {
+    function canDeposit() external view returns (bool) {
         return canDepositState;
     }
 }

@@ -1,8 +1,9 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
-import { ILido } from "contracts/0.8.9/oracle/AccountingOracle.sol";
+import {ILido} from "contracts/0.8.9/oracle/AccountingOracle.sol";
 
 interface IPostTokenRebaseReceiver {
     function handlePostTokenRebase(
@@ -16,7 +17,7 @@ interface IPostTokenRebaseReceiver {
     ) external;
 }
 
-contract MockLidoForAccountingOracle is ILido {
+contract Lido__MockForAccountingOracle is ILido {
     address internal legacyOracle;
 
     struct HandleOracleReportLastCall {
@@ -35,9 +36,9 @@ contract MockLidoForAccountingOracle is ILido {
     HandleOracleReportLastCall internal _handleOracleReportLastCall;
 
     function getLastCall_handleOracleReport()
-        external
-        view
-        returns (HandleOracleReportLastCall memory)
+    external
+    view
+    returns (HandleOracleReportLastCall memory)
     {
         return _handleOracleReportLastCall;
     }
@@ -62,19 +63,19 @@ contract MockLidoForAccountingOracle is ILido {
         uint256 simulatedShareRate
     ) external {
         _handleOracleReportLastCall
-            .currentReportTimestamp = currentReportTimestamp;
+        .currentReportTimestamp = currentReportTimestamp;
         _handleOracleReportLastCall
-            .secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
+        .secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
         _handleOracleReportLastCall.numValidators = numValidators;
         _handleOracleReportLastCall.clBalance = clBalance;
         _handleOracleReportLastCall
-            .withdrawalVaultBalance = withdrawalVaultBalance;
+        .withdrawalVaultBalance = withdrawalVaultBalance;
         _handleOracleReportLastCall
-            .elRewardsVaultBalance = elRewardsVaultBalance;
+        .elRewardsVaultBalance = elRewardsVaultBalance;
         _handleOracleReportLastCall
-            .sharesRequestedToBurn = sharesRequestedToBurn;
+        .sharesRequestedToBurn = sharesRequestedToBurn;
         _handleOracleReportLastCall
-            .withdrawalFinalizationBatches = withdrawalFinalizationBatches;
+        .withdrawalFinalizationBatches = withdrawalFinalizationBatches;
         _handleOracleReportLastCall.simulatedShareRate = simulatedShareRate;
         ++_handleOracleReportLastCall.callCount;
 

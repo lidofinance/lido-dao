@@ -1,15 +1,10 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
-import { UnstructuredStorage } from "contracts/0.8.9/lib/UnstructuredStorage.sol";
-import { BaseOracle } from "contracts/0.8.9/oracle/BaseOracle.sol";
-
-struct ConsensusReport {
-    bytes32 hash;
-    uint64 refSlot;
-    uint64 processingDeadlineTime;
-}
+import {UnstructuredStorage} from "contracts/0.8.9/lib/UnstructuredStorage.sol";
+import {BaseOracle} from "contracts/0.8.9/oracle/BaseOracle.sol";
 
 contract BaseOracle__Harness is BaseOracle {
     using UnstructuredStorage for bytes32;
@@ -18,13 +13,14 @@ contract BaseOracle__Harness is BaseOracle {
     event MockStartProcessingResult(uint256 prevProcessingRefSlot);
 
     struct HandleConsensusReportLastCall {
-        ConsensusReport report;
+        BaseOracle.ConsensusReport report;
         uint256 prevSubmittedRefSlot;
         uint256 prevProcessingRefSlot;
         uint256 callCount;
     }
+
     HandleConsensusReportLastCall internal _handleConsensusReportLastCall;
-    ConsensusReport public lastDiscardedReport;
+    BaseOracle.ConsensusReport public lastDiscardedReport;
 
     constructor(
         uint256 secondsPerSlot,
@@ -55,7 +51,7 @@ contract BaseOracle__Harness is BaseOracle {
         return _time;
     }
 
-    function originalGetTime() external view returns (uint256) {
+    function harness_getTime() external view returns (uint256) {
         return BaseOracle._getTime();
     }
 
@@ -68,28 +64,28 @@ contract BaseOracle__Harness is BaseOracle {
     }
 
     function _handleConsensusReport(
-        ConsensusReport memory report,
+        BaseOracle.ConsensusReport memory report,
         uint256 prevSubmittedRefSlot,
         uint256 prevProcessingRefSlot
     ) internal virtual override {
         _handleConsensusReportLastCall.report = report;
         _handleConsensusReportLastCall
-            .prevSubmittedRefSlot = prevSubmittedRefSlot;
+        .prevSubmittedRefSlot = prevSubmittedRefSlot;
         _handleConsensusReportLastCall
-            .prevProcessingRefSlot = prevProcessingRefSlot;
+        .prevProcessingRefSlot = prevProcessingRefSlot;
         ++_handleConsensusReportLastCall.callCount;
     }
 
     function _handleConsensusReportDiscarded(
-        ConsensusReport memory report
+        BaseOracle.ConsensusReport memory report
     ) internal override {
         lastDiscardedReport = report;
     }
 
     function getConsensusReportLastCall()
-        external
-        view
-        returns (HandleConsensusReportLastCall memory)
+    external
+    view
+    returns (HandleConsensusReportLastCall memory)
     {
         return _handleConsensusReportLastCall;
     }

@@ -1,5 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
 // for testing purposes only
 
 pragma solidity 0.8.9;
@@ -7,8 +6,7 @@ pragma solidity 0.8.9;
 import {IStakingRouter} from "contracts/0.8.9/DepositSecurityModule.sol";
 import {StakingRouter} from "contracts/0.8.9/StakingRouter.sol";
 
-
-contract StakingRouterMockForDepositSecurityModule is IStakingRouter {
+contract StakingRouter__MockForDepositSecurityModule is IStakingRouter {
     error StakingModuleUnregistered();
 
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);

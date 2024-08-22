@@ -1,17 +1,21 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
 // for testing purposes only
 
 pragma solidity 0.8.9;
 
 import {IERC721Receiver} from "@openzeppelin/contracts-v4.4/token/ERC721/IERC721Receiver.sol";
 
-contract ERC721ReceiverMock is IERC721Receiver {
+contract ERC721Receiver__Mock is IERC721Receiver {
+    bool public isReturnValid = true;
     bool public doesAcceptTokens;
     string public ERROR_MSG = "ERC721_NOT_ACCEPT_TOKENS";
 
-    function setDoesAcceptTokens(bool _value) external {
+    function mock__setDoesAcceptTokens(bool _value) external {
         doesAcceptTokens = _value;
+    }
+
+    function mock__setReturnValid(bool _value) external {
+        isReturnValid = _value;
     }
 
     function onERC721Received(
@@ -22,6 +26,9 @@ contract ERC721ReceiverMock is IERC721Receiver {
     ) external view returns (bytes4) {
         if (!doesAcceptTokens) {
             revert(ERROR_MSG);
+        }
+        if (!isReturnValid) {
+            return bytes4(keccak256("neverGonnaGiveYouUp()"));
         }
         return
             bytes4(

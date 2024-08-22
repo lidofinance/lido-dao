@@ -1,22 +1,20 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
-
-import { UnstructuredStorage } from "contracts/0.8.9/lib/UnstructuredStorage.sol";
-import { AccountingOracle } from "contracts/0.8.9/oracle/AccountingOracle.sol";
-
+import {UnstructuredStorage} from "contracts/0.8.9/lib/UnstructuredStorage.sol";
+import {AccountingOracle} from "contracts/0.8.9/oracle/AccountingOracle.sol";
 
 interface ITimeProvider {
     function getTime() external view returns (uint256);
 }
 
-
-contract AccountingOracleTimeTravellable is AccountingOracle, ITimeProvider {
+contract AccountingOracle__Harness is AccountingOracle, ITimeProvider {
     using UnstructuredStorage for bytes32;
 
     constructor(address lidoLocator, address lido, address legacyOracle, uint256 secondsPerSlot, uint256 genesisTime)
-        AccountingOracle(lidoLocator, lido, legacyOracle, secondsPerSlot, genesisTime)
+    AccountingOracle(lidoLocator, lido, legacyOracle, secondsPerSlot, genesisTime)
     {
         // allow usage without a proxy for tests
         CONTRACT_VERSION_POSITION.setStorageUint256(0);

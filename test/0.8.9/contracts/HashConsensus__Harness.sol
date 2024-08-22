@@ -1,12 +1,11 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
+import {HashConsensus} from "contracts/0.8.9/oracle/HashConsensus.sol";
 
-import { HashConsensus } from "contracts/0.8.9/oracle/HashConsensus.sol";
-
-
-contract HashConsensusTimeTravellable is HashConsensus {
+contract HashConsensus__Harness is HashConsensus {
     uint256 internal _time = 2513040315;
 
     constructor(
@@ -18,13 +17,13 @@ contract HashConsensusTimeTravellable is HashConsensus {
         address admin,
         address reportProcessor
     ) HashConsensus(
-        slotsPerEpoch,
-        secondsPerSlot,
-        genesisTime,
-        epochsPerFrame,
-        fastLaneLengthSlots,
-        admin,
-        reportProcessor
+    slotsPerEpoch,
+    secondsPerSlot,
+    genesisTime,
+    epochsPerFrame,
+    fastLaneLengthSlots,
+    admin,
+    reportProcessor
     ) {
         require(genesisTime <= _time, "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME");
     }

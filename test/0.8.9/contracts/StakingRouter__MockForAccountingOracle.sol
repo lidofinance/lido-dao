@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
-import { IStakingRouter } from "contracts/0.8.9/oracle/AccountingOracle.sol";
+import {IStakingRouter} from "contracts/0.8.9/oracle/AccountingOracle.sol";
 
-
-contract MockStakingRouterForAccountingOracle is IStakingRouter {
+contract StakingRouter__MockForAccountingOracle is IStakingRouter {
 
     struct UpdateExitedKeysByModuleCallData {
         uint256[] moduleIds;
@@ -30,7 +30,7 @@ contract MockStakingRouterForAccountingOracle is IStakingRouter {
 
 
     function lastCall_updateExitedKeysByModule()
-        external view returns (UpdateExitedKeysByModuleCallData memory)
+    external view returns (UpdateExitedKeysByModuleCallData memory)
     {
         return _lastCall_updateExitedKeysByModule;
     }

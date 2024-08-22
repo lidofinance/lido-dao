@@ -1,15 +1,14 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
 // for testing purposes only
 
 pragma solidity 0.8.9;
 
-import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
+import {SafeCast} from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { IConsensusContract } from "../../../contracts/0.8.9/oracle/BaseOracle.sol";
-import { IReportAsyncProcessor } from "../../../contracts/0.8.9/oracle/HashConsensus.sol";
+import {IConsensusContract} from "contracts/0.8.9/oracle/BaseOracle.sol";
+import {IReportAsyncProcessor} from "contracts/0.8.9/oracle/HashConsensus.sol";
 
-contract MockConsensusContract is IConsensusContract {
+contract ConsensusContract__Mock is IConsensusContract {
     using SafeCast for uint256;
 
     uint64 internal immutable SLOTS_PER_EPOCH;
@@ -64,9 +63,9 @@ contract MockConsensusContract is IConsensusContract {
     }
 
     function getCurrentFrame()
-        external
-        view
-        returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot)
+    external
+    view
+    returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot)
     {
         return (
             _consensusFrame.refSlot,
@@ -82,7 +81,7 @@ contract MockConsensusContract is IConsensusContract {
         _consensusFrame.index = index;
         _consensusFrame.refSlot = refSlot;
         _consensusFrame
-            .reportProcessingDeadlineSlot = reportProcessingDeadlineSlot;
+        .reportProcessingDeadlineSlot = reportProcessingDeadlineSlot;
     }
 
     function setInitialRefSlot(uint256 initialRefSlot) external {
@@ -90,21 +89,21 @@ contract MockConsensusContract is IConsensusContract {
     }
 
     function getChainConfig()
-        external
-        view
-        returns (
-            uint256 slotsPerEpoch,
-            uint256 secondsPerSlot,
-            uint256 genesisTime
-        )
+    external
+    view
+    returns (
+        uint256 slotsPerEpoch,
+        uint256 secondsPerSlot,
+        uint256 genesisTime
+    )
     {
         return (SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
     }
 
     function getFrameConfig()
-        external
-        view
-        returns (uint256 initialEpoch, uint256 epochsPerFrame)
+    external
+    view
+    returns (uint256 initialEpoch, uint256 epochsPerFrame)
     {
         return (_frameConfig.initialEpoch, _frameConfig.epochsPerFrame);
     }

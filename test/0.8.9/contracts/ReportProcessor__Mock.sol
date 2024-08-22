@@ -1,10 +1,11 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
+
 pragma solidity 0.8.9;
 
-import { IReportAsyncProcessor } from "contracts/0.8.9/oracle/HashConsensus.sol";
+import {IReportAsyncProcessor} from "contracts/0.8.9/oracle/HashConsensus.sol";
 
-contract MockReportProcessor is IReportAsyncProcessor {
+contract ReportProcessor__Mock is IReportAsyncProcessor {
     uint256 internal _consensusVersion;
 
     struct SubmitReportCall {
