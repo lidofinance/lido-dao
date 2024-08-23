@@ -10,7 +10,11 @@ contract StakingRouter__MockForDepositSecurityModule is IStakingRouter {
     error StakingModuleUnregistered();
 
     event StakingModuleDeposited(uint256 maxDepositsCount, uint24 stakingModuleId, bytes depositCalldata);
-    event StakingModuleStatusSet(uint24 indexed stakingModuleId, StakingRouter.StakingModuleStatus status, address setBy);
+    event StakingModuleStatusSet(
+        uint24 indexed stakingModuleId,
+        StakingRouter.StakingModuleStatus status,
+        address setBy
+    );
 
     StakingRouter.StakingModuleStatus private status;
     uint256 private stakingModuleNonce;
@@ -25,7 +29,7 @@ contract StakingRouter__MockForDepositSecurityModule is IStakingRouter {
         uint256 maxDepositsCount,
         uint256 stakingModuleId,
         bytes calldata depositCalldata
-    ) external whenModuleIsRegistered(stakingModuleId) payable returns (uint256 keysCount) {
+    ) external payable whenModuleIsRegistered(stakingModuleId) returns (uint256 keysCount) {
         emit StakingModuleDeposited(maxDepositsCount, uint24(stakingModuleId), depositCalldata);
         return maxDepositsCount;
     }
@@ -34,19 +38,26 @@ contract StakingRouter__MockForDepositSecurityModule is IStakingRouter {
         return _stakingModuleId == registeredStakingModuleId;
     }
 
-    function getStakingModuleStatus(uint256 stakingModuleId) external view whenModuleIsRegistered(stakingModuleId) returns (StakingRouter.StakingModuleStatus) {
+    function getStakingModuleStatus(
+        uint256 stakingModuleId
+    ) external view whenModuleIsRegistered(stakingModuleId) returns (StakingRouter.StakingModuleStatus) {
         return status;
     }
 
     function setStakingModuleStatus(
-        uint256 _stakingModuleId, StakingRouter.StakingModuleStatus _status
+        uint256 _stakingModuleId,
+        StakingRouter.StakingModuleStatus _status
     ) external whenModuleIsRegistered(_stakingModuleId) {
         emit StakingModuleStatusSet(uint24(_stakingModuleId), _status, msg.sender);
         status = _status;
     }
 
     function pauseStakingModule(uint256 stakingModuleId) external whenModuleIsRegistered(stakingModuleId) {
-        emit StakingModuleStatusSet(uint24(stakingModuleId), StakingRouter.StakingModuleStatus.DepositsPaused, msg.sender);
+        emit StakingModuleStatusSet(
+            uint24(stakingModuleId),
+            StakingRouter.StakingModuleStatus.DepositsPaused,
+            msg.sender
+        );
         status = StakingRouter.StakingModuleStatus.DepositsPaused;
     }
 

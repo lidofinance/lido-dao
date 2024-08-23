@@ -30,10 +30,7 @@ contract AccountingOracle__MockForLegacyOracle {
         return ITimeProvider(CONSENSUS_CONTRACT).getTime();
     }
 
-    function submitReportData(
-        AccountingOracle.ReportData calldata data,
-        uint256 /* contractVersion */
-    ) external {
+    function submitReportData(AccountingOracle.ReportData calldata data, uint256 /* contractVersion */) external {
         uint256 slotsElapsed = data.refSlot - _lastRefSlot;
         _lastRefSlot = data.refSlot;
 

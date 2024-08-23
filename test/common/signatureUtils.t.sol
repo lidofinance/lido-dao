@@ -172,11 +172,13 @@ contract SignatureUtilsTest is Test {
 }
 
 contract SignatureUtils__Harness {
-    function isValidSignature(address signer, bytes32 msgHash, uint8 v, bytes32 r, bytes32 s)
-    public
-    view
-    returns (bool)
-    {
+    function isValidSignature(
+        address signer,
+        bytes32 msgHash,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public view returns (bool) {
         return SignatureUtils.isValidSignature(signer, msgHash, v, r, s);
     }
 

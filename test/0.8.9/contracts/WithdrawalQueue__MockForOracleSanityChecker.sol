@@ -14,9 +14,7 @@ contract WithdrawalQueue__MockForOracleSanityChecker is IWithdrawalQueue {
 
     function getWithdrawalStatus(
         uint256[] calldata _requestIds
-    ) external view returns (
-        WithdrawalRequestStatus[] memory statuses
-    ) {
+    ) external view returns (WithdrawalRequestStatus[] memory statuses) {
         statuses = new WithdrawalRequestStatus[](_requestIds.length);
         for (uint256 i; i < _requestIds.length; ++i) {
             statuses[i].timestamp = _timestamps[_requestIds[i]];

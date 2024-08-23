@@ -13,9 +13,11 @@ interface ITimeProvider {
 contract ValidatorsExitBus__Harness is ValidatorsExitBusOracle, ITimeProvider {
     using UnstructuredStorage for bytes32;
 
-    constructor(uint256 secondsPerSlot, uint256 genesisTime, address lidoLocator)
-    ValidatorsExitBusOracle(secondsPerSlot, genesisTime, lidoLocator)
-    {
+    constructor(
+        uint256 secondsPerSlot,
+        uint256 genesisTime,
+        address lidoLocator
+    ) ValidatorsExitBusOracle(secondsPerSlot, genesisTime, lidoLocator) {
         // allow usage without a proxy for tests
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
     }
@@ -24,7 +26,7 @@ contract ValidatorsExitBus__Harness is ValidatorsExitBusOracle, ITimeProvider {
         return _getTime();
     }
 
-    function _getTime() internal override view returns (uint256) {
+    function _getTime() internal view override returns (uint256) {
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         return ITimeProvider(consensus).getTime();
     }

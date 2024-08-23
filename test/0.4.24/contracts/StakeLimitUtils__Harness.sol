@@ -18,9 +18,14 @@ contract StakeLimitUnstructuredStorage__Harness {
     );
 
     function getStorageStakeLimit()
-    external
-    view
-    returns (uint32 prevStakeBlockNumber, uint96 prevStakeLimit, uint32 maxStakeLimitGrowthBlocks, uint96 maxStakeLimit)
+        external
+        view
+        returns (
+            uint32 prevStakeBlockNumber,
+            uint96 prevStakeLimit,
+            uint32 maxStakeLimitGrowthBlocks,
+            uint96 maxStakeLimit
+        )
     {
         StakeLimitState.Data memory stakeLimit = position.getStorageStakeLimitStruct();
 
@@ -49,9 +54,14 @@ contract StakeLimitUnstructuredStorage__Harness {
     }
 
     function harness__getStorageStakeLimit()
-    external
-    view
-    returns (uint32 prevStakeBlockNumber, uint96 prevStakeLimit, uint32 maxStakeLimitGrowthBlocks, uint96 maxStakeLimit)
+        external
+        view
+        returns (
+            uint32 prevStakeBlockNumber,
+            uint96 prevStakeLimit,
+            uint32 maxStakeLimitGrowthBlocks,
+            uint96 maxStakeLimit
+        )
     {
         // the other way around for the tests purposes
         // could have done with calldata slices with a newer solidity versions
@@ -123,9 +133,14 @@ contract StakeLimitUtils__Harness {
     }
 
     function harness_getState()
-    external
-    view
-    returns (uint32 prevStakeBlockNumber, uint96 prevStakeLimit, uint32 maxStakeLimitGrowthBlocks, uint96 maxStakeLimit)
+        external
+        view
+        returns (
+            uint32 prevStakeBlockNumber,
+            uint96 prevStakeLimit,
+            uint32 maxStakeLimitGrowthBlocks,
+            uint96 maxStakeLimit
+        )
     {
         prevStakeBlockNumber = state.prevStakeBlockNumber;
         prevStakeLimit = state.prevStakeLimit;

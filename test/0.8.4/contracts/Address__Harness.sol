@@ -18,7 +18,11 @@ contract Address__Harness {
         return Address.functionCall(target, data);
     }
 
-    function functionCall(address target, bytes memory data, string memory errorMessage) external returns (bytes memory) {
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) external returns (bytes memory) {
         return Address.functionCall(target, data, errorMessage);
     }
 

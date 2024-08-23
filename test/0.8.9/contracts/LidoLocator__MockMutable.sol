@@ -40,9 +40,9 @@ contract LidoLocator__MockMutable {
 
     /**
      * @notice declare service locations
-   * @dev accepts a struct to avoid the "stack-too-deep" error
-   * @param _config struct of addresses
-   */
+     * @dev accepts a struct to avoid the "stack-too-deep" error
+     * @param _config struct of addresses
+     */
     constructor(Config memory _config) {
         accountingOracle = _assertNonZero(_config.accountingOracle);
         depositSecurityModule = _assertNonZero(_config.depositSecurityModule);
@@ -65,9 +65,9 @@ contract LidoLocator__MockMutable {
     }
 
     function oracleReportComponentsForLido()
-    external
-    view
-    returns (address, address, address, address, address, address, address)
+        external
+        view
+        returns (address, address, address, address, address, address, address)
     {
         return (
             accountingOracle,

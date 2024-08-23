@@ -13,15 +13,15 @@ contract StakingRouter__MockForLidoHandleOracleReport {
     uint256 private precisionPoint__mocked;
 
     function getStakingRewardsDistribution()
-    public
-    view
-    returns (
-        address[] memory recipients,
-        uint256[] memory stakingModuleIds,
-        uint96[] memory stakingModuleFees,
-        uint96 totalFee,
-        uint256 precisionPoints
-    )
+        public
+        view
+        returns (
+            address[] memory recipients,
+            uint256[] memory stakingModuleIds,
+            uint96[] memory stakingModuleFees,
+            uint96 totalFee,
+            uint256 precisionPoints
+        )
     {
         recipients = recipients__mocked;
         stakingModuleIds = stakingModuleIds__mocked;

@@ -77,7 +77,9 @@ contract PositiveTokenRebaseLimiterTest is Test {
             assertEq(data.positiveRebaseLimit, rebaseLimit);
             assertEq(
                 data.maxTotalPooledEther,
-                preTotalPooledEther + (preTotalPooledEther * rebaseLimit) / PositiveTokenRebaseLimiter.LIMITER_PRECISION_BASE
+                preTotalPooledEther +
+                    (preTotalPooledEther * rebaseLimit) /
+                    PositiveTokenRebaseLimiter.LIMITER_PRECISION_BASE
             );
         } else {
             assertEq(data.positiveRebaseLimit, PositiveTokenRebaseLimiter.UNLIMITED_REBASE);

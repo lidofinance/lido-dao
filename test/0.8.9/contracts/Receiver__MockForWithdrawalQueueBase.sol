@@ -4,7 +4,6 @@
 pragma solidity 0.8.9;
 
 contract Receiver__MockForWithdrawalQueueBase {
-
     bool public canReceive;
 
     function mock__setCanReceive(bool _value) external {

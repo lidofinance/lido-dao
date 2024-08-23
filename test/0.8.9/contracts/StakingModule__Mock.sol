@@ -20,9 +20,9 @@ contract StakingModule__Mock is IStakingModule {
     uint256 private depositableValidatorsCount__mocked;
 
     function getStakingModuleSummary()
-    external
-    view
-    returns (uint256 totalExitedValidators, uint256 totalDepositedValidators, uint256 depositableValidatorsCount)
+        external
+        view
+        returns (uint256 totalExitedValidators, uint256 totalDepositedValidators, uint256 depositableValidatorsCount)
     {
         totalExitedValidators = totalExitedValidators__mocked;
         totalDepositedValidators = totalDepositedValidators__mocked;
@@ -51,18 +51,18 @@ contract StakingModule__Mock is IStakingModule {
     function getNodeOperatorSummary(
         uint256 _nodeOperatorId
     )
-    external
-    view
-    returns (
-        bool isTargetLimitActive,
-        uint256 targetValidatorsCount,
-        uint256 stuckValidatorsCount,
-        uint256 refundedValidatorsCount,
-        uint256 stuckPenaltyEndTimestamp,
-        uint256 totalExitedValidators,
-        uint256 totalDepositedValidators,
-        uint256 depositableValidatorsCount
-    )
+        external
+        view
+        returns (
+            bool isTargetLimitActive,
+            uint256 targetValidatorsCount,
+            uint256 stuckValidatorsCount,
+            uint256 refundedValidatorsCount,
+            uint256 stuckPenaltyEndTimestamp,
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        )
     {
         isTargetLimitActive = nodeOperatorIsTargetLimitActive__mocked;
         targetValidatorsCount = nodeOperatorTargetValidatorsCount__mocked;
@@ -157,7 +157,10 @@ contract StakingModule__Mock is IStakingModule {
 
     event Mock__StuckValidatorsCountUpdated(bytes _nodeOperatorIds, bytes _stuckValidatorsCounts);
 
-    function updateStuckValidatorsCount(bytes calldata _nodeOperatorIds, bytes calldata _stuckValidatorsCounts) external {
+    function updateStuckValidatorsCount(
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _stuckValidatorsCounts
+    ) external {
         emit Mock__StuckValidatorsCountUpdated(_nodeOperatorIds, _stuckValidatorsCounts);
     }
 

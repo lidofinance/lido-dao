@@ -20,22 +20,21 @@ contract StakingRouter__MockForLidoMisc {
         return 10000; // 100%
     }
 
-    function getStakingFeeAggregateDistributionE4Precision() external view returns (
-        uint16 treasuryFee,
-        uint16 modulesFee
-    ) {
+    function getStakingFeeAggregateDistributionE4Precision()
+        external
+        view
+        returns (uint16 treasuryFee, uint16 modulesFee)
+    {
         treasuryFee = 500;
         modulesFee = 500;
     }
 
-    function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
-    public
-    view
-    returns (uint256)
-    {
+    function getStakingModuleMaxDepositsCount(
+        uint256 _stakingModuleId,
+        uint256 _maxDepositsValue
+    ) public view returns (uint256) {
         return stakingModuleMaxDepositsCount;
     }
-
 
     function deposit(
         uint256 _depositsCount,

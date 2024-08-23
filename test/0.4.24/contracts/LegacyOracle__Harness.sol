@@ -10,7 +10,6 @@ interface ITimeProvider {
 }
 
 contract LegacyOracle__Harness is LegacyOracle {
-
     // @dev this is a way to not use block.timestamp in the tests
     function _getTime() internal view returns (uint256) {
         address accountingOracle = ACCOUNTING_ORACLE_POSITION.getStorageAddress();

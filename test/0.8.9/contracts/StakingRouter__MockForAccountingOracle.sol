@@ -6,7 +6,6 @@ pragma solidity 0.8.9;
 import {IStakingRouter} from "contracts/0.8.9/oracle/AccountingOracle.sol";
 
 contract StakingRouter__MockForAccountingOracle is IStakingRouter {
-
     struct UpdateExitedKeysByModuleCallData {
         uint256[] moduleIds;
         uint256[] exitedKeysCounts;
@@ -28,10 +27,7 @@ contract StakingRouter__MockForAccountingOracle is IStakingRouter {
 
     uint256 public totalCalls_onValidatorsCountsByNodeOperatorReportingFinished;
 
-
-    function lastCall_updateExitedKeysByModule()
-    external view returns (UpdateExitedKeysByModuleCallData memory)
-    {
+    function lastCall_updateExitedKeysByModule() external view returns (UpdateExitedKeysByModuleCallData memory) {
         return _lastCall_updateExitedKeysByModule;
     }
 
@@ -71,9 +67,9 @@ contract StakingRouter__MockForAccountingOracle is IStakingRouter {
         bytes calldata nodeOperatorIds,
         bytes calldata exitedKeysCounts
     ) external {
-        calls_reportExitedKeysByNodeOperator.push(ReportKeysByNodeOperatorCallData(
-            stakingModuleId, nodeOperatorIds, exitedKeysCounts
-        ));
+        calls_reportExitedKeysByNodeOperator.push(
+            ReportKeysByNodeOperatorCallData(stakingModuleId, nodeOperatorIds, exitedKeysCounts)
+        );
     }
 
     function reportStakingModuleStuckValidatorsCountByNodeOperator(
@@ -81,9 +77,9 @@ contract StakingRouter__MockForAccountingOracle is IStakingRouter {
         bytes calldata nodeOperatorIds,
         bytes calldata stuckKeysCounts
     ) external {
-        calls_reportStuckKeysByNodeOperator.push(ReportKeysByNodeOperatorCallData(
-            stakingModuleId, nodeOperatorIds, stuckKeysCounts
-        ));
+        calls_reportStuckKeysByNodeOperator.push(
+            ReportKeysByNodeOperatorCallData(stakingModuleId, nodeOperatorIds, stuckKeysCounts)
+        );
     }
 
     function onValidatorsCountsByNodeOperatorReportingFinished() external {

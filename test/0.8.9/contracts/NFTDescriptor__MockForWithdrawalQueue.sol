@@ -15,9 +15,7 @@ contract NFTDescriptor__MockForWithdrawalQueue is INFTDescriptor {
         BASE_TOKEN_URI = _toBytes32(_baseURI);
     }
 
-    function constructTokenURI(
-        uint256 _requestId
-    ) external view returns (string memory) {
+    function constructTokenURI(uint256 _requestId) external view returns (string memory) {
         string memory baseURI = _toString(BASE_TOKEN_URI);
         return string(abi.encodePacked(baseURI, _requestId.toString()));
     }

@@ -36,6 +36,9 @@
     ],
     "./**/*.{ts,md,json}": [
       "prettier --write"
+    ],
+    "./test/**/*.sol": [
+      "prettier --write"
     ]
   },
   "devDependencies": {
@@ -80,6 +83,7 @@
     "husky": "^9.1.5",
     "lint-staged": "^15.2.9",
     "prettier": "^3.3.3",
+    "prettier-plugin-solidity": "^1.4.1",
     "solhint": "^5.0.3",
     "solhint-plugin-lido": "^0.0.4",
     "solidity-coverage": "^0.8.12",

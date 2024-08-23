@@ -6,7 +6,6 @@ pragma solidity 0.4.24;
 import {IHashConsensus} from "contracts/0.4.24/oracle/LegacyOracle.sol";
 
 contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
-
     uint256 internal _time = 2513040315;
 
     /// Chain specification
@@ -47,16 +46,8 @@ contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
         _setFrameConfig(initialEpoch, epochsPerFrame, fastLaneLengthSlots);
     }
 
-    function _setFrameConfig(
-        uint256 initialEpoch,
-        uint256 epochsPerFrame,
-        uint256 fastLaneLengthSlots
-    ) internal {
-        _frameConfig = FrameConfig(
-            uint64(initialEpoch),
-            uint64(epochsPerFrame),
-            uint64(fastLaneLengthSlots)
-        );
+    function _setFrameConfig(uint256 initialEpoch, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) internal {
+        _frameConfig = FrameConfig(uint64(initialEpoch), uint64(epochsPerFrame), uint64(fastLaneLengthSlots));
     }
 
     function setTime(uint256 newTime) external {
@@ -71,26 +62,20 @@ contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
         return _time;
     }
 
-    function getChainConfig() external view returns (
-        uint256 slotsPerEpoch,
-        uint256 secondsPerSlot,
-        uint256 genesisTime
-    ) {
+    function getChainConfig()
+        external
+        view
+        returns (uint256 slotsPerEpoch, uint256 secondsPerSlot, uint256 genesisTime)
+    {
         return (SLOTS_PER_EPOCH, SECONDS_PER_SLOT, GENESIS_TIME);
     }
 
-    function getFrameConfig() external view returns (
-        uint256 initialEpoch,
-        uint256 epochsPerFrame
-    ) {
+    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame) {
         FrameConfig memory config = _frameConfig;
         return (config.initialEpoch, config.epochsPerFrame);
     }
 
-    function getCurrentFrame() external view returns (
-        uint256 refSlot,
-        uint256 reportProcessingDeadlineSlot
-    ) {
+    function getCurrentFrame() external view returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot) {
         ConsensusFrame memory frame = _getCurrentFrame();
         return (frame.refSlot, frame.reportProcessingDeadlineSlot);
     }
@@ -99,15 +84,14 @@ contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
         return _getFrameAtTimestamp(_getTime(), _frameConfig);
     }
 
-    function _getFrameAtTimestamp(uint256 timestamp, FrameConfig memory config)
-    internal view returns (ConsensusFrame memory)
-    {
+    function _getFrameAtTimestamp(
+        uint256 timestamp,
+        FrameConfig memory config
+    ) internal view returns (ConsensusFrame memory) {
         return _getFrameAtIndex(_computeFrameIndex(timestamp, config), config);
     }
 
-    function _computeFrameIndex(uint256 timestamp, FrameConfig memory config)
-    internal view returns (uint256)
-    {
+    function _computeFrameIndex(uint256 timestamp, FrameConfig memory config) internal view returns (uint256) {
         uint256 epoch = _computeEpochAtTimestamp(timestamp);
         return (epoch - config.initialEpoch) / config.epochsPerFrame;
     }
@@ -116,18 +100,20 @@ contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
         return _computeEpochAtSlot(_computeSlotAtTimestamp(timestamp));
     }
 
-    function _getFrameAtIndex(uint256 frameIndex, FrameConfig memory config)
-    internal view returns (ConsensusFrame memory)
-    {
+    function _getFrameAtIndex(
+        uint256 frameIndex,
+        FrameConfig memory config
+    ) internal view returns (ConsensusFrame memory) {
         uint256 frameStartEpoch = _computeStartEpochOfFrameWithIndex(frameIndex, config);
         uint256 frameStartSlot = _computeStartSlotAtEpoch(frameStartEpoch);
         uint256 nextFrameStartSlot = frameStartSlot + config.epochsPerFrame * SLOTS_PER_EPOCH;
 
-        return ConsensusFrame({
-            index: frameIndex,
-            refSlot: uint64(frameStartSlot - 1),
-            reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1 - DEADLINE_SLOT_OFFSET)
-        });
+        return
+            ConsensusFrame({
+                index: frameIndex,
+                refSlot: uint64(frameStartSlot - 1),
+                reportProcessingDeadlineSlot: uint64(nextFrameStartSlot - 1 - DEADLINE_SLOT_OFFSET)
+            });
     }
 
     // Math
@@ -146,9 +132,10 @@ contract HashConsensus__HarnessForLegacyOracle is IHashConsensus {
         return epoch * SLOTS_PER_EPOCH;
     }
 
-    function _computeStartEpochOfFrameWithIndex(uint256 frameIndex, FrameConfig memory config)
-    internal pure returns (uint256)
-    {
+    function _computeStartEpochOfFrameWithIndex(
+        uint256 frameIndex,
+        FrameConfig memory config
+    ) internal pure returns (uint256) {
         return config.initialEpoch + frameIndex * config.epochsPerFrame;
     }
 

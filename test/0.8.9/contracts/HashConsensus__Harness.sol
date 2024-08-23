@@ -16,19 +16,21 @@ contract HashConsensus__Harness is HashConsensus {
         uint256 fastLaneLengthSlots,
         address admin,
         address reportProcessor
-    ) HashConsensus(
-    slotsPerEpoch,
-    secondsPerSlot,
-    genesisTime,
-    epochsPerFrame,
-    fastLaneLengthSlots,
-    admin,
-    reportProcessor
-    ) {
+    )
+        HashConsensus(
+            slotsPerEpoch,
+            secondsPerSlot,
+            genesisTime,
+            epochsPerFrame,
+            fastLaneLengthSlots,
+            admin,
+            reportProcessor
+        )
+    {
         require(genesisTime <= _time, "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME");
     }
 
-    function _getTime() internal override view returns (uint256) {
+    function _getTime() internal view override returns (uint256) {
         return _time;
     }
 

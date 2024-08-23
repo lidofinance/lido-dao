@@ -35,11 +35,7 @@ contract Lido__MockForAccountingOracle is ILido {
 
     HandleOracleReportLastCall internal _handleOracleReportLastCall;
 
-    function getLastCall_handleOracleReport()
-    external
-    view
-    returns (HandleOracleReportLastCall memory)
-    {
+    function getLastCall_handleOracleReport() external view returns (HandleOracleReportLastCall memory) {
         return _handleOracleReportLastCall;
     }
 
@@ -62,20 +58,14 @@ contract Lido__MockForAccountingOracle is ILido {
         uint256[] calldata withdrawalFinalizationBatches,
         uint256 simulatedShareRate
     ) external {
-        _handleOracleReportLastCall
-        .currentReportTimestamp = currentReportTimestamp;
-        _handleOracleReportLastCall
-        .secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
+        _handleOracleReportLastCall.currentReportTimestamp = currentReportTimestamp;
+        _handleOracleReportLastCall.secondsElapsedSinceLastReport = secondsElapsedSinceLastReport;
         _handleOracleReportLastCall.numValidators = numValidators;
         _handleOracleReportLastCall.clBalance = clBalance;
-        _handleOracleReportLastCall
-        .withdrawalVaultBalance = withdrawalVaultBalance;
-        _handleOracleReportLastCall
-        .elRewardsVaultBalance = elRewardsVaultBalance;
-        _handleOracleReportLastCall
-        .sharesRequestedToBurn = sharesRequestedToBurn;
-        _handleOracleReportLastCall
-        .withdrawalFinalizationBatches = withdrawalFinalizationBatches;
+        _handleOracleReportLastCall.withdrawalVaultBalance = withdrawalVaultBalance;
+        _handleOracleReportLastCall.elRewardsVaultBalance = elRewardsVaultBalance;
+        _handleOracleReportLastCall.sharesRequestedToBurn = sharesRequestedToBurn;
+        _handleOracleReportLastCall.withdrawalFinalizationBatches = withdrawalFinalizationBatches;
         _handleOracleReportLastCall.simulatedShareRate = simulatedShareRate;
         ++_handleOracleReportLastCall.callCount;
 

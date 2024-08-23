@@ -152,7 +152,7 @@ contract WQHandler is CommonBase, StdAssertions, StdUtils {
         uint256[] memory batches = calculateBatches(ethBudget, maxShareRate);
 
         if (batches.length > 0) {
-            (uint256 eth,) = wq.prefinalize(batches, maxShareRate);
+            (uint256 eth, ) = wq.prefinalize(batches, maxShareRate);
 
             vm.deal(address(this), eth);
             wq.finalize{value: eth}(batches[batches.length - 1], maxShareRate);

@@ -7,9 +7,7 @@ contract Burner__MockForOracleSanityChecker {
     uint256 private nonCover;
     uint256 private cover;
 
-    function getSharesRequestedToBurn() external view returns (
-        uint256 coverShares, uint256 nonCoverShares
-    ) {
+    function getSharesRequestedToBurn() external view returns (uint256 coverShares, uint256 nonCoverShares) {
         coverShares = cover;
         nonCoverShares = nonCover;
     }

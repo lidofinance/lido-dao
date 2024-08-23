@@ -13,9 +13,13 @@ interface ITimeProvider {
 contract AccountingOracle__Harness is AccountingOracle, ITimeProvider {
     using UnstructuredStorage for bytes32;
 
-    constructor(address lidoLocator, address lido, address legacyOracle, uint256 secondsPerSlot, uint256 genesisTime)
-    AccountingOracle(lidoLocator, lido, legacyOracle, secondsPerSlot, genesisTime)
-    {
+    constructor(
+        address lidoLocator,
+        address lido,
+        address legacyOracle,
+        uint256 secondsPerSlot,
+        uint256 genesisTime
+    ) AccountingOracle(lidoLocator, lido, legacyOracle, secondsPerSlot, genesisTime) {
         // allow usage without a proxy for tests
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
     }
@@ -24,7 +28,7 @@ contract AccountingOracle__Harness is AccountingOracle, ITimeProvider {
         return _getTime();
     }
 
-    function _getTime() internal override view returns (uint256) {
+    function _getTime() internal view override returns (uint256) {
         address consensus = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         return ITimeProvider(consensus).getTime();
     }

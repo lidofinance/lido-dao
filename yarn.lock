@@ -7991,6 +7991,7 @@ __metadata:
     lint-staged: "npm:^15.2.9"
     openzeppelin-solidity: "npm:2.0.0"
     prettier: "npm:^3.3.3"
+    prettier-plugin-solidity: "npm:^1.4.1"
     solhint: "npm:^5.0.3"
     solhint-plugin-lido: "npm:^0.0.4"
     solidity-coverage: "npm:^0.8.12"
@@ -9444,6 +9445,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"prettier-plugin-solidity@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "prettier-plugin-solidity@npm:1.4.1"
+  dependencies:
+    "@solidity-parser/parser": "npm:^0.18.0"
+    semver: "npm:^7.5.4"
+  peerDependencies:
+    prettier: ">=2.3.0"
+  checksum: 10c0/5ea7631fe01002319b87bf493e96b7b1cdc442fe4faebf227a4d5accb953140af6b3f63a330de53b1139b56e0ff8de6f055b84c902b75ba331824302d604418d
+  languageName: node
+  linkType: hard
+
 "prettier@npm:^2.3.1, prettier@npm:^2.8.3":
   version: 2.8.8
   resolution: "prettier@npm:2.8.8"
@@ -10212,7 +10225,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.3.4, semver@npm:^7.3.5, semver@npm:^7.3.7, semver@npm:^7.5.2, semver@npm:^7.6.0, semver@npm:^7.6.2":
+"semver@npm:^7.3.4, semver@npm:^7.3.5, semver@npm:^7.3.7, semver@npm:^7.5.2, semver@npm:^7.5.4, semver@npm:^7.6.0, semver@npm:^7.6.2":
   version: 7.6.3
   resolution: "semver@npm:7.6.3"
   bin:

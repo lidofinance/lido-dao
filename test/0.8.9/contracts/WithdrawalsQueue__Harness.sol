@@ -6,12 +6,15 @@ pragma solidity 0.8.9;
 import {WithdrawalQueue, IWstETH} from "contracts/0.8.9/WithdrawalQueue.sol";
 
 contract WithdrawalsQueue__Harness is WithdrawalQueue {
-
     event Mock__Transfer(address indexed from, address indexed to, uint256 requestId);
 
     constructor(address _wstETH) WithdrawalQueue(IWstETH(_wstETH)) {}
 
-    function harness__enqueue(uint128 _amountOfStETH, uint128 _amountOfShares, address _owner) external returns (uint256 requestId) {
+    function harness__enqueue(
+        uint128 _amountOfStETH,
+        uint128 _amountOfShares,
+        address _owner
+    ) external returns (uint256 requestId) {
         return _enqueue(_amountOfStETH, _amountOfShares, _owner);
     }
 

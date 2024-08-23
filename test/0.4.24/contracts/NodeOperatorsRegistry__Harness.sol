@@ -113,7 +113,11 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
         uint256[] _nodeOperatorIds,
         uint256[] _activeKeyCountsAfterAllocation
     ) external returns (bytes memory pubkeys, bytes memory signatures) {
-        (pubkeys, signatures) = _loadAllocatedSigningKeys(_keysCountToLoad, _nodeOperatorIds, _activeKeyCountsAfterAllocation);
+        (pubkeys, signatures) = _loadAllocatedSigningKeys(
+            _keysCountToLoad,
+            _nodeOperatorIds,
+            _activeKeyCountsAfterAllocation
+        );
 
         obtainedPublicKeys = pubkeys;
         obtainedSignatures = signatures;
@@ -121,11 +125,17 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
         emit ValidatorsKeysLoaded(pubkeys, signatures);
     }
 
-    function harness__getSigningKeysAllocationData(uint256 _keysCount) external view returns (
-        uint256 allocatedKeysCount,
-        uint256[] memory nodeOperatorIds,
-        uint256[] memory activeKeyCountsAfterAllocation
-    ) {
+    function harness__getSigningKeysAllocationData(
+        uint256 _keysCount
+    )
+        external
+        view
+        returns (
+            uint256 allocatedKeysCount,
+            uint256[] memory nodeOperatorIds,
+            uint256[] memory activeKeyCountsAfterAllocation
+        )
+    {
         return _getSigningKeysAllocationData(_keysCount);
     }
 
@@ -145,8 +155,8 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
 
     /**
      * @dev Extra care is needed.
-   * Doesn't update the active node operators counter and node operator's summary
-   */
+     * Doesn't update the active node operators counter and node operator's summary
+     */
     function harness__unsafeSetNodeOperatorIsActive(uint256 _nodeOperatorId, bool _isActive) external {
         _nodeOperators[_nodeOperatorId].active = _isActive;
     }

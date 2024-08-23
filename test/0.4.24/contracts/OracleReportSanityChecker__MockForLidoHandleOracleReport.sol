@@ -26,7 +26,10 @@ contract OracleReportSanityChecker__MockForLidoHandleOracleReport {
         if (checkAccountingOracleReportReverts) revert();
     }
 
-    function checkWithdrawalQueueOracleReport(uint256 _lastFinalizableRequestId, uint256 _reportTimestamp) external view {
+    function checkWithdrawalQueueOracleReport(
+        uint256 _lastFinalizableRequestId,
+        uint256 _reportTimestamp
+    ) external view {
         if (checkWithdrawalQueueOracleReportReverts) revert();
     }
 
@@ -41,9 +44,9 @@ contract OracleReportSanityChecker__MockForLidoHandleOracleReport {
         uint256 _etherToLockForWithdrawals,
         uint256 _newSharesToBurnForWithdrawals
     )
-    external
-    view
-    returns (uint256 withdrawals, uint256 elRewards, uint256 simulatedSharesToBurn, uint256 sharesToBurn)
+        external
+        view
+        returns (uint256 withdrawals, uint256 elRewards, uint256 simulatedSharesToBurn, uint256 sharesToBurn)
     {
         withdrawals = _withdrawals;
         elRewards = _elRewards;

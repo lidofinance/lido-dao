@@ -17,19 +17,26 @@ interface IStETH {
     function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256);
 
     function permit(
-        address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s
+        address _owner,
+        address _spender,
+        uint256 _value,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
     ) external;
 }
 
 contract StETH__HarnessForWithdrawalQueue is IStETH {
     using UnstructuredStorage for bytes32;
 
-    uint256 constant internal INFINITE_ALLOWANCE = ~uint256(0);
+    uint256 internal constant INFINITE_ALLOWANCE = ~uint256(0);
 
     uint256 public totalPooledEther;
     uint256 public totalShares;
 
-    bytes32 internal constant TOTAL_SHARES_POSITION = 0xe3b4b636e601189b5f4c6742edf2538ac12bb61ed03e6da26949d69838fa447e;
+    bytes32 internal constant TOTAL_SHARES_POSITION =
+        0xe3b4b636e601189b5f4c6742edf2538ac12bb61ed03e6da26949d69838fa447e;
 
     mapping(address => uint256) private shares;
 
@@ -38,25 +45,13 @@ contract StETH__HarnessForWithdrawalQueue is IStETH {
     bool internal isSignatureValid = true;
 
     // StETH::TransferShares
-    event TransferShares(
-        address indexed from,
-        address indexed to,
-        uint256 sharesValue
-    );
+    event TransferShares(address indexed from, address indexed to, uint256 sharesValue);
 
     // openzeppelin-solidity/contracts/token/ERC20/IERC20.sol (0.4.24)
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     // openzeppelin-solidity/contracts/token/ERC20/IERC20.sol (0.4.24)
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 value
-    );
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     constructor() {}
 
@@ -64,12 +59,12 @@ contract StETH__HarnessForWithdrawalQueue is IStETH {
 
     // StETH::getSharesByPooledEth
     function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
-        return _ethAmount * _getTotalShares() / totalPooledEther;
+        return (_ethAmount * _getTotalShares()) / totalPooledEther;
     }
 
     // StETH::getPooledEthByShares
     function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
-        return _sharesAmount * totalPooledEther / _getTotalShares();
+        return (_sharesAmount * totalPooledEther) / _getTotalShares();
     }
 
     // StETH::transfer
@@ -96,7 +91,13 @@ contract StETH__HarnessForWithdrawalQueue is IStETH {
     // @dev Overrides the actual permit function to allow testing without signatures based on `isSignatureValid` flag.
     // StETHPermit::permit
     function permit(
-        address _owner, address _spender, uint256 _value, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s
+        address _owner,
+        address _spender,
+        uint256 _value,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
     ) external {
         require(block.timestamp <= _deadline, "DEADLINE_EXPIRED");
         require(isSignatureValid, "INVALID_SIGNATURE");

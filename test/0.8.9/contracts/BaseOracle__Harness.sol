@@ -22,24 +22,13 @@ contract BaseOracle__Harness is BaseOracle {
     HandleConsensusReportLastCall internal _handleConsensusReportLastCall;
     BaseOracle.ConsensusReport public lastDiscardedReport;
 
-    constructor(
-        uint256 secondsPerSlot,
-        uint256 genesisTime,
-        address admin
-    ) BaseOracle(secondsPerSlot, genesisTime) {
+    constructor(uint256 secondsPerSlot, uint256 genesisTime, address admin) BaseOracle(secondsPerSlot, genesisTime) {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
-        require(
-            genesisTime <= _time,
-            "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME"
-        );
+        require(genesisTime <= _time, "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME");
     }
 
-    function initialize(
-        address consensusContract,
-        uint256 consensusVersion,
-        uint256 lastProcessingRefSlot
-    ) external {
+    function initialize(address consensusContract, uint256 consensusVersion, uint256 lastProcessingRefSlot) external {
         _initialize(consensusContract, consensusVersion, lastProcessingRefSlot);
     }
 
@@ -69,24 +58,16 @@ contract BaseOracle__Harness is BaseOracle {
         uint256 prevProcessingRefSlot
     ) internal virtual override {
         _handleConsensusReportLastCall.report = report;
-        _handleConsensusReportLastCall
-        .prevSubmittedRefSlot = prevSubmittedRefSlot;
-        _handleConsensusReportLastCall
-        .prevProcessingRefSlot = prevProcessingRefSlot;
+        _handleConsensusReportLastCall.prevSubmittedRefSlot = prevSubmittedRefSlot;
+        _handleConsensusReportLastCall.prevProcessingRefSlot = prevProcessingRefSlot;
         ++_handleConsensusReportLastCall.callCount;
     }
 
-    function _handleConsensusReportDiscarded(
-        BaseOracle.ConsensusReport memory report
-    ) internal override {
+    function _handleConsensusReportDiscarded(BaseOracle.ConsensusReport memory report) internal override {
         lastDiscardedReport = report;
     }
 
-    function getConsensusReportLastCall()
-    external
-    view
-    returns (HandleConsensusReportLastCall memory)
-    {
+    function getConsensusReportLastCall() external view returns (HandleConsensusReportLastCall memory) {
         return _handleConsensusReportLastCall;
     }
 
@@ -103,11 +84,7 @@ contract BaseOracle__Harness is BaseOracle {
         return _getCurrentRefSlot();
     }
 
-    function checkConsensusData(
-        uint256 refSlot,
-        uint256 consensusVersion,
-        bytes32 hash
-    ) external view {
+    function checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash) external view {
         _checkConsensusData(refSlot, consensusVersion, hash);
     }
 

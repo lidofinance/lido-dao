@@ -6,7 +6,9 @@ pragma solidity 0.8.9;
 contract OracleReportSanityChecker__Mock {
     error SelectorNotFound(bytes4 sig, uint256 value, bytes data);
 
-    fallback() external payable {revert SelectorNotFound(msg.sig, msg.value, msg.data);}
+    fallback() external payable {
+        revert SelectorNotFound(msg.sig, msg.value, msg.data);
+    }
 
     function checkAccountingOracleReport(
         uint256 _timeElapsed,
@@ -42,12 +44,11 @@ contract OracleReportSanityChecker__Mock {
         uint256,
         uint256 _etherToLockForWithdrawals,
         uint256
-    ) external view returns (
-        uint256 withdrawals,
-        uint256 elRewards,
-        uint256 simulatedSharesToBurn,
-        uint256 sharesToBurn
-    ) {
+    )
+        external
+        view
+        returns (uint256 withdrawals, uint256 elRewards, uint256 simulatedSharesToBurn, uint256 sharesToBurn)
+    {
         withdrawals = _withdrawalVaultBalance;
         elRewards = _elRewardsVaultBalance;
 

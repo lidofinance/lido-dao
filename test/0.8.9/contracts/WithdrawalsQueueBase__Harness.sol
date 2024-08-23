@@ -6,16 +6,23 @@ pragma solidity 0.8.9;
 import {WithdrawalQueueBase} from "contracts/0.8.9/WithdrawalQueueBase.sol";
 
 contract WithdrawalsQueueBase__Harness is WithdrawalQueueBase {
-
     constructor() {
         _initializeQueue();
     }
 
-    function harness__enqueue(uint128 _amountOfStETH, uint128 _amountOfShares, address _owner) external returns (uint256 requestId) {
+    function harness__enqueue(
+        uint128 _amountOfStETH,
+        uint128 _amountOfShares,
+        address _owner
+    ) external returns (uint256 requestId) {
         return _enqueue(_amountOfStETH, _amountOfShares, _owner);
     }
 
-    function harness__finalize(uint256 _lastRequestIdToBeFinalized, uint256 _amountOfETH, uint256 _maxShareRate) external {
+    function harness__finalize(
+        uint256 _lastRequestIdToBeFinalized,
+        uint256 _amountOfETH,
+        uint256 _maxShareRate
+    ) external {
         _finalize(_lastRequestIdToBeFinalized, _amountOfETH, _maxShareRate);
     }
 
@@ -23,7 +30,11 @@ contract WithdrawalsQueueBase__Harness is WithdrawalQueueBase {
         return _getStatus(_requestId);
     }
 
-    function harness__findCheckpointHint(uint256 _requestId, uint256 _start, uint256 _end) external view returns (uint256) {
+    function harness__findCheckpointHint(
+        uint256 _requestId,
+        uint256 _start,
+        uint256 _end
+    ) external view returns (uint256) {
         return _findCheckpointHint(_requestId, _start, _end);
     }
 
@@ -31,8 +42,10 @@ contract WithdrawalsQueueBase__Harness is WithdrawalQueueBase {
         return _sendValue(_recipient, _amount);
     }
 
-    function harness__calcBatch(WithdrawalRequest memory _preStartRequest, WithdrawalRequest memory _endRequest) external pure returns (uint256 shareRate, uint256 stETH, uint256 shares)
-    {
+    function harness__calcBatch(
+        WithdrawalRequest memory _preStartRequest,
+        WithdrawalRequest memory _endRequest
+    ) external pure returns (uint256 shareRate, uint256 stETH, uint256 shares) {
         return _calcBatch(_preStartRequest, _endRequest);
     }
 
