@@ -16,8 +16,7 @@ export class ProtocolNetworkConfig {
   constructor(
     public readonly env: Record<keyof ProtocolNetworkItems, string>,
     public readonly defaults: Record<keyof ProtocolNetworkItems, string>,
-  ) {
-  }
+  ) {}
 
   get(key: keyof ProtocolNetworkItems): string {
     return process.env[this.env[key]] || this.defaults[key] || "";
@@ -54,14 +53,10 @@ const defaultEnv = {
 } as ProtocolNetworkItems;
 
 const getPrefixedEnv = (prefix: string, obj: Record<string, string>): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [key, `${prefix}_${value}`]),
-  );
+  Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, `${prefix}_${value}`]));
 
 const getDefaults = (obj: Record<string, string>): Record<string, string> =>
-  Object.fromEntries(
-    Object.entries(obj).map(([key]) => [key, ""]),
-  );
+  Object.fromEntries(Object.entries(obj).map(([key]) => [key, ""]));
 
 export async function getNetworkConfig(network: string): Promise<ProtocolNetworkConfig> {
   const defaults = getDefaults(defaultEnv) as Record<keyof ProtocolNetworkItems, string>;
@@ -69,17 +64,15 @@ export async function getNetworkConfig(network: string): Promise<ProtocolNetwork
   switch (network) {
     case "local":
       const config = await parseLocalDeploymentJson();
-      return new ProtocolNetworkConfig(
-        getPrefixedEnv("LOCAL", defaultEnv),
-        {
-          ...defaults,
-          locator: config["lidoLocator"].proxy.address,
-          agentAddress: config["app:aragon-agent"].proxy.address,
-          votingAddress: config["app:aragon-voting"].proxy.address,
-          // Overrides for local development
-          easyTrackAddress: config["app:aragon-agent"].proxy.address,
-          sdvt: config["app:node-operators-registry"].proxy.address,
-        });
+      return new ProtocolNetworkConfig(getPrefixedEnv("LOCAL", defaultEnv), {
+        ...defaults,
+        locator: config["lidoLocator"].proxy.address,
+        agentAddress: config["app:aragon-agent"].proxy.address,
+        votingAddress: config["app:aragon-voting"].proxy.address,
+        // Overrides for local development
+        easyTrackAddress: config["app:aragon-agent"].proxy.address,
+        sdvt: config["app:node-operators-registry"].proxy.address,
+      });
 
     case "mainnet-fork":
     case "hardhat":
@@ -92,6 +85,17 @@ export async function getNetworkConfig(network: string): Promise<ProtocolNetwork
         votingAddress: "0x2e59A20f205bB85a89C53f1936454680651E618e",
         // https://docs.lido.fi/deployed-contracts/#easy-track
         easyTrackAddress: "0xFE5986E06210aC1eCC1aDCafc0cc7f8D63B3F977",
+      });
+
+    case "sepolia-fork":
+      return new ProtocolNetworkConfig(getPrefixedEnv("SEPOLIA", defaultEnv), {
+        ...defaults,
+        locator: "0x8f6254332f69557A72b0DA2D5F0Bc07d4CA991E7",
+        // https://docs.lido.fi/deployed-contracts/#dao-contracts
+        agentAddress: "0x32A0E5828B62AAb932362a4816ae03b860b65e83",
+        votingAddress: "0x39A0EbdEE54cB319f4F42141daaBDb6ba25D341A",
+        // https://docs.lido.fi/deployed-contracts/#easy-track
+        easyTrackAddress: "0xF0211b7660680B49De1A7E9f25C65660F0a13Fea",
       });
 
     default:
