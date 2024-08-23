@@ -38,7 +38,7 @@ const MANAGE_TOKEN_URI_ROLE = streccak("MANAGE_TOKEN_URI_ROLE");
 const MOCK_NFT_DESCRIPTOR_BASE_URI = "https://example-descriptor.com/";
 const MOCK_TOKEN_BASE_URL = "https://example.com";
 
-describe.only("WithdrawalQueueERC721.sol", () => {
+describe("WithdrawalQueueERC721.sol", () => {
   let owner: HardhatEthersSigner;
   let user: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;

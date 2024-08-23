@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 
 pragma solidity >=0.4.24 <0.9.0;
 
@@ -80,7 +80,7 @@ contract MemUtilsTest is Test, MemUtilsTestHelper {
             initialFreeMemPtr,
             freeMemPtr,
             abi.encodePacked(
-                // array 1: length
+            // array 1: length
                 uint256(32),
                 // array 1: data
                 bytes32(0x1111111111111111111111111111111111111111111111111111111111111111),

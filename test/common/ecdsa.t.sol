@@ -3,7 +3,7 @@
 
 pragma solidity >=0.4.24 <0.9.0;
 
-import {Test} from "forge-std/Test.sol";
+import "forge-std/Test.sol";
 
 import {ECDSA} from "contracts/common/lib/ECDSA.sol";
 

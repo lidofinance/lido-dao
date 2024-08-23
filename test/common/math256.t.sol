@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 
 pragma solidity >=0.4.24 <0.9.0;
 
@@ -117,36 +117,36 @@ contract Math256Test is Test {
     }
 
     function test_max_WorksWithBothNegativeABInt256() public pure {
-        int256 a = -1;
-        int256 b = -2;
+        int256 a = - 1;
+        int256 b = - 2;
 
         assertEq(Math256.max(a, b), a);
     }
 
     function test_max_WorksWithBothNegativeBAInt256() public pure {
-        int256 a = -1;
-        int256 b = -2;
+        int256 a = - 1;
+        int256 b = - 2;
 
         assertEq(Math256.max(b, a), a);
     }
 
     function test_max_WorksWithPositiveAndNegativeInt256() public pure {
         int256 a = 1;
-        int256 b = -2;
+        int256 b = - 2;
 
         assertEq(Math256.max(a, b), a);
     }
 
     function test_max_WorksWithNegativeAndPositiveInt256() public pure {
         int256 a = 1;
-        int256 b = -2;
+        int256 b = - 2;
 
         assertEq(Math256.max(b, a), a);
     }
 
     function test_max_WorksWithEqualNegativeBAInt256() public pure {
-        int256 a = -1;
-        int256 b = -1;
+        int256 a = - 1;
+        int256 b = - 1;
 
         assertEq(Math256.max(b, a), b);
     }

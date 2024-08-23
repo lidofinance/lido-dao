@@ -1,5 +1,5 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 
 pragma solidity >=0.4.24 <0.9.0;
 
@@ -171,9 +171,9 @@ contract MinFirstAllocationStrategyBase {
     TestOutput internal _expected;
 
     function getInput()
-        external
-        view
-        returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocationSize)
+    external
+    view
+    returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocationSize)
     {
         buckets = _input.buckets;
         capacities = _input.capacities;
@@ -181,9 +181,9 @@ contract MinFirstAllocationStrategyBase {
     }
 
     function getExpectedOutput()
-        external
-        view
-        returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated)
+    external
+    view
+    returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated)
     {
         buckets = _expected.buckets;
         capacities = _expected.capacities;
@@ -191,9 +191,9 @@ contract MinFirstAllocationStrategyBase {
     }
 
     function getActualOutput()
-        external
-        view
-        returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated)
+    external
+    view
+    returns (uint256[] memory buckets, uint256[] memory capacities, uint256 allocated)
     {
         buckets = _actual.buckets;
         capacities = _actual.capacities;
@@ -218,7 +218,7 @@ contract MinFirstAllocationStrategyBase {
 
 contract MinFirstAllocationStrategyAllocateHandler is MinFirstAllocationStrategyBase {
     function allocate(uint256[] memory _fuzzBuckets, uint256[] memory _fuzzCapacities, uint256 _fuzzAllocationSize)
-        public
+    public
     {
         _fillTestInput(_fuzzBuckets, _fuzzCapacities, _fuzzAllocationSize);
 
@@ -253,9 +253,9 @@ contract MinFirstAllocationStrategyAllocateHandler is MinFirstAllocationStrategy
 
 contract MinFirstAllocationStrategy__Harness {
     function allocate(uint256[] memory _buckets, uint256[] memory _capacities, uint256 _allocationSize)
-        public
-        pure
-        returns (uint256 allocated, uint256[] memory newBuckets, uint256[] memory newCapacities)
+    public
+    pure
+    returns (uint256 allocated, uint256[] memory newBuckets, uint256[] memory newCapacities)
     {
         allocated = MinFirstAllocationStrategy.allocate(_buckets, _capacities, _allocationSize);
         newBuckets = _buckets;
@@ -263,9 +263,9 @@ contract MinFirstAllocationStrategy__Harness {
     }
 
     function allocateToBestCandidate(uint256[] memory _buckets, uint256[] memory _capacities, uint256 _allocationSize)
-        public
-        pure
-        returns (uint256 allocated, uint256[] memory newBuckets, uint256[] memory newCapacities)
+    public
+    pure
+    returns (uint256 allocated, uint256[] memory newBuckets, uint256[] memory newCapacities)
     {
         allocated = MinFirstAllocationStrategy.allocateToBestCandidate(_buckets, _capacities, _allocationSize);
         newBuckets = _buckets;
@@ -277,9 +277,9 @@ library NaiveMinFirstAllocationStrategy {
     uint256 private constant MAX_UINT256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     function allocate(uint256[] memory buckets, uint256[] memory capacities, uint256 allocationSize)
-        internal
-        pure
-        returns (uint256 allocated)
+    internal
+    pure
+    returns (uint256 allocated)
     {
         while (allocated < allocationSize) {
             uint256 bestCandidateIndex = MAX_UINT256;
