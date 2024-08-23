@@ -6,7 +6,7 @@ pragma solidity 0.6.12; // latest available for using OZ
 import {WstETH} from "contracts/0.6.12/WstETH.sol";
 import {IStETH} from "contracts/0.6.12/interfaces/IStETH.sol";
 
-contract WstETH__HarnessForWithdrawalQueue is WstETH {
+contract WstETH__HarnessForWithdrawalQueueDeploy is WstETH {
     constructor(IStETH _StETH) public WstETH(_StETH) {}
 
     function harness__mint(address recipient, uint256 amount) public {

@@ -5,7 +5,13 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import { BurnerStub, LidoLocatorStub, LidoStub, OracleReportSanityChecker, WithdrawalQueueStub } from "typechain-types";
+import {
+  Burner__MockForOracleSanityChecker,
+  Lido__MockForOracleSanityChecker,
+  LidoLocator__MockForOracleSanityChecker,
+  OracleReportSanityChecker,
+  WithdrawalQueue__MockForOracleSanityChecker,
+} from "typechain-types";
 
 import { ether, getCurrentBlockTimestamp, randomAddress } from "lib";
 
@@ -13,10 +19,10 @@ import { Snapshot } from "test/suite";
 
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
-  let lidoLocatorMock: LidoLocatorStub;
-  let lidoMock: LidoStub;
-  let burnerMock: BurnerStub;
-  let withdrawalQueueMock: WithdrawalQueueStub;
+  let lidoLocatorMock: LidoLocator__MockForOracleSanityChecker;
+  let lidoMock: Lido__MockForOracleSanityChecker;
+  let burnerMock: Burner__MockForOracleSanityChecker;
+  let withdrawalQueueMock: WithdrawalQueue__MockForOracleSanityChecker;
   let originalState: string;
 
   let managersRoster: Record<string, HardhatEthersSigner[]>;
@@ -57,15 +63,15 @@ describe("OracleReportSanityChecker.sol", () => {
 
     // mine 1024 blocks with block duration 12 seconds
     await ethers.provider.send("hardhat_mine", ["0x" + Number(1024).toString(16), "0x" + Number(12).toString(16)]);
-    lidoMock = await ethers.deployContract("LidoStub", []);
-    withdrawalQueueMock = await ethers.deployContract("WithdrawalQueueStub");
-    burnerMock = await ethers.deployContract("BurnerStub");
-    lidoLocatorMock = await ethers.deployContract("LidoLocatorStub", [
-      await lidoMock.getAddress(),
+    lidoMock = await ethers.deployContract("Lido__MockForOracleSanityChecker");
+    withdrawalQueueMock = await ethers.deployContract("WithdrawalQueue__MockForOracleSanityChecker");
+    burnerMock = await ethers.deployContract("Burner__MockForOracleSanityChecker");
+    lidoLocatorMock = await ethers.deployContract("LidoLocator__MockForOracleSanityChecker", [
+      lidoMock,
       withdrawalVault,
-      await withdrawalQueueMock.getAddress(),
-      elRewardsVault.address,
-      await burnerMock.getAddress(),
+      withdrawalQueueMock,
+      elRewardsVault,
+      burnerMock,
     ]);
 
     // const accounts = signers.map(s => s.address);
@@ -82,7 +88,7 @@ describe("OracleReportSanityChecker.sol", () => {
       maxPositiveTokenRebaseManagers: accounts.slice(18, 20),
     };
     oracleReportSanityChecker = await ethers.deployContract("OracleReportSanityChecker", [
-      await lidoLocatorMock.getAddress(),
+      lidoLocatorMock,
       admin,
       Object.values(defaultLimitsList),
       Object.values(managersRoster).map((m) => m.map((s) => s.address)),
@@ -96,7 +102,7 @@ describe("OracleReportSanityChecker.sol", () => {
   it("constructor reverts if admin address is zero", async () => {
     await expect(
       ethers.deployContract("OracleReportSanityChecker", [
-        await lidoLocatorMock.getAddress(),
+        lidoLocatorMock,
         ZeroAddress,
         Object.values(defaultLimitsList),
         Object.values(managersRoster),
@@ -1163,9 +1169,9 @@ describe("OracleReportSanityChecker.sol", () => {
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.maxNodeOperatorsPerExtraDataItemCountManagers[0])
         .setMaxNodeOperatorsPerExtraDataItemCount(newValue);
-      expect(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount,
-      ).to.equal(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxNodeOperatorsPerExtraDataItemCount).to.equal(
+        newValue,
+      );
       await expect(tx)
         .to.emit(oracleReportSanityChecker, "MaxNodeOperatorsPerExtraDataItemCountSet")
         .withArgs(newValue);
@@ -1185,9 +1191,9 @@ describe("OracleReportSanityChecker.sol", () => {
       const tx = await oracleReportSanityChecker
         .connect(managersRoster.maxAccountingExtraDataListItemsCountManagers[0])
         .setMaxAccountingExtraDataListItemsCount(newValue);
-      expect(
-        (await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount,
-      ).to.equal(newValue);
+      expect((await oracleReportSanityChecker.getOracleReportLimits()).maxAccountingExtraDataListItemsCount).to.equal(
+        newValue,
+      );
       await expect(tx).to.emit(oracleReportSanityChecker, "MaxAccountingExtraDataListItemsCountSet").withArgs(newValue);
     });
 

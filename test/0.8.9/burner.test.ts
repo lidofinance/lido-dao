@@ -4,11 +4,11 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { Burner, ERC20Token__MockForBurner, NFT__GeneralMock, StETH__Harness } from "typechain-types";
+import { Burner, ERC20__Harness, ERC721__Harness, StETH__Harness } from "typechain-types";
 
 import { batch, certainAddress, ether, impersonate } from "lib";
 
-describe("Burner", () => {
+describe("Burner.sol", () => {
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
   let holder: HardhatEthersSigner;
@@ -26,7 +26,11 @@ describe("Burner", () => {
     [deployer, admin, holder, stranger] = await ethers.getSigners();
 
     steth = await ethers.deployContract("StETH__Harness", [holder], { value: ether("10.0"), from: deployer });
-    burner = await ethers.deployContract("Burner", [admin, treasury, steth, coverSharesBurnt, nonCoverSharesBurnt], deployer);
+    burner = await ethers.deployContract(
+      "Burner",
+      [admin, treasury, steth, coverSharesBurnt, nonCoverSharesBurnt],
+      deployer,
+    );
 
     steth = steth.connect(holder);
     burner = burner.connect(holder);
@@ -55,13 +59,11 @@ describe("Burner", () => {
       const differentCoverSharesBurnt = 1n;
       const differentNonCoverSharesBurntNonZero = 3n;
 
-      burner = await ethers.deployContract("Burner", [
-        admin,
-        treasury,
-        steth,
-        differentCoverSharesBurnt,
-        differentNonCoverSharesBurntNonZero,
-      ], deployer);
+      burner = await ethers.deployContract(
+        "Burner",
+        [admin, treasury, steth, differentCoverSharesBurnt, differentNonCoverSharesBurntNonZero],
+        deployer,
+      );
 
       expect(await burner.getCoverSharesBurnt()).to.equal(differentCoverSharesBurnt);
       expect(await burner.getNonCoverSharesBurnt()).to.equal(differentNonCoverSharesBurntNonZero);
@@ -69,7 +71,11 @@ describe("Burner", () => {
 
     it("Reverts if admin is zero address", async () => {
       await expect(
-        ethers.deployContract("Burner", [ZeroAddress, treasury, steth, coverSharesBurnt, nonCoverSharesBurnt], deployer),
+        ethers.deployContract(
+          "Burner",
+          [ZeroAddress, treasury, steth, coverSharesBurnt, nonCoverSharesBurnt],
+          deployer,
+        ),
       )
         .to.be.revertedWithCustomError(burner, "ZeroAddress")
         .withArgs("_admin");
@@ -85,7 +91,11 @@ describe("Burner", () => {
 
     it("Reverts if stETH is zero address", async () => {
       await expect(
-        ethers.deployContract("Burner", [admin, treasury, ZeroAddress, coverSharesBurnt, nonCoverSharesBurnt], deployer),
+        ethers.deployContract(
+          "Burner",
+          [admin, treasury, ZeroAddress, coverSharesBurnt, nonCoverSharesBurnt],
+          deployer,
+        ),
       )
         .to.be.revertedWithCustomError(burner, "ZeroAddress")
         .withArgs("_stETH");
@@ -267,10 +277,10 @@ describe("Burner", () => {
   });
 
   context("recoverERC20", () => {
-    let token: ERC20Token__MockForBurner;
+    let token: ERC20__Harness;
 
     beforeEach(async () => {
-      token = await ethers.deployContract("ERC20Token__MockForBurner", ["Token", "TKN"], deployer);
+      token = await ethers.deployContract("ERC20__Harness", ["Token", "TKN"], deployer);
       await token.mint(burner, ether("1.0"));
 
       expect(await token.balanceOf(burner)).to.equal(ether("1.0"));
@@ -307,11 +317,11 @@ describe("Burner", () => {
   });
 
   context("recoverERC721", () => {
-    let nft: NFT__GeneralMock;
+    let nft: ERC721__Harness;
     const tokenId = 1n;
 
     beforeEach(async () => {
-      nft = await ethers.deployContract("NFT__GeneralMock", ["NFT", "NFT"], deployer);
+      nft = await ethers.deployContract("ERC721__Harness", ["NFT", "NFT"], deployer);
       await nft.mint(burner, tokenId);
 
       expect(await nft.balanceOf(burner)).to.equal(1n);
