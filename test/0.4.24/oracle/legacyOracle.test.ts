@@ -6,7 +6,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import {
   AccountingOracle__MockForLegacyOracle,
-  HashConsensus__MockForLegacyOracle,
+  HashConsensus__HarnessForLegacyOracle,
   LegacyOracle__Harness,
   LidoLocator,
 } from "typechain-types";
@@ -35,7 +35,7 @@ describe("LegacyOracle.sol", () => {
   let legacyOracle: LegacyOracle__Harness;
 
   let locator: LidoLocator;
-  let consensusContract: HashConsensus__MockForLegacyOracle;
+  let consensusContract: HashConsensus__HarnessForLegacyOracle;
   let accountingOracle: AccountingOracle__MockForLegacyOracle;
 
   let lido: string;
@@ -50,7 +50,7 @@ describe("LegacyOracle.sol", () => {
 
     lido = certainAddress("legacy-oracle:lido");
 
-    consensusContract = await ethers.deployContract("HashConsensus__MockForLegacyOracle", [
+    consensusContract = await ethers.deployContract("HashConsensus__HarnessForLegacyOracle", [
       SLOTS_PER_EPOCH,
       SECONDS_PER_SLOT,
       GENESIS_TIME,
@@ -289,11 +289,11 @@ describe("LegacyOracle.sol", () => {
         await updateLidoLocatorImplementation(
           brokenLocatorAddress,
           { accountingOracle },
-          "LidoLocator__MutableMock",
+          "LidoLocator__MockMutable",
           admin,
         );
 
-        const locatorMutable = await ethers.getContractAt("LidoLocator__MutableMock", brokenLocatorAddress);
+        const locatorMutable = await ethers.getContractAt("LidoLocator__MockMutable", brokenLocatorAddress);
         await locatorMutable.mock___updateAccountingOracle(ZeroAddress);
 
         await expect(legacyOracle.initialize(locatorMutable, ZeroAddress)).to.revertedWith(
@@ -317,7 +317,7 @@ describe("LegacyOracle.sol", () => {
         epochsPerFrame = EPOCHS_PER_FRAME,
         initialFastLaneLengthSlots = INITIAL_FAST_LANE_LENGTH_SLOTS,
       }) {
-        const invalidConsensusContract = await ethers.deployContract("HashConsensus__MockForLegacyOracle", [
+        const invalidConsensusContract = await ethers.deployContract("HashConsensus__HarnessForLegacyOracle", [
           slotsPerEpoch,
           secondsPerSlot,
           genesisTime,
