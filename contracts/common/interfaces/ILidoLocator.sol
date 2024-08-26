@@ -7,36 +7,23 @@ pragma solidity >=0.4.24 <0.9.0;
 interface ILidoLocator {
 
     function accountingOracle() external view returns (address);
-
     function depositSecurityModule() external view returns (address);
-
     function elRewardsVault() external view returns (address);
-
     function legacyOracle() external view returns (address);
-
     function lido() external view returns (address);
-
     function oracleReportSanityChecker() external view returns (address);
-
     function burner() external view returns (address);
-
     function stakingRouter() external view returns (address);
-
     function treasury() external view returns (address);
-
     function validatorsExitBusOracle() external view returns (address);
-
     function withdrawalQueue() external view returns (address);
-
     function withdrawalVault() external view returns (address);
-
     function postTokenRebaseReceiver() external view returns (address);
-
     function oracleDaemonConfig() external view returns (address);
-
     function wstEth() external view returns (address);
 
-    /// @dev Returns the addresses of core protocol components
+    /// @dev Returns a batch of core components addresses at once.
+    ///      It's just a more gas-efficient way of calling several public getters at once.
     function coreComponents() external view returns (
         address elRewardsVault,
         address oracleReportSanityChecker,
@@ -46,7 +33,8 @@ interface ILidoLocator {
         address withdrawalVault
     );
 
-    /// @dev Returns the addresses of Oracle Report components for Lido rebase
+    /// @dev Returns a batch of addresses that is used specifically during oracle report handling in the Lido contract.
+    ///      It's just a more gas-efficient way of calling several public getters at once.
     function oracleReportComponentsForLido() external view returns (
         address accountingOracle,
         address elRewardsVault,
