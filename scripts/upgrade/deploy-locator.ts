@@ -19,6 +19,7 @@ const VIEW_NAMES_AND_CTOR_ARGS = [
   "withdrawalQueue",
   "withdrawalVault",
   "oracleDaemonConfig",
+  "wstEth",
 ];
 
 /////////////// GLOBAL VARIABLES ///////////////
@@ -52,12 +53,14 @@ async function main() {
   const newOrCurrent = async (name: string) => {
     return await getNewFromEnvOrCurrent(name, locator);
   };
+
   const ctorArgs = await Promise.all(VIEW_NAMES_AND_CTOR_ARGS.map(newOrCurrent));
 
   if (Object.keys(g_newAddresses).length === 0) {
     log(`No new addresses specified: exiting doing nothing`);
     process.exit(0);
   }
+
   log.splitter();
   for (const name in g_newAddresses) {
     log(`(!) "${name}" new address: ${g_newAddresses[name]}`);

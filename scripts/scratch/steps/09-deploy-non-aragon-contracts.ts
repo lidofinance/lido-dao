@@ -301,6 +301,7 @@ async function main() {
     withdrawalQueueERC721.address,
     withdrawalVaultAddress,
     oracleDaemonConfig.address,
+    wstETH.address,
   ];
   await updateProxyImplementation(Sk.lidoLocator, "LidoLocator", locator.address, proxyContractsOwner, [locatorConfig]);
 
