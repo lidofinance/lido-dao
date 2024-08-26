@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
+
+// solhint-disable immutable-vars-naming
 
 import {ILidoLocator} from "../common/interfaces/ILidoLocator.sol";
 
@@ -28,6 +29,7 @@ contract LidoLocator is ILidoLocator {
         address withdrawalQueue;
         address withdrawalVault;
         address oracleDaemonConfig;
+        address wstEth;
     }
 
     error ZeroAddress();
@@ -46,6 +48,7 @@ contract LidoLocator is ILidoLocator {
     address public immutable withdrawalQueue;
     address public immutable withdrawalVault;
     address public immutable oracleDaemonConfig;
+    address public immutable wstEth;
 
     /**
      * @notice declare service locations
@@ -67,9 +70,10 @@ contract LidoLocator is ILidoLocator {
         withdrawalQueue = _assertNonZero(_config.withdrawalQueue);
         withdrawalVault = _assertNonZero(_config.withdrawalVault);
         oracleDaemonConfig = _assertNonZero(_config.oracleDaemonConfig);
+        wstEth = _assertNonZero(_config.wstEth);
     }
 
-    function coreComponents() external view returns(
+    function coreComponents() external view returns (
         address,
         address,
         address,
@@ -87,7 +91,7 @@ contract LidoLocator is ILidoLocator {
         );
     }
 
-    function oracleReportComponentsForLido() external view returns(
+    function oracleReportComponentsForLido() external view returns (
         address,
         address,
         address,
