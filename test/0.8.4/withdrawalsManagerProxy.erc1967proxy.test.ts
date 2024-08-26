@@ -45,7 +45,11 @@ describe("WithdrawalsManagerProxy.sol:erc1967proxy", () => {
       const slot = hexlify(randomBytes(32));
       const value = hexlify(randomBytes(32));
 
-      proxy = await ethers.deployContract("ERC1967Proxy__Harness", [impl, impl.interface.encodeFunctionData("writeToStorage", [slot, value])], deployer);
+      proxy = await ethers.deployContract(
+        "ERC1967Proxy__Harness",
+        [impl, impl.interface.encodeFunctionData("writeToStorage", [slot, value])],
+        deployer,
+      );
 
       expect(await getStorageAt(await proxy.getAddress(), slot)).to.equal(value);
     });

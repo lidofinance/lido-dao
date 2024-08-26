@@ -249,9 +249,9 @@ describe("NodeOperatorsRegistry.sol:signing-keys", () => {
       const summaryBefore = await nor.getStakingModuleSummary();
       expect(summaryBefore.depositableValidatorsCount).to.equal(
         NODE_OPERATORS[firstNodeOperatorId].vettedSigningKeysCount -
-        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
-        NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
-        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
+          NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount +
+          NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount -
+          NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
       );
 
       await expect(nor.connect(stakingRouter).harness__obtainDepositData(summaryBefore.depositableValidatorsCount))
@@ -620,9 +620,7 @@ describe("NodeOperatorsRegistry.sol:signing-keys", () => {
       }
 
       expect(preFirstNOInfo[totalVettedValidatorsIndex]).to.equal(postFirstNOInfo[totalVettedValidatorsIndex] + 1n);
-      expect(preSecondNOInfo[totalVettedValidatorsIndex]).to.equal(
-        postSecondNOInfo[totalVettedValidatorsIndex] + 3n,
-      );
+      expect(preSecondNOInfo[totalVettedValidatorsIndex]).to.equal(postSecondNOInfo[totalVettedValidatorsIndex] + 3n);
 
       expect(preFirstNOInfo[totalAddedValidatorsIndex]).to.equal(postFirstNOInfo[totalAddedValidatorsIndex] + 3n);
       expect(preSecondNOInfo[totalAddedValidatorsIndex]).to.equal(postSecondNOInfo[totalAddedValidatorsIndex] + 5n);
@@ -774,9 +772,7 @@ describe("NodeOperatorsRegistry.sol:signing-keys", () => {
       }
 
       expect(preFirstNOInfo[totalVettedValidatorsIndex]).to.equal(postFirstNOInfo[totalVettedValidatorsIndex] + 1n);
-      expect(preSecondNOInfo[totalVettedValidatorsIndex]).to.equal(
-        postSecondNOInfo[totalVettedValidatorsIndex] + 3n,
-      );
+      expect(preSecondNOInfo[totalVettedValidatorsIndex]).to.equal(postSecondNOInfo[totalVettedValidatorsIndex] + 3n);
 
       expect(preFirstNOInfo[totalAddedValidatorsIndex]).to.equal(postFirstNOInfo[totalAddedValidatorsIndex] + 1n);
       expect(preSecondNOInfo[totalAddedValidatorsIndex]).to.equal(postSecondNOInfo[totalAddedValidatorsIndex] + 1n);

@@ -126,9 +126,6 @@ describe("NodeOperatorsRegistry.sol:management", () => {
   afterEach(async () => await Snapshot.restore(originalState));
 
   context("addNodeOperator", () => {
-    beforeEach(async () => {
-    });
-
     it("Reverts if invalid name", async () => {
       await expect(nor.addNodeOperator("", certainAddress("reward-address-0"))).to.be.revertedWith("WRONG_NAME_LENGTH");
 
@@ -497,9 +494,7 @@ describe("NodeOperatorsRegistry.sol:management", () => {
       expect(noInfo.totalVettedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount);
       expect(noInfo.totalExitedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount);
       expect(noInfo.totalAddedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
-      expect(noInfo.totalDepositedValidators).to.equal(
-        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
-      );
+      expect(noInfo.totalDepositedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount);
     });
 
     it("Returns full info with name", async () => {
@@ -511,9 +506,7 @@ describe("NodeOperatorsRegistry.sol:management", () => {
       expect(noInfo.totalVettedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].vettedSigningKeysCount);
       expect(noInfo.totalExitedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].exitedSigningKeysCount);
       expect(noInfo.totalAddedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
-      expect(noInfo.totalDepositedValidators).to.equal(
-        NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount,
-      );
+      expect(noInfo.totalDepositedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].depositedSigningKeysCount);
     });
   });
 

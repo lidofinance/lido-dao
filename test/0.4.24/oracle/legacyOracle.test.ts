@@ -151,10 +151,7 @@ describe("LegacyOracle.sol", () => {
 
       expect(frame.frameEpochId).to.equal((consensusFrame.refSlot + 1n) / SLOTS_PER_EPOCH, "frameEpochId");
       expect(frame.frameStartTime).to.equal(timestampAtSlot(consensusFrame.refSlot + 1n), "frameStartTime");
-      expect(frame.frameEndTime).to.equal(
-        timestampAtEpoch(frame.frameEpochId + EPOCHS_PER_FRAME) - 1n,
-        "frameEndTime",
-      );
+      expect(frame.frameEndTime).to.equal(timestampAtEpoch(frame.frameEpochId + EPOCHS_PER_FRAME) - 1n, "frameEndTime");
     });
 
     it("Returns frame synced with consensus contract on the edge", async () => {

@@ -42,7 +42,6 @@ describe("StETH.sol:non-ERC-20 behavior", () => {
 
   afterEach(async () => await Snapshot.restore(originalState));
 
-
   context("getTotalPooledEther", () => {
     it("Returns the amount of ether sent upon construction", async () => {
       expect(await steth.getTotalPooledEther()).to.equal(totalSupply);

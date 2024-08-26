@@ -311,24 +311,16 @@ describe("NodeOperatorsRegistry.sol:initialize-and-upgrade", () => {
       expect(summary.depositableValidatorsCount).to.equal(0n + 8n + 0n + 0n);
 
       const firstNoInfo = await nor.getNodeOperator(firstNodeOperatorId, true);
-      expect(firstNoInfo.totalVettedValidators).to.equal(
-        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
-      );
+      expect(firstNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount);
 
       const secondNoInfo = await nor.getNodeOperator(secondNodeOperatorId, true);
-      expect(secondNoInfo.totalVettedValidators).to.equal(
-        NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount,
-      );
+      expect(secondNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
 
       const thirdNoInfo = await nor.getNodeOperator(thirdNodeOperatorId, true);
-      expect(thirdNoInfo.totalVettedValidators).to.equal(
-        NODE_OPERATORS[thirdNodeOperatorId].depositedSigningKeysCount,
-      );
+      expect(thirdNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[thirdNodeOperatorId].depositedSigningKeysCount);
 
       const fourthNoInfo = await nor.getNodeOperator(fourthNodeOperatorId, true);
-      expect(fourthNoInfo.totalVettedValidators).to.equal(
-        NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount,
-      );
+      expect(fourthNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount);
     });
   });
 });

@@ -147,10 +147,10 @@ To enable tracing, you need to wrap the code you want to trace with the `Tracer.
 functions and run the tests with the appropriate command postfix, e.g. `yarn test:trace`.
 
 ```typescript
-import { Tracer } from 'test/suite';
+import { Tracer } from "test/suite";
 
-describe('MyContract', () => {
-  it('should do something', async () => {
+describe("MyContract", () => {
+  it("should do something", async () => {
     Tracer.enable();
     // code to trace
     Tracer.disable();

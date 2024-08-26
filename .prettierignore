@@ -1,6 +1,9 @@
 foundry
+contracts/**/*.sol
 
 .gitignore
 .prettierignore
+
+eslint.config.mjs
 
 package-lock.json
