@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   test_hardhat_integration_fork:
-    name: Hardhat (mainnet fork)
+    name: Hardhat / Mainnet Fork
     runs-on: ubuntu-latest
     timeout-minutes: 120
 

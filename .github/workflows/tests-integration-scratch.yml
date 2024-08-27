@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   test_hardhat_integration_scratch:
-    name: Hardhat (scratch deployment)
+    name: Hardhat / Scratch deployment
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
