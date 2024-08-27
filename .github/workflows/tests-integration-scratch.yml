@@ -13,6 +13,8 @@ jobs:
         image: feofanov/hardhat-node:2.22.9
         ports:
           - 8555:8545
+        env:
+          ETH_RPC_URL: "${{ secrets.ETH_RPC_URL }}"
 
     steps:
       - uses: actions/checkout@v4
