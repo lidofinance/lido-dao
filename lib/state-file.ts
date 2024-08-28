@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { network as hardhatNetwork } from "hardhat";
-import { resolve } from "path";
 
 const NETWORK_STATE_FILE_BASENAME = "deployed";
 const NETWORK_STATE_FILE_DIR = ".";
@@ -174,13 +175,16 @@ export function incrementGasUsed(increment: bigint | number) {
 }
 
 // If network name is undefined current hardhat network will be used
-export function persistNetworkState(state: DeploymentState, networkName?: string) {
-  networkName = networkName || hardhatNetwork.name;
+export function persistNetworkState(state: DeploymentState, networkName: string = hardhatNetwork.name): void {
   const fileName = _getFileName(networkName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR);
-
   const stateSorted = _sortKeysAlphabetically(state);
-  const data = JSON.stringify(stateSorted, null, "  ");
-  writeFileSync(fileName, data + "\n", "utf8");
+  const data = JSON.stringify(stateSorted, null, 2);
+
+  try {
+    writeFileSync(fileName, `${data}\n`, { encoding: "utf8", flag: "w" });
+  } catch (error) {
+    throw new Error(`Failed to write network state file ${fileName}: ${(error as Error).message}`);
+  }
 }
 
 function _getFileName(networkName: string, baseName: string, dir: string) {
