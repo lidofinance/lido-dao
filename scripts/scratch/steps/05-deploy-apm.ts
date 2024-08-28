@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { ethers } from "hardhat";
 
-import { ENS, ENS__factory, LidoTemplate, LidoTemplate__factory } from "typechain-types";
+import { ENS, LidoTemplate } from "typechain-types";
 
 import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
@@ -32,7 +32,7 @@ export async function main() {
   log.emptyLine();
 
   // Load ENS contract and check ownership
-  const ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address);
+  const ens = await loadContract<ENS>("ENS", state[Sk.ens].address);
   const lidoApmEnsNode = ethers.namehash(state.lidoApmEnsName);
   const lidoApmEnsNodeOwner = await getENSNodeOwner(ens, lidoApmEnsNode);
   const checkDesc = `ENS node is owned by the DAO template`;
@@ -51,7 +51,7 @@ export async function main() {
   log.emptyLine();
 
   // Deploy Lido APM
-  const template = await loadContract<LidoTemplate>(LidoTemplate__factory, templateAddress);
+  const template = await loadContract<LidoTemplate>("LidoTemplate", templateAddress);
   const lidoApmDeployArguments = [parentHash, subHash];
   const receipt = await makeTx(template, "deployLidoAPM", lidoApmDeployArguments, { from: deployer });
   updateObjectInState(Sk.lidoApm, {

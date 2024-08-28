@@ -2,16 +2,11 @@ import { assert } from "chai";
 import { ContractTransactionReceipt } from "ethers";
 import { ethers } from "hardhat";
 
-import {
-  ERCProxy__factory,
-  EVMScriptRegistryFactory,
-  EVMScriptRegistryFactory__factory,
-  Kernel__factory,
-} from "typechain-types";
+import { ERCProxy, EVMScriptRegistryFactory, Kernel } from "typechain-types";
 
 import { getContractAt, getContractPath, loadContract, LoadedContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
-import { findEvents, findEventsWithAbi } from "lib/event";
+import { findEvents, findEventsWithInterfaces } from "lib/event";
 import { cy, log, yl } from "lib/log";
 import {
   AppNames,
@@ -102,7 +97,7 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
 
   // Load EVM script registry factory and update state
   const evmScriptRegistryFactory = await loadContract<EVMScriptRegistryFactory>(
-    EVMScriptRegistryFactory__factory,
+    "EVMScriptRegistryFactory",
     state[Sk.evmScriptRegistryFactory].address,
   );
 
@@ -130,7 +125,7 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
   );
   log.success(idsCheckDesc);
 
-  const kernel = Kernel__factory.connect(kernelProxyAddress, ethers.provider);
+  const kernel = await loadContract<Kernel>("Kernel", kernelProxyAddress);
   const APP_BASES_NAMESPACE = await kernel.APP_BASES_NAMESPACE();
 
   // Process each installed app
@@ -140,7 +135,7 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
     const appName = appNameByAppId[appId];
     const proxyAddress = ethers.getAddress(evt.args.appProxy);
 
-    const proxy = ERCProxy__factory.connect(proxyAddress, ethers.provider);
+    const proxy = await loadContract<ERCProxy>("ERCProxy", proxyAddress);
     const implAddress = await proxy.implementation();
 
     const kernelBaseAddr = await kernel.getApp(APP_BASES_NAMESPACE, appId);
@@ -182,7 +177,7 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
   persistNetworkState(state);
 
   // Process missing proxies (ACL and EVMScriptRegistry)
-  const newAppProxyEvents = findEventsWithAbi(newDAOReceipt, "NewAppProxy", Kernel__factory.abi);
+  const newAppProxyEvents = findEventsWithInterfaces(newDAOReceipt, "NewAppProxy", [kernel.interface]);
   for (const e of newAppProxyEvents) {
     const appId = e.args.appId;
     if (appNameByAppId[appId] !== undefined) continue;

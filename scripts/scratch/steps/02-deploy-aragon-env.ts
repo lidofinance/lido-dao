@@ -1,7 +1,7 @@
 import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { DAOFactory, DAOFactory__factory, ENS, ENS__factory } from "typechain-types";
+import { DAOFactory, ENS } from "typechain-types";
 
 import { getContractAt, loadContract, LoadedContract } from "lib/contract";
 import { deployImplementation, deployWithoutProxy, makeTx } from "lib/deploy";
@@ -74,13 +74,13 @@ export async function main() {
   log.header(`ENS`);
   if (state[Sk.ens].address) {
     log(`Using pre-deployed ENS: ${cy(state[Sk.ens].address)}`);
-    ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address);
+    ens = await loadContract<ENS>("ENS", state[Sk.ens].address);
   } else {
     const ensFactory = await deployWithoutProxy(Sk.ensFactory, "ENSFactory", deployer);
     const receipt = await makeTx(ensFactory, "newENS", [deployer], { from: deployer });
     const ensAddress = findEvents(receipt, "DeployENS")[0].args.ens;
 
-    ens = await loadContract<ENS>(ENS__factory, ensAddress);
+    ens = await loadContract<ENS>("ENS", ensAddress);
     state = updateObjectInState(Sk.ens, {
       address: ensAddress,
       constructorArgs: [deployer],
@@ -104,7 +104,7 @@ export async function main() {
     const daoFactoryArgs = [kernelBase.address, aclBase.address, evmScriptRegistryFactory.address];
     daoFactoryAddress = (await deployWithoutProxy(Sk.daoFactory, "DAOFactory", deployer, daoFactoryArgs)).address;
   }
-  const daoFactory = await loadContract<DAOFactory>(DAOFactory__factory, daoFactoryAddress);
+  const daoFactory = await loadContract<DAOFactory>("DAOFactory", daoFactoryAddress);
 
   // Deploy APM registry factory
   log.header(`APM registry factory`);

@@ -1,7 +1,7 @@
 import { assert } from "chai";
 import { ethers } from "hardhat";
 
-import { ENS, ENS__factory } from "typechain-types";
+import { ENS } from "typechain-types";
 
 import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
@@ -18,7 +18,7 @@ export async function main() {
 
   // Load ENS contract
   log(`Using ENS: ${cy(state[Sk.ens].address)}`);
-  const ens = await loadContract<ENS>(ENS__factory, state[Sk.ens].address, deployerSigner);
+  const ens = await loadContract<ENS>("ENS", state[Sk.ens].address, deployerSigner);
 
   const tldNode = ethers.namehash(TLD);
   const domainName = state[Sk.lidoApmEnsName];
