@@ -24,7 +24,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Run scratch deployment
-        run: ./scripts/scratch/dao-local-deploy.sh || exit 0
+        run: ./scripts/dao-local-deploy.sh || exit 0
 
       - name: Run integration tests
         run: yarn test:integration:local
