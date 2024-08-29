@@ -22,4 +22,4 @@ bash scripts/dao-deploy.sh
 yarn hardhat --network $NETWORK run --no-compile scripts/scratch/send-hardhat-mine.ts
 
 # Run acceptance tests
-yarn test:integration:local
+yarn test:integration:fork:local

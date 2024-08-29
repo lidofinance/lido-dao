@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   test_hardhat_integration_scratch:
-    name: Hardhat / Scratch deployment
+    name: Hardhat / Scratch
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -27,6 +27,6 @@ jobs:
         run: ./scripts/dao-ci-deploy.sh
 
       - name: Run integration tests
-        run: yarn test:integration:local
+        run: yarn test:integration:fork:scratch
         env:
           LOG_LEVEL: debug
