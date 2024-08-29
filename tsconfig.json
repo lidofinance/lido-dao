@@ -11,6 +11,7 @@
     "paths": {
       "lib": ["./lib"],
       "test": ["./test"],
+      "scripts": ["./scripts"],
       "typechain-types": ["./typechain-types"]
     }
   },

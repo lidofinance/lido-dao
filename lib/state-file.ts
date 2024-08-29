@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { access, constants as fsPromisesConstants } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { network as hardhatNetwork } from "hardhat";
@@ -172,6 +173,22 @@ export function incrementGasUsed(increment: bigint | number) {
   state[Sk.scratchDeployGasUsed] = (BigInt(state[Sk.scratchDeployGasUsed] || 0) + BigInt(increment)).toString();
   persistNetworkState(state);
   return state;
+}
+
+export async function resetStateFile(networkName: string = hardhatNetwork.name): Promise<void> {
+  const fileName = _getFileName(networkName, NETWORK_STATE_FILE_BASENAME, NETWORK_STATE_FILE_DIR);
+  try {
+    await access(fileName, fsPromisesConstants.R_OK | fsPromisesConstants.W_OK);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new Error(`No network state file ${fileName}: ${(error as Error).message}`);
+    }
+    // If file does not exist, create it with default values
+  } finally {
+    const templateFileName = _getFileName("testnet-defaults", NETWORK_STATE_FILE_BASENAME, "scripts/scratch");
+    const templateData = readFileSync(templateFileName, "utf8");
+    writeFileSync(fileName, templateData, { encoding: "utf8", flag: "w" });
+  }
 }
 
 // If network name is undefined current hardhat network will be used

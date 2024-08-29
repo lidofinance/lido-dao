@@ -26,6 +26,7 @@
     "test:integration:local": "INTEGRATION_SIMPLE_DVT_MODULE=off hardhat test test/integration/**/*.ts --network local --bail",
     "test:integration:fork": "hardhat test test/integration/**/*.ts --network mainnet-fork --bail",
     "test:integration:trace": "hardhat test test/integration/**/*.ts --trace --disabletracer --bail",
+    "test:integration:trace:scratch": "INTEGRATION_SCRATCH_DEPLOY=on INTEGRATION_SIMPLE_DVT_MODULE=off hardhat test test/integration/**/*.ts --trace --disabletracer --bail",
     "test:integration:fulltrace": "hardhat test test/integration/**/*.ts --fulltrace --disabletracer --bail",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
