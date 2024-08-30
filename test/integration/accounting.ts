@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
-import { ether, findEventsWithInterfaces, impersonate, ONE_GWEI, updateBalance } from "lib";
+import { ether, impersonate, ONE_GWEI, updateBalance } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
 import { report } from "lib/protocol/helpers";
 
@@ -33,12 +33,8 @@ describe("Accounting integration", () => {
 
   afterEach(async () => await Snapshot.restore(snapshot));
 
-  const getEvents = (receipt: ContractTransactionReceipt, eventName: string) => {
-    return findEventsWithInterfaces(receipt, eventName, ctx.interfaces);
-  };
-
   const getFirstEvent = (receipt: ContractTransactionReceipt, eventName: string) => {
-    const events = getEvents(receipt, eventName);
+    const events = ctx.getEvents(receipt, eventName);
     expect(events.length).to.be.greaterThan(0);
     return events[0];
   };
@@ -66,11 +62,11 @@ describe("Accounting integration", () => {
   };
 
   const getWithdrawalParams = (tx: ContractTransactionReceipt) => {
-    const withdrawalsFinalized = getEvents(tx, "WithdrawalsFinalized");
+    const withdrawalsFinalized = ctx.getEvents(tx, "WithdrawalsFinalized");
     const amountOfETHLocked = withdrawalsFinalized.length > 0 ? withdrawalsFinalized[0].args.amountOfETHLocked : 0n;
     const sharesToBurn = withdrawalsFinalized.length > 0 ? withdrawalsFinalized[0].args.sharesToBurn : 0n;
 
-    const sharesBurnt = getEvents(tx, "SharesBurnt");
+    const sharesBurnt = ctx.getEvents(tx, "SharesBurnt");
     const sharesBurntAmount = sharesBurnt.length > 0 ? sharesBurnt[0].args.sharesAmount : 0n;
 
     return { amountOfETHLocked, sharesBurntAmount, sharesToBurn };
@@ -121,11 +117,11 @@ describe("Accounting integration", () => {
     const totalSharesAfter = await lido.getTotalShares();
     expect(totalSharesBefore).to.equal(totalSharesAfter + sharesBurntAmount);
 
-    const tokenRebasedEvent = getEvents(reportTxReceipt, "TokenRebased");
+    const tokenRebasedEvent = ctx.getEvents(reportTxReceipt, "TokenRebased");
     const { sharesRateBefore, sharesRateAfter } = shareRateFromEvent(tokenRebasedEvent[0]);
     expect(sharesRateBefore).to.be.lessThanOrEqual(sharesRateAfter);
 
-    const postTotalSharesEvent = getEvents(reportTxReceipt, "PostTotalShares");
+    const postTotalSharesEvent = ctx.getEvents(reportTxReceipt, "PostTotalShares");
     expect(postTotalSharesEvent[0].args.preTotalPooledEther).to.equal(
       postTotalSharesEvent[0].args.postTotalPooledEther + amountOfETHLocked,
     );
@@ -162,16 +158,16 @@ describe("Accounting integration", () => {
     const totalSharesAfter = await lido.getTotalShares();
     expect(totalSharesBefore).to.equal(totalSharesAfter + sharesBurntAmount);
 
-    const tokenRebasedEvent = getEvents(reportTxReceipt, "TokenRebased");
+    const tokenRebasedEvent = ctx.getEvents(reportTxReceipt, "TokenRebased");
     const { sharesRateBefore, sharesRateAfter } = shareRateFromEvent(tokenRebasedEvent[0]);
     expect(sharesRateAfter).to.be.lessThan(sharesRateBefore);
 
-    const ethDistributedEvent = getEvents(reportTxReceipt, "ETHDistributed");
+    const ethDistributedEvent = ctx.getEvents(reportTxReceipt, "ETHDistributed");
     expect(ethDistributedEvent[0].args.preCLBalance + REBASE_AMOUNT).to.equal(
       ethDistributedEvent[0].args.postCLBalance,
     );
 
-    const postTotalSharesEvent = getEvents(reportTxReceipt, "PostTotalShares");
+    const postTotalSharesEvent = ctx.getEvents(reportTxReceipt, "PostTotalShares");
     expect(postTotalSharesEvent[0].args.preTotalPooledEther + REBASE_AMOUNT).to.equal(
       postTotalSharesEvent[0].args.postTotalPooledEther + amountOfETHLocked,
     );
@@ -206,7 +202,7 @@ describe("Accounting integration", () => {
     const totalPooledEtherAfter = await lido.getTotalPooledEther();
     expect(totalPooledEtherBefore + rebaseAmount).to.equal(totalPooledEtherAfter + amountOfETHLocked);
 
-    const sharesAsFeesList = getEvents(reportTxReceipt, "TransferShares").map((e) => e.args.sharesValue);
+    const sharesAsFeesList = ctx.getEvents(reportTxReceipt, "TransferShares").map((e) => e.args.sharesValue);
     let mintedSharesSum = 0n;
 
     if (amountOfETHLocked == 0) {
@@ -233,7 +229,7 @@ describe("Accounting integration", () => {
       mintedSharesSum = sharesAsFeesList[1] + sharesAsFeesList[2] + sharesAsFeesList[Number(stakingModulesCount) + 1];
     }
 
-    const tokenRebasedEvent = getEvents(reportTxReceipt, "TokenRebased");
+    const tokenRebasedEvent = ctx.getEvents(reportTxReceipt, "TokenRebased");
     expect(tokenRebasedEvent[0].args.sharesMintedAsFees).to.equal(mintedSharesSum);
 
     const totalSharesAfter = await lido.getTotalShares();
@@ -242,10 +238,10 @@ describe("Accounting integration", () => {
     const { sharesRateBefore, sharesRateAfter } = shareRateFromEvent(tokenRebasedEvent[0]);
     expect(sharesRateAfter).to.be.greaterThan(sharesRateBefore);
 
-    const ethDistributedEvent = getEvents(reportTxReceipt, "ETHDistributed");
+    const ethDistributedEvent = ctx.getEvents(reportTxReceipt, "ETHDistributed");
     expect(ethDistributedEvent[0].args.preCLBalance + rebaseAmount).to.equal(ethDistributedEvent[0].args.postCLBalance);
 
-    const postTotalSharesEvent = getEvents(reportTxReceipt, "PostTotalShares");
+    const postTotalSharesEvent = ctx.getEvents(reportTxReceipt, "PostTotalShares");
     expect(postTotalSharesEvent[0].args.preTotalPooledEther + rebaseAmount).to.equal(
       postTotalSharesEvent[0].args.postTotalPooledEther + amountOfETHLocked,
     );
@@ -297,8 +293,8 @@ describe("Accounting integration", () => {
     const ethBalanceAfter = await ethers.provider.getBalance(lido.address);
     expect(ethBalanceBefore).to.equal(ethBalanceAfter + amountOfETHLocked);
 
-    expect(getEvents(reportTxReceipt, "WithdrawalsReceived")).to.be.empty;
-    expect(getEvents(reportTxReceipt, "ELRewardsReceived")).to.be.empty;
+    expect(ctx.getEvents(reportTxReceipt, "WithdrawalsReceived")).to.be.empty;
+    expect(ctx.getEvents(reportTxReceipt, "ELRewardsReceived")).to.be.empty;
   });
 
   it("Should account correctly normal EL rewards", async () => {
@@ -327,7 +323,7 @@ describe("Accounting integration", () => {
     const totalELRewardsCollectedAfter = await lido.getTotalELRewardsCollected();
     expect(totalELRewardsCollectedBefore + elRewards).to.equal(totalELRewardsCollectedAfter);
 
-    const elRewardsReceivedEvent = await getEvents(reportTxReceipt, "ELRewardsReceived")[0];
+    const elRewardsReceivedEvent = await ctx.getEvents(reportTxReceipt, "ELRewardsReceived")[0];
     expect(elRewardsReceivedEvent.args.amount).to.equal(elRewards);
 
     const totalPooledEtherAfter = await lido.getTotalPooledEther();
@@ -368,7 +364,7 @@ describe("Accounting integration", () => {
     const totalELRewardsCollectedAfter = await lido.getTotalELRewardsCollected();
     expect(totalELRewardsCollectedBefore + elRewards).to.equal(totalELRewardsCollectedAfter);
 
-    const elRewardsReceivedEvent = await getEvents(reportTxReceipt, "ELRewardsReceived")[0];
+    const elRewardsReceivedEvent = await ctx.getEvents(reportTxReceipt, "ELRewardsReceived")[0];
     expect(elRewardsReceivedEvent.args.amount).to.equal(elRewards);
 
     const totalPooledEtherAfter = await lido.getTotalPooledEther();
@@ -411,7 +407,7 @@ describe("Accounting integration", () => {
     const totalELRewardsCollectedAfter = await lido.getTotalELRewardsCollected();
     expect(totalELRewardsCollectedBefore + expectedRewards).to.equal(totalELRewardsCollectedAfter);
 
-    const elRewardsReceivedEvent = await getEvents(reportTxReceipt, "ELRewardsReceived")[0];
+    const elRewardsReceivedEvent = await ctx.getEvents(reportTxReceipt, "ELRewardsReceived")[0];
     expect(elRewardsReceivedEvent.args.amount).to.equal(expectedRewards);
 
     const totalPooledEtherAfter = await lido.getTotalPooledEther();
@@ -457,8 +453,8 @@ describe("Accounting integration", () => {
     const lidoBalanceAfter = await ethers.provider.getBalance(lido.address);
     expect(lidoBalanceBefore).to.equal(lidoBalanceAfter + amountOfETHLocked);
 
-    expect(getEvents(reportTxReceipt, "WithdrawalsReceived").length).be.equal(0);
-    expect(getEvents(reportTxReceipt, "ELRewardsReceived").length).be.equal(0);
+    expect(ctx.getEvents(reportTxReceipt, "WithdrawalsReceived").length).be.equal(0);
+    expect(ctx.getEvents(reportTxReceipt, "ELRewardsReceived").length).be.equal(0);
   });
 
   it("Should account correctly with withdrawals at limits", async () => {
@@ -487,7 +483,7 @@ describe("Accounting integration", () => {
     const totalPooledEtherAfter = await lido.getTotalPooledEther();
     expect(totalPooledEtherBefore + withdrawals).to.equal(totalPooledEtherAfter + amountOfETHLocked);
 
-    const sharesAsFeesList = (await getEvents(reportTxReceipt, "TransferShares")).map((e) => e.args.sharesValue);
+    const sharesAsFeesList = (await ctx.getEvents(reportTxReceipt, "TransferShares")).map((e) => e.args.sharesValue);
 
     let mintedSharesSum = 0n;
 
@@ -532,7 +528,7 @@ describe("Accounting integration", () => {
     const [sharesRateBefore, sharesRateAfter] = sharesRateFromEvent(reportTxReceipt);
     expect(sharesRateAfter).to.be.greaterThan(sharesRateBefore);
 
-    const withdrawalsReceivedEvent = getEvents(reportTxReceipt, "WithdrawalsReceived")[0];
+    const withdrawalsReceivedEvent = ctx.getEvents(reportTxReceipt, "WithdrawalsReceived")[0];
     expect(withdrawalsReceivedEvent.args.amount).to.equal(withdrawals);
 
     const withdrawalVaultBalanceAfter = await ethers.provider.getBalance(withdrawalVault.address);
@@ -567,7 +563,7 @@ describe("Accounting integration", () => {
     const totalPooledEtherAfter = await lido.getTotalPooledEther();
     expect(totalPooledEtherBefore + expectedWithdrawals).to.equal(totalPooledEtherAfter + amountOfETHLocked);
 
-    const sharesAsFeesList = (await getEvents(reportTxReceipt, "TransferShares")).map((e) => e.args.sharesValue);
+    const sharesAsFeesList = (await ctx.getEvents(reportTxReceipt, "TransferShares")).map((e) => e.args.sharesValue);
 
     let mintedSharesSum = 0n;
 
@@ -795,7 +791,7 @@ describe("Accounting integration", () => {
       const { reportTx } = await report(ctx, { clDiff: 0n, reportElVault: true, reportWithdrawalsVault: true });
       const reportTxReceipt = (await reportTx!.wait()) as ContractTransactionReceipt;
 
-      expect(getEvents(reportTxReceipt, "WithdrawalsReceived")).to.be.empty;
+      expect(ctx.getEvents(reportTxReceipt, "WithdrawalsReceived")).to.be.empty;
       expect(await ethers.provider.getBalance(elRewardsVault.address)).to.equal(0);
       const rewardsEvent = getFirstEvent(reportTxReceipt, "ELRewardsReceived");
       expect(rewardsEvent.args.amount).to.equal(elVaultExcess);
