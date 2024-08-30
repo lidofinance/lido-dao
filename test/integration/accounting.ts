@@ -813,8 +813,7 @@ describe("Accounting integration", () => {
 
       expect(totalELRewardsCollectedBefore + limit + excess).to.equal(await lido.getTotalELRewardsCollected());
       const totalPooledEtherAfter = await lido.getTotalPooledEther();
-      console.log(totalPooledEtherBefore, limit, excess, totalPooledEtherAfter, amountOfETHLocked);
-      // expect(totalPooledEtherBefore + (limit + excess) * 2n).to.equal(await lido.getTotalPooledEther() + amountOfETHLocked);
+      expect(totalPooledEtherBefore + (limit + excess) * 2n).to.equal(totalPooledEtherAfter + amountOfETHLocked);
       expect(ethBalanceBefore + (limit + excess) * 2n).to.equal(
         (await ethers.provider.getBalance(lido.address)) + amountOfETHLocked,
       );
