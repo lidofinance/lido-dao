@@ -178,9 +178,15 @@ describe("Accounting integration", () => {
     const annualIncreaseLimit = (await oracleReportSanityChecker.getOracleReportLimits())[2];
     const preCLBalance = (await lido.getBeaconStat()).slice(-1)[0];
 
+    // To calculate the rebase amount close to the annual increase limit
+    // we use (ONE_DAY + 1n) to slightly underperform for the daily limit
+    // This ensures we're testing a scenario very close to, but not exceeding, the annual limit
     let rebaseAmount = (preCLBalance * annualIncreaseLimit * (ONE_DAY + 1n)) / (365n * ONE_DAY) / MAX_BASIS_POINTS;
     rebaseAmount = roundToGwei(rebaseAmount);
 
+    // At this point, rebaseAmount represents a positive CL rebase that is
+    // just slightly below the maximum allowed daily increase, testing the system's
+    // behavior near its operational limits
     const lastProcessingRefSlotBefore = await accountingOracle.getLastProcessingRefSlot();
     const totalELRewardsCollectedBefore = await lido.getTotalELRewardsCollected();
     const totalPooledEtherBefore = await lido.getTotalPooledEther();
@@ -205,6 +211,7 @@ describe("Accounting integration", () => {
     let mintedSharesSum = 0n;
 
     if (amountOfETHLocked == 0) {
+      // if no withdrawals processed
       expect(sharesAsFeesList.length).to.equal(3);
 
       const simpleDVTStats = await stakingRouter.getStakingModule(2);
@@ -505,6 +512,11 @@ describe("Accounting integration", () => {
       // Expected transfer of shares to NodeOperatorsRegistry and DAO
       expect(sharesAsFeesList.length).to.equal(2n + stakingModulesCount);
 
+      // transfer recipients:
+      // 0 - burner
+      // 1 - staking_modules[0] : node operators registry
+      // 2 - staking_modules[1] : simple DVT
+      // 3 - treasury
       const simpleDVTStats = await stakingRouter.getStakingModule(2);
       const simpleDVTTreasuryFee =
         (((sharesAsFeesList[2] * 10000n) / simpleDVTStats.stakingModuleFee) * simpleDVTStats.treasuryFee) / 10000n;
