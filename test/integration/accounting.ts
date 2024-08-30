@@ -26,7 +26,6 @@ describe("Accounting integration", () => {
     ctx = await getProtocolContext();
 
     [ethHolder] = await ethers.getSigners();
-    await setBalance(ethHolder.address, ether("1000000"));
 
     snapshot = await Snapshot.take();
   });
@@ -674,6 +673,8 @@ describe("Accounting integration", () => {
   it("Should account correctly shares burn above limits", async () => {
     const { lido, burner, wstETH, withdrawalQueue } = ctx.contracts;
 
+    await setBalance(ethHolder.address, ether("1000000"));
+
     while ((await withdrawalQueue.getLastRequestId()) != (await withdrawalQueue.getLastFinalizedRequestId())) {
       await report(ctx);
       await lido.connect(ethHolder).submit(ZeroAddress, { value: ether("10000") });
@@ -741,6 +742,8 @@ describe("Accounting integration", () => {
 
   it("Should account correctly overfill both vaults", async () => {
     const { lido, withdrawalQueue, withdrawalVault, elRewardsVault } = ctx.contracts;
+
+    await setBalance(ethHolder.address, ether("1000000"));
 
     while ((await withdrawalQueue.getLastRequestId()) != (await withdrawalQueue.getLastFinalizedRequestId())) {
       await report(ctx);
