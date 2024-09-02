@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report! If the bug may potentially lead to loss of user funds, denial of service, governance hijacks, data breaches, and data leaks, please refer to [Lido Bug Bounty](https://immunefi.com/bug-bounty/lido/information/).
+        ⚠️ Important! If the bug may potentially lead to loss of user funds, denial of service, governance hijacks, data breaches, and data leaks, please refer to [Lido Bug Bounty](https://immunefi.com/bug-bounty/lido/information/).
   - type: textarea
     id: summary
     attributes:
@@ -39,7 +39,7 @@ body:
     id: solution
     attributes:
       label: Possible Solutions
-      description: Possible ways to fix the bug 
+      description: Possible ways to fix the bug
     validations:
       required: false
   - type: checkboxes
