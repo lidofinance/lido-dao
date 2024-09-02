@@ -1,20 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-
-import { applyMigrationScript, log } from "lib";
-
-type StepsFile = {
-  steps: string[];
-};
-
-const loadSteps = (stepsFile: string): string[] => {
-  const stepsPath = path.resolve(process.cwd(), `scripts/${stepsFile}`);
-  return (JSON.parse(fs.readFileSync(stepsPath, "utf8")) as StepsFile).steps;
-};
-
-const resolveMigrationFile = (step: string): string => {
-  return path.resolve(process.cwd(), `scripts/${step}`);
-};
+import { applyMigrationScript, loadSteps, log, resolveMigrationFile } from "lib";
 
 const runMigrations = async (stepsFile: string): Promise<void> => {
   const steps = loadSteps(stepsFile);
