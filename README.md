@@ -1,14 +1,4 @@
-## Disclaimer: WIP!
-
-This repository is currently a **work-in-progress**.
-
-This repository is the modernized iteration of the outdated [`lido-dao` repository](https://github.com/lidofinance/lido-dao). Significant efforts were undertaken to update the tooling and infrastructure to align with current standards and best practices. As part of this modernization process:
-
-- the codebase has been transitioned from JavaScript to TypeScript to leverage TypeScript's robust type-checking, IDE autocompletion, and scalability features;
-- the test suite was revamped and restructured to ensure consistent approach and comprehensive testing coverage;
-- deprecated dependencies (e.g. Waffle testing framework) were removed or replaced by modern alternatives;
-- outdated dependencies such as Hardhat, ethers and others were upgraded to their latest versions to improve performance, compatibility and developer experience;
-- Lido Aragon Apps will be migrated to the [Lido Aragon Apps repository](https://github.com/lidofinance/aragon-apps).
+_This is the official repository for Lido protocol. It contains the core protocol contracts, associated tests and scripts._
 
 ---
 
@@ -59,7 +49,9 @@ Users can deposit ether to the Lido smart contract and receive stETH tokens in r
 
 ## Bug Bounty
 
-At the moment, the [Lido bug bounty program](https://immunefi.com/bounty/lido/) covers only the contracts in the [Lido DAO repository](https://github.com/lidofinance/lido-dao). Once the work on this repository is finished, the bug bounty program will be updated.
+If you have found a vulnerability in Lido, it must be submitted through [Lido Bug Bounty program](https://immunefi.com/bounty/lido/). Immunefi will handle bug bounty communications. See the bounty page on Immunefi for more details on accepted vulnerabilities, payout amounts, and rules of participation.
+
+Users who violate the rules of participation will not receive bug bounty payouts and may be temporarily suspended or banned from the bug bounty program.
 
 ## Contributing
 
