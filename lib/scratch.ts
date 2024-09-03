@@ -6,16 +6,25 @@ import { ethers } from "hardhat";
 import { log } from "./log";
 import { resetStateFile } from "./state-file";
 
-export async function deployScratchProtocol(networkName: string): Promise<void> {
-  await resetStateFile(networkName);
+const deployedSteps: string[] = [];
 
+export async function deployScratchProtocol(networkName: string): Promise<void> {
   const stepsFile = process.env.STEPS_FILE || "scratch/steps.json";
   const steps = loadSteps(stepsFile);
+
+  if (steps.every((step) => deployedSteps.includes(step))) {
+    return; // All steps have been deployed
+  }
+
+  await resetStateFile(networkName);
+
   for (const step of steps) {
     const migrationFile = resolveMigrationFile(step);
 
     await applyMigrationScript(migrationFile);
     await ethers.provider.send("evm_mine", []); // Persist the state after each step
+
+    deployedSteps.push(step);
   }
 }
 
