@@ -100,6 +100,7 @@ const shareRate = e27
 
 const bnE9 = new BN(10).pow(new BN(9))
 const ethToGwei = (valueEth) => toBN(valueEth).div(bnE9).toString()
+const ethToStr = (valueEth) => web3.utils.fromWei(toBN(valueEth), 'ether')
 
 const changeEndianness = (string) => {
   string = string.replace('0x', '')
@@ -202,6 +203,7 @@ module.exports = {
   gwei,
   ETH,
   ethToGwei,
+  ethToStr,
   StETH: ETH,
   tokens,
   changeEndianness,

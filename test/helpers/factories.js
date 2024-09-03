@@ -3,7 +3,7 @@ const withdrawals = require('./withdrawals')
 const { newApp } = require('./dao')
 const { artifacts } = require('hardhat')
 const { deployLocatorWithDummyAddressesImplementation } = require('./locator-deploy')
-const { ETH } = require('./utils')
+const { ETH, ZERO_ADDRESS } = require('./utils')
 
 const { SLOTS_PER_EPOCH, SECONDS_PER_SLOT, EPOCHS_PER_FRAME, CONSENSUS_VERSION } = require('./constants')
 
@@ -27,6 +27,9 @@ const Burner = artifacts.require('Burner')
 const OracleReportSanityChecker = artifacts.require('OracleReportSanityChecker')
 const ValidatorsExitBusOracle = artifacts.require('ValidatorsExitBusOracle')
 const OracleReportSanityCheckerStub = artifacts.require('OracleReportSanityCheckerStub')
+const Voting = artifacts.require('Voting')
+const MiniMeToken = artifacts.require('MiniMeToken')
+const TokenManager = artifacts.require('TokenManager')
 
 async function lidoMockFactory({ dao, appManager, acl, voting }) {
   const base = await LidoMock.new()
@@ -74,7 +77,93 @@ async function appManagerFactory({ signers }) {
 }
 
 async function votingEOAFactory({ signers }) {
-  return signers[1]
+  return { voting: signers[1], daoToken: null, tokenManager: null }
+}
+
+async function votingFactory({ appManager, dao, acl, deployParams }) {
+  const {
+    daoTokenDecimals = 18,
+    daoTokenName = 'DAO Token',
+    daoTokenSymbol = 'DAOTKN',
+    daoTokenTotalSupply = '1000000000000000000000000',
+    minSupportRequired = '500000000000000000',
+    minAcceptanceQuorum = '50000000000000000',
+    voteDuration = 3600,
+    objectionPhaseDuration = 1800,
+  } = deployParams
+
+  // deploy gov token (aka LDO)
+  const daoToken = await MiniMeToken.new(
+    ZERO_ADDRESS,
+    ZERO_ADDRESS,
+    0,
+    daoTokenName,
+    daoTokenDecimals,
+    daoTokenSymbol,
+    true
+  )
+
+  // deploy TokenManager
+  const tmBase = await TokenManager.new()
+  const tmProxyAddress = await newApp(dao, 'aragon-token-manager', tmBase.address, appManager.address)
+  const tokenManager = await TokenManager.at(tmProxyAddress)
+  await daoToken.changeController(tokenManager.address, { from: appManager.address })
+  await tokenManager.initialize(daoToken.address, true, 0, { from: appManager.address })
+
+  await Promise.all([
+    acl.createPermission(
+      appManager.address,
+      tokenManager.address,
+      await tokenManager.ISSUE_ROLE(),
+      appManager.address,
+      {
+        from: appManager.address,
+      }
+    ),
+    acl.createPermission(
+      appManager.address,
+      tokenManager.address,
+      await tokenManager.ASSIGN_ROLE(),
+      appManager.address,
+      {
+        from: appManager.address,
+      }
+    ),
+  ])
+
+  // issue gov token to appManger
+  await tokenManager.issue(daoTokenTotalSupply, { from: appManager.address })
+  await tokenManager.assign(appManager.address, daoTokenTotalSupply, { from: appManager.address })
+
+  // deploy Voting
+  const votingBase = await Voting.new()
+  const proxyAddress = await newApp(dao, 'aragon-voting', votingBase.address, appManager.address)
+  const voting = await Voting.at(proxyAddress)
+  await voting.initialize(
+    daoToken.address,
+    minSupportRequired,
+    minAcceptanceQuorum,
+    voteDuration,
+    objectionPhaseDuration,
+    { from: appManager.address }
+  )
+
+  await Promise.all([
+    acl.grantPermission(voting.address, acl.address, await acl.CREATE_PERMISSIONS_ROLE(), {
+      from: appManager.address,
+    }),
+    acl.grantPermission(voting.address, dao.address, await dao.APP_MANAGER_ROLE(), {
+      from: appManager.address,
+    }),
+    acl.createPermission(tokenManager.address, voting.address, await voting.CREATE_VOTES_ROLE(), appManager.address, {
+      from: appManager.address,
+    }),
+    // acl.createPermission(voting.address, tokenManager.address, await tokenManager.ASSIGN_ROLE(), voting.address, {
+    //   from: appManager.address,
+    // }),
+  ])
+
+  return { voting, daoToken, tokenManager }
 }
 
 async function treasuryFactory(_) {
@@ -287,6 +376,21 @@ async function stakingModulesFactory(_) {
   return []
 }
 
+async function addStakingModulesWrapper(protocol, stakingModules = []) {
+  for (const stakingModule of stakingModules) {
+    await protocol.stakingRouter.addStakingModule(
+      stakingModule.name,
+      stakingModule.module.address,
+      stakingModule.targetShares,
+      stakingModule.moduleFee,
+      stakingModule.treasuryFee,
+      { from: protocol.voting.address }
+    )
+  }
+
+  return stakingModules.map(({ module }) => module)
+}
+
 async function guardiansFactory({ deployParams }) {
   return {
     privateKeys: deployParams.guardians,
@@ -399,6 +503,7 @@ module.exports = {
   appManagerFactory,
   treasuryFactory,
   votingEOAFactory,
+  votingFactory,
   depositContractFactory,
   lidoMockFactory,
   wstethFactory,
@@ -412,6 +517,7 @@ module.exports = {
   eip712StETHFactory,
   withdrawalCredentialsFactory,
   stakingModulesFactory,
+  addStakingModulesWrapper,
   guardiansFactory,
   burnerFactory,
   postSetup,

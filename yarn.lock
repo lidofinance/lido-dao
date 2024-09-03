@@ -1926,7 +1926,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/abi@npm:5.7.0, @ethersproject/abi@npm:^5.0.0-beta.146, @ethersproject/abi@npm:^5.0.9, @ethersproject/abi@npm:^5.7.0":
+"@ethersproject/abi@npm:5.7.0, @ethersproject/abi@npm:^5.0.0-beta.146, @ethersproject/abi@npm:^5.0.7, @ethersproject/abi@npm:^5.0.9, @ethersproject/abi@npm:^5.7.0":
   version: 5.7.0
   resolution: "@ethersproject/abi@npm:5.7.0"
   dependencies:
@@ -3765,6 +3765,7 @@ __metadata:
     ethereumjs-testrpc-sc: ^6.5.1-sc.1
     ethereumjs-util: ^7.0.8
     ethers: ^5.1.4
+    evm-script-decoder: "git+https://github.com/lidofinance/evm-script-decoder.git#v0.2.2"
     ganache: =7.6.0
     hardhat: 2.12.7
     hardhat-contract-sizer: ^2.5.0
@@ -7729,7 +7730,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bn.js@npm:^5.2.1":
+"bn.js@npm:^5.2.0, bn.js@npm:^5.2.1":
   version: 5.2.1
   resolution: "bn.js@npm:5.2.1"
   checksum: 4693b52187524b856422b133cb2168ab5d593981891cb213e0565f5355008539f3887291f69c5ae2b254743c6c8d062ab7b69983e19bd00060023517d0a7ca8b
@@ -13182,6 +13183,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"evm-script-decoder@git+https://github.com/lidofinance/evm-script-decoder.git#v0.2.2":
+  version: 0.2.2
+  resolution: "evm-script-decoder@https://github.com/lidofinance/evm-script-decoder.git#commit=7bf9f89234e4504bf8246bdd3eb6cd43ad4c0709"
+  dependencies:
+    "@ethersproject/abi": ^5.0.7
+    keccak256: ^1.0.3
+  checksum: c1f9ca3c4cc0710e0a080493c6bac533611f0bd6ebb076c6928ced5fa82ab2782fce7d1ded250950b803f4be2c7a79315754bcd311d81a552e402c7b3a65916f
+  languageName: node
+  linkType: hard
+
 "evp_bytestokey@npm:^1.0.0, evp_bytestokey@npm:^1.0.3":
   version: 1.0.3
   resolution: "evp_bytestokey@npm:1.0.3"
@@ -18184,6 +18195,17 @@ fsevents@~2.3.2:
   version: 1.0.3
   resolution: "junk@npm:1.0.3"
   checksum: 4090c24ce843acad68032c901f1de0ae21c024c7a31b79865ae2c5f2b9c36d8d8733b35c6c086171fd1dd7af4bda2c7987a990d5083162ccf2f157c8bebbe4a9
+  languageName: node
+  linkType: hard
+
+"keccak256@npm:^1.0.3":
+  version: 1.0.6
+  resolution: "keccak256@npm:1.0.6"
+  dependencies:
+    bn.js: ^5.2.0
+    buffer: ^6.0.3
+    keccak: ^3.0.2
+  checksum: 5f7649021b30167c545dcf937aab5c93a2bb612f62722fa102e53d5c529feb3e4e4ab11baf7a2e419bf8d3bcc90a00fa6822e3095017fce2873679f2469c34ab
   languageName: node
   linkType: hard
 
@@ -25288,6 +25310,42 @@ resolve@^1.22.1:
   checksum: 4623960448a49731b5abeedc5430f8158c5caa05f10a685b405b13ed8532c80b5d99e6ef5d53f76a695e66f551cdbcca22c1363ceef8f8b246cda1e21b9ef871
   languageName: node
   linkType: hard
+
+"simple-dvt-frontend@workspace:apps/simple-dvt/app":
+  version: 0.0.0-use.local
+  resolution: "simple-dvt-frontend@workspace:apps/simple-dvt/app"
+  dependencies:
+    "@aragon/api": ^2.0.0
+    "@aragon/api-react": ^2.0.0
+    "@aragon/ui": ^1.7.0
+    "@babel/core": ^7.21.0
+    "@babel/preset-env": ^7.11.5
+    "@babel/preset-react": ^7.10.1
+    babel-eslint: ^10.1.0
+    babel-plugin-styled-components: ^1.11.1
+    copyfiles: ^2.3.0
+    core-js: ^3.6.5
+    eslint: ^8.34.0
+    eslint-config-prettier: ^8.6.0
+    eslint-config-standard: ^17.0.0
+    eslint-config-standard-react: ^9.2.0
+    eslint-plugin-import: ^2.27.5
+    eslint-plugin-node: ^11.1.0
+    eslint-plugin-prettier: ^4.2.1
+    eslint-plugin-promise: ^6.1.1
+    eslint-plugin-react: ^7.20.6
+    eslint-plugin-react-hooks: ^4.1.2
+    eslint-plugin-standard: ^5.0.0
+    formik: ^2.2.0
+    parcel-bundler: ^1.12.4
+    prettier: ^2.8.4
+    react: ^16.13.1
+    react-dom: ^16.13.1
+    regenerator-runtime: ^0.13.7
+    styled-components: ^5.2.0
+    yup: ^0.29.3
+  languageName: unknown
+  linkType: soft
 
 "simple-get@npm:^2.7.0":
   version: 2.8.1

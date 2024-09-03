@@ -64,6 +64,7 @@ const DEFAULT_FACTORIES = {
   eip712StETHFactory: factories.eip712StETHFactory,
   withdrawalCredentialsFactory: factories.withdrawalCredentialsFactory,
   stakingModulesFactory: factories.stakingModulesFactory,
+  addStakingModulesWrapper: factories.addStakingModulesWrapper,
   guardiansFactory: factories.guardiansFactory,
   burnerFactory: factories.burnerFactory,
   postSetup: factories.postSetup,

@@ -8,8 +8,8 @@
 ## General info
 
 The repo contains bash scripts for deployment of the DAO under multiple environments:
-- local node (ganache, anvil, hardhat network) `dao-local-deploy.sh`
-- holesky testnet - `dao-holesky-deploy.sh`
+- local node (ganache, anvil, hardhat network) `scripts/scratch/dao-local-deploy.sh`
+- holesky testnet - `scripts/scratch/dao-holesky-deploy.sh`
 
 The protocol has a bunch of parameters to configure for the scratch deployment. The default configuration is stored in files `deployed-<deploy env>-defaults.json`, where `<deploy env>` is the target environment. Currently, there is a single default configuration, `deployed-testnet-defaults.json`, suitable for testnet deployments. Compared to the mainnet configuration, it has lower vote durations, more frequent oracle report cycles, etc. Part of the parameters require further specification -- they are marked with `null` values.
 During the deployment, the "default" configuration is copied to `deployed-<network name>.json`, where `<network name>` is the name of a network configuration defined in `hardhat.config.js`. The file `deployed-<network name>.json` gets populated with the contract addresses and transaction hashes during the deployment process.
@@ -91,8 +91,9 @@ To do Holešky deployment, the following parameters must be set up via env varia
 - `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is `https://holesky.infura.io/v3/<yourProjectId>`
 - `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
 - `GAS_MAX_FEE`. Gas max fee. By default set to `100`
-- `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed in advance. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment.
-- `WITHDRAWAL_QUEUE_BASE_URI`. BaseURI for WithdrawalQueueERC712. By default not set (left an empty string).
+- `GATE_SEAL_FACTORY`. Address of the [GateSeal Factory](https://github.com/lidofinance/gate-seals) contract. Must be deployed in advance. Can be set to any `0x0000000000000000000000000000000000000000` to debug deployment
+- `WITHDRAWAL_QUEUE_BASE_URI`. BaseURI for WithdrawalQueueERC712. By default not set (left an empty string)
+- `DSM_PREDEFINED_ADDRESS`. Address to use instead of deploying `DepositSecurityModule` or `null` otherwise. If used, the deposits can be made by calling `Lido.deposit` from the address.
 
 Also you need to specify `DEPLOYER` private key in `accounts.json` under `/eth/holesky` like `"holesky": ["<key>"]`. See `accounts.sample.json` for an example.
 
