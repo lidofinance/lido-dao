@@ -253,19 +253,15 @@ export const report = async (
   return submitReport(ctx, reportParams);
 };
 
-/**
- * Wait for the next available report time.
- */
-export const waitNextAvailableReportTime = async (ctx: ProtocolContext): Promise<void> => {
+export const getReportTimeElapsed = async (ctx: ProtocolContext) => {
   const { hashConsensus } = ctx.contracts;
   const { slotsPerEpoch, secondsPerSlot, genesisTime } = await hashConsensus.getChainConfig();
   const { refSlot } = await hashConsensus.getCurrentFrame();
-
   const time = await getCurrentBlockTimestamp();
 
   const { epochsPerFrame } = await hashConsensus.getFrameConfig();
 
-  log.debug("Current frame", {
+  log.debug("Report elapse time", {
     "Ref slot": refSlot,
     "Ref slot date": new Date(Number(genesisTime + refSlot * secondsPerSlot) * 1000).toUTCString(),
     "Epochs per frame": epochsPerFrame,
@@ -282,18 +278,37 @@ export const waitNextAvailableReportTime = async (ctx: ProtocolContext): Promise
   // add 10 slots to be sure that the next frame starts
   const nextFrameStartWithOffset = nextFrameStart + secondsPerSlot * 10n;
 
-  const timeToAdvance = Number(nextFrameStartWithOffset - time);
+  return {
+    time,
+    nextFrameStart,
+    nextFrameStartWithOffset,
+    timeElapsed: nextFrameStartWithOffset - time,
+  };
+};
 
-  await advanceChainTime(timeToAdvance);
+/**
+ * Wait for the next available report time.
+ */
+export const waitNextAvailableReportTime = async (ctx: ProtocolContext): Promise<void> => {
+  const { hashConsensus } = ctx.contracts;
+  const { slotsPerEpoch } = await hashConsensus.getChainConfig();
+  const { epochsPerFrame } = await hashConsensus.getFrameConfig();
+  const { refSlot } = await hashConsensus.getCurrentFrame();
+
+  const slotsPerFrame = slotsPerEpoch * epochsPerFrame;
+
+  const { nextFrameStartWithOffset, timeElapsed } = await getReportTimeElapsed(ctx);
+
+  await advanceChainTime(timeElapsed);
 
   const timeAfterAdvance = await getCurrentBlockTimestamp();
 
   const nextFrame = await hashConsensus.getCurrentFrame();
 
   log.debug("Next frame", {
-    "Next ref slot": nextRefSlot,
-    "Next frame date": new Date(Number(nextFrameStart) * 1000).toUTCString(),
-    "Time to advance": timeToAdvance,
+    "Next ref slot": refSlot + slotsPerFrame,
+    "Next frame date": new Date(Number(nextFrameStartWithOffset) * 1000).toUTCString(),
+    "Time to advance": timeElapsed,
     "Time after advance": timeAfterAdvance,
     "Time after advance date": new Date(Number(timeAfterAdvance) * 1000).toUTCString(),
     "Ref slot": nextFrame.refSlot,
