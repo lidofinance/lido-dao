@@ -35,7 +35,6 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
     event EthReceived(address sender, uint256 amount);
     event EthRecovered(uint256 amount);
     event BepoliaRecovered(uint256 amount);
-    event OwnerInitialized(address owner);
 
     error EthRecoverFailed();
     error BepoliaRecoverFailed();
@@ -54,7 +53,6 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
         } else {
             _transferOwnership(msg.sender);
             initialized = true;
-            emit OwnerInitialized(msg.sender);
         }
     }
 
