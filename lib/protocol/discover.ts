@@ -39,6 +39,7 @@ const getDiscoveryConfig = async () => {
 
   log.debug("Discovery config", {
     "Network": hre.network.name,
+    "Source": config.source,
     "Locator address": locatorAddress,
     "Agent address": agentAddress,
     "Voting address": votingAddress,
