@@ -1,5 +1,5 @@
 foundry
-contracts/**/*.sol
+contracts
 
 .gitignore
 .prettierignore
