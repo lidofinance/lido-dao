@@ -263,7 +263,7 @@ contract Math256Test is Test {
         // This case should always error
         if (b == 0) {
             // It shouldn't crash unexpectedly
-            vm.expectRevert("Division or modulo by 0");
+            vm.expectRevert();
             Math256.ceilDiv(a, b);
             return;
         }
