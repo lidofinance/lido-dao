@@ -36,7 +36,7 @@ async function main() {
 
   // Oracle report sanity checker
   // 43200 check value
-  const LIMITS = [9000, 500, 1000, 50, 600, 8, 62, 7680, 750000, 43200];
+  const LIMITS = [9000, 500, 1000, 50, 600, 8, 24, 7680, 750000, 43200];
   const MANAGERS_ROSTER = [[], [], [], [], [], [], [], [], [], [], []];
 
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));

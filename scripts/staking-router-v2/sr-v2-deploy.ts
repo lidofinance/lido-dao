@@ -36,7 +36,7 @@ function getEnvVariable(name: string, defaultValue?: string) {
 const SECONDS_PER_SLOT = 12;
 const GENESIS_TIME = 1606824023;
 // Oracle report sanity checker
-const LIMITS = [9000, 43200, 1000, 50, 600, 8, 62, 7680, 750000, 1000, 101, 74];
+const LIMITS = [9000, 43200, 1000, 50, 600, 8, 24, 7680, 750000, 1000, 101, 74];
 // DSM args
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 6646;
 const MAX_OPERATORS_PER_UNVETTING = 200;
