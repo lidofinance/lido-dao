@@ -115,10 +115,15 @@ export type HashConsensusContracts = {
   hashConsensus: LoadedContract<HashConsensus>;
 };
 
+export type WstETHContracts = {
+  wstETH: LoadedContract<WstETH>;
+};
+
 export type ProtocolContracts = { locator: LoadedContract<LidoLocator> } & CoreContracts &
   AragonContracts &
   StakingModuleContracts &
-  HashConsensusContracts;
+  HashConsensusContracts &
+  WstETHContracts;
 
 export type ProtocolSigners = {
   agent: string;
