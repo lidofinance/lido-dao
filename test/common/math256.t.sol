@@ -259,9 +259,14 @@ contract Math256Test is Test {
      * forge-config: default.fuzz.runs = 2048
      * forge-config: default.fuzz.max-test-rejects = 0
      */
-    function testFuzz_ceilDiv(uint256 a, uint256 b) public pure {
-        // Skip zero, implementation is safe against division by zero
-        vm.assume(b != 0);
+    function testFuzz_ceilDiv(uint256 a, uint256 b) public {
+        // This case should always error
+        if (b == 0) {
+            // It shouldn't crash unexpectedly
+            vm.expectRevert();
+            Math256.ceilDiv(a, b);
+            return;
+        }
 
         // This case should always be zero
         if (a == 0) {
