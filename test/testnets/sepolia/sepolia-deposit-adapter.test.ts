@@ -178,7 +178,6 @@ describe("SepoliaDepositAdapter.sol", () => {
       ]);
       const proxiedAdapter = await ethers.getContractAt("SepoliaDepositAdapter", await proxy.getAddress());
 
-      // await proxiedAdapter.connect(user).initialize(user.address);
       await expect(proxiedAdapter.initialize(ZeroAddress)).to.revertedWithCustomError(proxiedAdapter, "ZeroAddress");
     });
 
