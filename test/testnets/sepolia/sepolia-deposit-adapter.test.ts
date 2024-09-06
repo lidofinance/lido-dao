@@ -10,6 +10,10 @@ import { ether, findEvents } from "lib";
 
 import { Snapshot } from "test/suite";
 
+// To run tests on the Sepolia network, you will need node with sepolia fork running.
+// For example: anvil --port 8545 --fork-url https://sepolia.infura.io/v3/<token>
+// Then run the tests with the following command:
+// RPC_URL=http://127.0.0.1:8545 npx hardhat test test/testnets/sepolia/sepolia-deposit-adapter.test.ts --network sepolia
 describe("SepoliaDepositAdapter.sol", () => {
   let originalState: string;
 
@@ -17,8 +21,11 @@ describe("SepoliaDepositAdapter.sol", () => {
   let user: HardhatEthersSigner;
   let depositAdapter: SepoliaDepositAdapter;
   let depositAdapterAddress: string;
+  // BEPOLIA ⇒ Sepolia deposit contract token
   let bepoliaToken: ISepoliaDepositContract;
+  // Sepolia deposit contract address https://sepolia.etherscan.io/token/0x7f02c3e3c98b133055b8b348b2ac625669ed295d
   const sepoliaDepositContractAddress = "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D";
+  // https://docs.lido.fi/deployed-contracts/sepolia/
   const EOAddress = "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5";
   const bepoliaTokenHolder = EOAddress;
   // const log = console.log;
