@@ -6,11 +6,11 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { setBalance } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
-  BurnerStub,
+  Burner__MockForSanityChecker,
   LidoLocator__MockForSanityChecker,
   OracleReportSanityChecker,
   StakingRouter__MockForSanityChecker,
-  WithdrawalQueueStub,
+  WithdrawalQueue__MockForSanityChecker,
 } from "typechain-types";
 
 import { ether, getCurrentBlockTimestamp, randomAddress } from "lib";
@@ -20,8 +20,8 @@ import { Snapshot } from "test/suite";
 describe("OracleReportSanityChecker.sol", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
   let lidoLocatorMock: LidoLocator__MockForSanityChecker;
-  let burnerMock: BurnerStub;
-  let withdrawalQueueMock: WithdrawalQueueStub;
+  let burnerMock: Burner__MockForSanityChecker;
+  let withdrawalQueueMock: WithdrawalQueue__MockForSanityChecker;
   let originalState: string;
 
   let managersRoster: Record<string, HardhatEthersSigner[]>;
@@ -51,6 +51,7 @@ describe("OracleReportSanityChecker.sol", () => {
     preCLValidators: 0n,
     postCLValidators: 0n,
   };
+
   type CheckAccountingOracleReportParameters = [number, bigint, bigint, number, number, number, number, number];
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
@@ -66,8 +67,8 @@ describe("OracleReportSanityChecker.sol", () => {
 
     // mine 1024 blocks with block duration 12 seconds
     await ethers.provider.send("hardhat_mine", ["0x" + Number(1024).toString(16), "0x" + Number(12).toString(16)]);
-    withdrawalQueueMock = await ethers.deployContract("WithdrawalQueueStub");
-    burnerMock = await ethers.deployContract("BurnerStub");
+    withdrawalQueueMock = await ethers.deployContract("WithdrawalQueue__MockForSanityChecker");
+    burnerMock = await ethers.deployContract("Burner__MockForSanityChecker");
     const accountingOracle = await ethers.deployContract("AccountingOracle__MockForSanityChecker", [
       deployer.address,
       12,
