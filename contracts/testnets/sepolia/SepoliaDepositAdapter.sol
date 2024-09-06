@@ -6,6 +6,7 @@ pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts-v4.4/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-v4.4/access/Ownable.sol";
+import "../../0.8.9/utils/Versioned.sol";
 
 interface IDepositContract {
     event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index);
@@ -31,7 +32,7 @@ interface ISepoliaDepositContract is IDepositContract, IERC20 {}
 // 2. It returns the ETH to the sender after depositing.
 // This adapter is used to make the mainnet deposit contract compatible with the testnet deposit contract.
 // For further information see Sepolia deposit contract variant source code link above.
-contract SepoliaDepositAdapter is IDepositContract, Ownable {
+contract SepoliaDepositAdapter is IDepositContract, Ownable, Versioned {
     event EthReceived(address sender, uint256 amount);
     event EthRecovered(uint256 amount);
     event BepoliaRecovered(uint256 amount);
@@ -39,21 +40,20 @@ contract SepoliaDepositAdapter is IDepositContract, Ownable {
     error EthRecoverFailed();
     error BepoliaRecoverFailed();
     error DepositFailed();
-    error AlreadyInitialized();
+    error ZeroAddress(string field);
 
-    // Sepolia testnet default deposit contract address
-    ISepoliaDepositContract public constant originalContract =
-        ISepoliaDepositContract(0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D);
+    // Sepolia original deposit contract address
+    ISepoliaDepositContract public immutable originalContract;
 
-    bool public initialized;
+    constructor(address _deposit_contract) {
+        originalContract = ISepoliaDepositContract(_deposit_contract);
+    }
 
-    function initializeOwnable() external {
-        if (initialized) {
-            revert AlreadyInitialized();
-        } else {
-            _transferOwnership(msg.sender);
-            initialized = true;
-        }
+    function initialize(address _owner) external {
+        if (_owner == address(0)) revert ZeroAddress("_owner");
+
+        _initializeContractVersionTo(1);
+        _transferOwnership(_owner);
     }
 
     function get_deposit_root() external view override returns (bytes32) {
