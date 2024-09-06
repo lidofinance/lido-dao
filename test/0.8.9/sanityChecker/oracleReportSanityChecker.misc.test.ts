@@ -17,7 +17,7 @@ import { ether, getCurrentBlockTimestamp, randomAddress } from "lib";
 
 import { Snapshot } from "test/suite";
 
-describe("OracleReportSanityChecker.sol", () => {
+describe("OracleReportSanityChecker.sol:misc", () => {
   let oracleReportSanityChecker: OracleReportSanityChecker;
   let lidoLocatorMock: LidoLocator__MockForSanityChecker;
   let burnerMock: Burner__MockForSanityChecker;

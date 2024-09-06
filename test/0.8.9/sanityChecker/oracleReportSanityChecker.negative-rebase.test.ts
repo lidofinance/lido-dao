@@ -4,7 +4,6 @@ import { artifacts, ethers } from "hardhat";
 
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import {
   AccountingOracle__MockForSanityChecker,
@@ -13,39 +12,35 @@ import {
   StakingRouter__MockForSanityChecker,
 } from "typechain-types";
 
-import { ether } from "lib";
+import { ether, getCurrentBlockTimestamp } from "lib";
 
-// pnpm hardhat test --grep "OracleReportSanityChecker"
+import { Snapshot } from "test/suite";
 
-describe("OracleReportSanityChecker.sol", () => {
+const SLOTS_PER_DAY = 7200n;
+
+describe("OracleReportSanityChecker.sol:negative-rebase", () => {
   let locator: LidoLocator__MockForSanityChecker;
   let checker: OracleReportSanityChecker;
   let accountingOracle: AccountingOracle__MockForSanityChecker;
   let stakingRouter: StakingRouter__MockForSanityChecker;
   let deployer: HardhatEthersSigner;
-  let genesisTime: bigint;
-  const SLOTS_PER_DAY = 7200;
 
   const defaultLimitsList = {
-    churnValidatorsPerDayLimit: 55,
-    deprecatedOneOffCLBalanceDecreaseBPLimit: 0,
-    annualBalanceIncreaseBPLimit: 10_00, // 10%
-    simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
-    maxValidatorExitRequestsPerReport: 2000,
-    maxAccountingExtraDataListItemsCount: 15,
-    maxNodeOperatorsPerExtraDataItemCount: 16,
-    requestTimestampMargin: 128,
-    maxPositiveTokenRebase: 5_000_000, // 0.05%
-    initialSlashingAmountPWei: 1000, // 1 ETH = 1000 PWei
-    inactivityPenaltiesAmountPWei: 101, // 0.101 ETH = 101 PWei
-    clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%
+    churnValidatorsPerDayLimit: 55n,
+    deprecatedOneOffCLBalanceDecreaseBPLimit: 0n,
+    annualBalanceIncreaseBPLimit: 10_00n, // 10%
+    simulatedShareRateDeviationBPLimit: 2_50n, // 2.5%
+    maxValidatorExitRequestsPerReport: 2000n,
+    maxAccountingExtraDataListItemsCount: 15n,
+    maxNodeOperatorsPerExtraDataItemCount: 16n,
+    requestTimestampMargin: 128n,
+    maxPositiveTokenRebase: 5_000_000n, // 0.05%
+    initialSlashingAmountPWei: 1000n, // 1 ETH = 1000 PWei
+    inactivityPenaltiesAmountPWei: 101n, // 0.101 ETH = 101 PWei
+    clBalanceOraclesErrorUpperBPLimit: 74n, // 0.74%
   };
 
-  const gweis = (x: number) => parseUnits(x.toString(), "gwei");
-
-  const genAccessControlError = (caller: string, role: string): string => {
-    return `AccessControl: account ${caller.toLowerCase()} is missing role ${role}`;
-  };
+  let originalState: string;
 
   const deploySecondOpinionOracle = async () => {
     const secondOpinionOracle = await ethers.deployContract("SecondOpinionOracleMock");
@@ -55,21 +50,21 @@ describe("OracleReportSanityChecker.sol", () => {
 
     // 10000 BP - 100%
     // 74 BP - 0.74%
-    await checker.setSecondOpinionOracleAndCLBalanceUpperMargin(await secondOpinionOracle.getAddress(), 74);
+    await checker.setSecondOpinionOracleAndCLBalanceUpperMargin(await secondOpinionOracle.getAddress(), 74n);
     return secondOpinionOracle;
   };
 
-  beforeEach(async () => {
+  before(async () => {
     [deployer] = await ethers.getSigners();
 
+    const sanityCheckerAddress = deployer.address;
+
+    const burner = await ethers.deployContract("Burner__MockForSanityChecker", []);
     accountingOracle = await ethers.deployContract("AccountingOracle__MockForSanityChecker", [
       deployer.address,
       12,
       1606824023,
     ]);
-    genesisTime = await accountingOracle.GENESIS_TIME();
-    const sanityChecker = deployer.address;
-    const burner = await ethers.deployContract("BurnerStub", []);
     stakingRouter = await ethers.deployContract("StakingRouter__MockForSanityChecker");
 
     locator = await ethers.deployContract("LidoLocator__MockForSanityChecker", [
@@ -79,7 +74,7 @@ describe("OracleReportSanityChecker.sol", () => {
         elRewardsVault: deployer.address,
         accountingOracle: await accountingOracle.getAddress(),
         legacyOracle: deployer.address,
-        oracleReportSanityChecker: sanityChecker,
+        oracleReportSanityChecker: sanityCheckerAddress,
         burner: await burner.getAddress(),
         validatorsExitBusOracle: deployer.address,
         stakingRouter: await stakingRouter.getAddress(),
@@ -97,6 +92,10 @@ describe("OracleReportSanityChecker.sol", () => {
       Object.values(defaultLimitsList),
     ]);
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("OracleReportSanityChecker is functional", () => {
     it(`base parameters are correct`, async () => {
@@ -139,19 +138,19 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it(`second opinion can be changed or removed`, async () => {
-      expect(await checker.secondOpinionOracle()).to.be.equal(ZeroAddress);
+      expect(await checker.secondOpinionOracle()).to.equal(ZeroAddress);
 
       const clOraclesRole = await checker.SECOND_OPINION_MANAGER_ROLE();
       await checker.grantRole(clOraclesRole, deployer.address);
 
       await checker.setSecondOpinionOracleAndCLBalanceUpperMargin(deployer.address, 74);
-      expect(await checker.secondOpinionOracle()).to.be.equal(deployer.address);
+      expect(await checker.secondOpinionOracle()).to.equal(deployer.address);
 
       const allLimitsRole = await checker.ALL_LIMITS_MANAGER_ROLE();
       await checker.grantRole(allLimitsRole, deployer.address);
 
       await checker.setOracleReportLimits(defaultLimitsList, ZeroAddress);
-      expect(await checker.secondOpinionOracle()).to.be.equal(ZeroAddress);
+      expect(await checker.secondOpinionOracle()).to.equal(ZeroAddress);
     });
   });
 
@@ -166,60 +165,64 @@ describe("OracleReportSanityChecker.sol", () => {
 
     it(`sums negative rebases for a few days`, async () => {
       const reportChecker = await newChecker();
-      const timestamp = await time.latest();
-      expect(await reportChecker.sumNegativeRebasesNotOlderThan(timestamp - 18 * SLOTS_PER_DAY)).to.equal(0);
-      await reportChecker.addReportData(timestamp - 1 * SLOTS_PER_DAY, 10, 100);
-      await reportChecker.addReportData(timestamp - 2 * SLOTS_PER_DAY, 10, 150);
-      expect(await reportChecker.sumNegativeRebasesNotOlderThan(timestamp - 18 * SLOTS_PER_DAY)).to.equal(250);
+      const timestamp = await getCurrentBlockTimestamp();
+      expect(await reportChecker.sumNegativeRebasesNotOlderThan(timestamp - 18n * SLOTS_PER_DAY)).to.equal(0);
+      await reportChecker.addReportData(timestamp - 1n * SLOTS_PER_DAY, 10, 100);
+      await reportChecker.addReportData(timestamp - 2n * SLOTS_PER_DAY, 10, 150);
+      expect(await reportChecker.sumNegativeRebasesNotOlderThan(timestamp - 18n * SLOTS_PER_DAY)).to.equal(250);
     });
 
     it(`sums negative rebases for 18 days`, async () => {
       const reportChecker = await newChecker();
-      const timestamp = await time.latest();
-      await reportChecker.addReportData(timestamp - 19 * SLOTS_PER_DAY, 0, 700);
-      await reportChecker.addReportData(timestamp - 18 * SLOTS_PER_DAY, 0, 13);
-      await reportChecker.addReportData(timestamp - 17 * SLOTS_PER_DAY, 0, 10);
-      await reportChecker.addReportData(timestamp - 5 * SLOTS_PER_DAY, 0, 5);
-      await reportChecker.addReportData(timestamp - 2 * SLOTS_PER_DAY, 0, 150);
-      await reportChecker.addReportData(timestamp - 1 * SLOTS_PER_DAY, 0, 100);
-      expect(await reportChecker.sumNegativeRebasesNotOlderThan(timestamp - 18 * SLOTS_PER_DAY)).to.equal(
-        100 + 150 + 5 + 10,
-      );
+      const timestamp = await getCurrentBlockTimestamp();
+
+      await reportChecker.addReportData(timestamp - 19n * SLOTS_PER_DAY, 0, 700);
+      await reportChecker.addReportData(timestamp - 18n * SLOTS_PER_DAY, 0, 13);
+      await reportChecker.addReportData(timestamp - 17n * SLOTS_PER_DAY, 0, 10);
+      await reportChecker.addReportData(timestamp - 5n * SLOTS_PER_DAY, 0, 5);
+      await reportChecker.addReportData(timestamp - 2n * SLOTS_PER_DAY, 0, 150);
+      await reportChecker.addReportData(timestamp - 1n * SLOTS_PER_DAY, 0, 100);
+
+      const expectedSum = await reportChecker.sumNegativeRebasesNotOlderThan(timestamp - 18n * SLOTS_PER_DAY);
+      expect(expectedSum).to.equal(100 + 150 + 5 + 10);
     });
 
     it(`returns exited validators count`, async () => {
       const reportChecker = await newChecker();
-      const timestamp = await time.latest();
-      await reportChecker.addReportData(timestamp - 19 * SLOTS_PER_DAY, 10, 100);
-      await reportChecker.addReportData(timestamp - 18 * SLOTS_PER_DAY, 11, 100);
-      await reportChecker.addReportData(timestamp - 17 * SLOTS_PER_DAY, 12, 100);
-      await reportChecker.addReportData(timestamp - 5 * SLOTS_PER_DAY, 13, 100);
-      await reportChecker.addReportData(timestamp - 2 * SLOTS_PER_DAY, 14, 100);
-      await reportChecker.addReportData(timestamp - 1 * SLOTS_PER_DAY, 15, 100);
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 19 * SLOTS_PER_DAY)).to.equal(10);
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 18 * SLOTS_PER_DAY)).to.equal(11);
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 1 * SLOTS_PER_DAY)).to.equal(15);
+      const timestamp = await getCurrentBlockTimestamp();
+
+      await reportChecker.addReportData(timestamp - 19n * SLOTS_PER_DAY, 10, 100);
+      await reportChecker.addReportData(timestamp - 18n * SLOTS_PER_DAY, 11, 100);
+      await reportChecker.addReportData(timestamp - 17n * SLOTS_PER_DAY, 12, 100);
+      await reportChecker.addReportData(timestamp - 5n * SLOTS_PER_DAY, 13, 100);
+      await reportChecker.addReportData(timestamp - 2n * SLOTS_PER_DAY, 14, 100);
+      await reportChecker.addReportData(timestamp - 1n * SLOTS_PER_DAY, 15, 100);
+
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 19n * SLOTS_PER_DAY)).to.equal(10);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 18n * SLOTS_PER_DAY)).to.equal(11);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 1n * SLOTS_PER_DAY)).to.equal(15);
     });
 
     it(`returns exited validators count for missed or non-existent report`, async () => {
       const reportChecker = await newChecker();
-      const timestamp = await time.latest();
-      await reportChecker.addReportData(timestamp - 19 * SLOTS_PER_DAY, 10, 100);
-      await reportChecker.addReportData(timestamp - 18 * SLOTS_PER_DAY, 11, 100);
-      await reportChecker.addReportData(timestamp - 15 * SLOTS_PER_DAY, 12, 100);
-      await reportChecker.addReportData(timestamp - 5 * SLOTS_PER_DAY, 13, 100);
-      await reportChecker.addReportData(timestamp - 2 * SLOTS_PER_DAY, 14, 100);
-      await reportChecker.addReportData(timestamp - 1 * SLOTS_PER_DAY, 15, 100);
+      const timestamp = await getCurrentBlockTimestamp();
+      await reportChecker.addReportData(timestamp - 19n * SLOTS_PER_DAY, 10, 100);
+      await reportChecker.addReportData(timestamp - 18n * SLOTS_PER_DAY, 11, 100);
+      await reportChecker.addReportData(timestamp - 15n * SLOTS_PER_DAY, 12, 100);
+      await reportChecker.addReportData(timestamp - 5n * SLOTS_PER_DAY, 13, 100);
+      await reportChecker.addReportData(timestamp - 2n * SLOTS_PER_DAY, 14, 100);
+      await reportChecker.addReportData(timestamp - 1n * SLOTS_PER_DAY, 15, 100);
+
       // Out of range: day -20
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 20 * SLOTS_PER_DAY)).to.equal(0);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 20n * SLOTS_PER_DAY)).to.equal(0);
       // Missed report: day -6
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 6 * SLOTS_PER_DAY)).to.equal(12);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 6n * SLOTS_PER_DAY)).to.equal(12);
       // Missed report: day -7
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 7 * SLOTS_PER_DAY)).to.equal(12);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 7n * SLOTS_PER_DAY)).to.equal(12);
       // Expected report: day 15
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 15 * SLOTS_PER_DAY)).to.equal(12);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 15n * SLOTS_PER_DAY)).to.equal(12);
       // Missed report: day -16
-      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 16 * SLOTS_PER_DAY)).to.equal(11);
+      expect(await reportChecker.exitedValidatorsAtTimestamp(timestamp - 16n * SLOTS_PER_DAY)).to.equal(11);
     });
   });
 
@@ -231,7 +234,9 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it(`works as accamulation for IncorrectCLBalanceDecrease`, async () => {
-      const refSlot = Math.floor(((await time.latest()) - Number(genesisTime)) / 12);
+      const genesisTime = await accountingOracle.GENESIS_TIME();
+      const timestamp = await getCurrentBlockTimestamp();
+      const refSlot = (timestamp - genesisTime) / 12n;
       const prevRefSlot = refSlot - SLOTS_PER_DAY;
 
       await accountingOracle.setLastProcessingRefSlot(prevRefSlot);
@@ -244,8 +249,10 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it(`works for happy path and report is not ready`, async () => {
-      const numGenesis = Number(genesisTime);
-      const refSlot = Math.floor(((await time.latest()) - numGenesis) / 12);
+      const genesisTime = await accountingOracle.GENESIS_TIME();
+      const timestamp = await getCurrentBlockTimestamp();
+      const refSlot = (timestamp - genesisTime) / 12n;
+
       await accountingOracle.setLastProcessingRefSlot(refSlot);
 
       // Expect to pass through
@@ -259,7 +266,7 @@ describe("OracleReportSanityChecker.sol", () => {
 
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
-        clBalanceGwei: gweis(300),
+        clBalanceGwei: parseUnits("300", "gwei"),
         withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
@@ -270,11 +277,14 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it("works with staking router reports exited validators at day 18 and 54", async () => {
-      const refSlot = Math.floor(((await time.latest()) - Number(genesisTime)) / 12);
-      const refSlot17 = refSlot - 17 * SLOTS_PER_DAY;
-      const refSlot18 = refSlot - 18 * SLOTS_PER_DAY;
-      const refSlot54 = refSlot - 54 * SLOTS_PER_DAY;
-      const refSlot55 = refSlot - 55 * SLOTS_PER_DAY;
+      const genesisTime = await accountingOracle.GENESIS_TIME();
+      const timestamp = await getCurrentBlockTimestamp();
+      const refSlot = (timestamp - genesisTime) / 12n;
+
+      const refSlot17 = refSlot - 17n * SLOTS_PER_DAY;
+      const refSlot18 = refSlot - 18n * SLOTS_PER_DAY;
+      const refSlot54 = refSlot - 54n * SLOTS_PER_DAY;
+      const refSlot55 = refSlot - 55n * SLOTS_PER_DAY;
 
       await stakingRouter.mock__addStakingModuleExitedValidators(1, 1);
       await accountingOracle.setLastProcessingRefSlot(refSlot55);
@@ -300,8 +310,10 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it(`works for reports close together`, async () => {
-      const numGenesis = Number(genesisTime);
-      const refSlot = Math.floor(((await time.latest()) - numGenesis) / 12);
+      const genesisTime = await accountingOracle.GENESIS_TIME();
+      const timestamp = await getCurrentBlockTimestamp();
+      const refSlot = (timestamp - genesisTime) / 12n;
+
       await accountingOracle.setLastProcessingRefSlot(refSlot);
 
       const secondOpinionOracle = await deploySecondOpinionOracle();
@@ -309,11 +321,12 @@ describe("OracleReportSanityChecker.sol", () => {
       // Second opinion balance is way bigger than general Oracle's (~1%)
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
-        clBalanceGwei: gweis(302),
+        clBalanceGwei: parseUnits("302", "gwei"),
         withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
       });
+
       await expect(checker.checkAccountingOracleReport(0, ether("330"), ether("299"), 0, 0, 0, 10, 10))
         .to.be.revertedWithCustomError(checker, "NegativeRebaseFailedCLBalanceMismatch")
         .withArgs(ether("299"), ether("302"), anyValue);
@@ -321,7 +334,7 @@ describe("OracleReportSanityChecker.sol", () => {
       // Second opinion balance is almost equal general Oracle's (<0.74%) - should pass
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
-        clBalanceGwei: gweis(301),
+        clBalanceGwei: parseUnits("301", "gwei"),
         withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
@@ -344,8 +357,10 @@ describe("OracleReportSanityChecker.sol", () => {
     });
 
     it(`works for reports with incorrect withdrawal vault balance`, async () => {
-      const numGenesis = Number(genesisTime);
-      const refSlot = Math.floor(((await time.latest()) - numGenesis) / 12);
+      const genesisTime = await accountingOracle.GENESIS_TIME();
+      const timestamp = await getCurrentBlockTimestamp();
+      const refSlot = (timestamp - genesisTime) / 12n;
+
       await accountingOracle.setLastProcessingRefSlot(refSlot);
 
       const secondOpinionOracle = await deploySecondOpinionOracle();
@@ -353,7 +368,7 @@ describe("OracleReportSanityChecker.sol", () => {
       // Second opinion balance is almost equal general Oracle's (<0.74%) and withdrawal vauls is the same - should pass
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
-        clBalanceGwei: gweis(300),
+        clBalanceGwei: parseUnits("300", "gwei"),
         withdrawalVaultBalanceWei: ether("1"),
         numValidators: 0,
         exitedValidators: 0,
@@ -365,7 +380,7 @@ describe("OracleReportSanityChecker.sol", () => {
       // Second opinion withdrawal vault balance is different - should fail
       await secondOpinionOracle.addReport(refSlot, {
         success: true,
-        clBalanceGwei: gweis(300),
+        clBalanceGwei: parseUnits("300", "gwei"),
         withdrawalVaultBalanceWei: 0,
         numValidators: 0,
         exitedValidators: 0,
@@ -380,8 +395,9 @@ describe("OracleReportSanityChecker.sol", () => {
     it(`CL Oracle related functions require INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE`, async () => {
       const role = await checker.INITIAL_SLASHING_AND_PENALTIES_MANAGER_ROLE();
 
-      await expect(checker.setInitialSlashingAndPenaltiesAmount(0, 0)).to.be.revertedWith(
-        genAccessControlError(deployer.address, role),
+      await expect(checker.setInitialSlashingAndPenaltiesAmount(0, 0)).to.be.revertedWithOZAccessControlError(
+        deployer.address,
+        role,
       );
 
       await checker.grantRole(role, deployer.address);
@@ -391,9 +407,9 @@ describe("OracleReportSanityChecker.sol", () => {
     it(`CL Oracle related functions require SECOND_OPINION_MANAGER_ROLE`, async () => {
       const clOraclesRole = await checker.SECOND_OPINION_MANAGER_ROLE();
 
-      await expect(checker.setSecondOpinionOracleAndCLBalanceUpperMargin(ZeroAddress, 74)).to.be.revertedWith(
-        genAccessControlError(deployer.address, clOraclesRole),
-      );
+      await expect(
+        checker.setSecondOpinionOracleAndCLBalanceUpperMargin(ZeroAddress, 74),
+      ).to.be.revertedWithOZAccessControlError(deployer.address, clOraclesRole);
 
       await checker.grantRole(clOraclesRole, deployer.address);
       await expect(checker.setSecondOpinionOracleAndCLBalanceUpperMargin(ZeroAddress, 74)).to.not.be.reverted;
