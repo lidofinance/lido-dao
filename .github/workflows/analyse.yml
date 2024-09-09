@@ -45,7 +45,6 @@ jobs:
       - name: Run slither
         run: >
           poetry run slither . \
-            --filter-paths test \
             --no-fail-pedantic \
             --compile-force-framework hardhat \
             --sarif results.sarif \
