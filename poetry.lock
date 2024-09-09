@@ -1633,6 +1633,20 @@ lint = ["black (==22.3.0)", "pylint (==3.0.3)"]
 test = ["coverage[toml]", "deepdiff", "filelock", "numpy", "pytest", "pytest-cov", "pytest-insta", "pytest-xdist"]
 
 [[package]]
+name = "slitherin"
+version = "0.7.2"
+description = "Pessimistic security Slither detectors"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "slitherin-0.7.2-py3-none-any.whl", hash = "sha256:08e25a6dd6e1340754e0969d6ce5b9fcdbaf62b3ed7ce2dcc4fa988a0ce3491d"},
+    {file = "slitherin-0.7.2.tar.gz", hash = "sha256:9e1d2f7be9034df9046e5ef038cc72d86c3af49ed77b64df3066d72a2e15af62"},
+]
+
+[package.dependencies]
+slither-analyzer = ">=0.10.0"
+
+[[package]]
 name = "solc-select"
 version = "1.0.4"
 description = "Manage multiple Solidity compiler versions."
@@ -1935,4 +1949,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12.1"
-content-hash = "5e52daf2ad7fc946a43b063a2d328bf3031a19627a9fe4bd126242c56a5e25fe"
+content-hash = "7dbd95475986aea633803fbd89c20c125261399458f5b68f372d390dd07bf649"
