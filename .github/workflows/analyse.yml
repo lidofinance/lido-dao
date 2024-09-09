@@ -17,15 +17,8 @@ jobs:
       - name: Common setup
         uses: ./.github/workflows/setup
 
-      # REVIEW: here and below steps taken from official guide
-      # https://github.com/actions/setup-python/blob/main/docs/advanced-usage.md#caching-packages
       - name: Install poetry
         run: pipx install poetry
-
-      # REVIEW:
-      # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#example-of-adding-a-system-path
-      - name: Add poetry to $GITHUB_PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - uses: actions/setup-python@v5
         with:
