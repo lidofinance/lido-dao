@@ -13,6 +13,7 @@ setuptools = "^70.0.0"
 
 [tool.poetry.group.dev.dependencies]
 slither-analyzer = "^0.10.4"
+slitherin = "^0.7.2"
 
 [build-system]
 requires = ["poetry-core"]
