@@ -6,9 +6,14 @@ declare namespace NodeJS {
     /* logging verbosity */
     LOG_LEVEL?: "all" | "debug" | "info" | "warn" | "error" | "none";
 
-    /* flags for changing the behavior of the integration tests */
-    INTEGRATION_SCRATCH_DEPLOY?: "on" | "off"; // if "on" test will use scratch deploy instead of forking
-    INTEGRATION_SIMPLE_DVT_MODULE?: "on" | "off"; // if "on" test will use simple DVT module instead of linking NOR
+    /**
+     * Flags for changing the behavior of the integration tests
+     */
+
+    /* if "on" the integration tests will deploy the contracts to the empty Hardhat Network node using scratch deploy */
+    INTEGRATION_SCRATCH_DEPLOY?: "on" | "off";
+    /* if "on" the integration tests will enable assertions and checks for the simple DVT module */
+    INTEGRATION_SIMPLE_DVT_MODULE?: "on" | "off";
 
     /**
      * Network configuration for the protocol discovery.
