@@ -1,7 +1,7 @@
 declare namespace NodeJS {
   export interface ProcessEnv {
-    /* forking url for hardhat internal node, required for tracing e.g. */
-    HARDHAT_FORKING_URL?: string;
+    /* RPC URL for Hardhat Network forking, required for running tests on mainnet fork with tracing */
+    MAINNET_FORKING_URL?: string;
 
     /* logging verbosity */
     LOG_LEVEL?: "all" | "debug" | "info" | "warn" | "error" | "none";
