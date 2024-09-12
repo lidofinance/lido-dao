@@ -15,7 +15,7 @@ import {
   sdvtEnsureOperators,
 } from "lib/protocol/helpers";
 
-import { Snapshot } from "test/suite";
+import { bailOnFailure, Snapshot } from "test/suite";
 
 const LIMITER_PRECISION_BASE = BigInt(10 ** 9);
 
@@ -63,6 +63,8 @@ describe("Accounting integration", () => {
       excludeVaultsBalances: true,
     });
   });
+
+  beforeEach(bailOnFailure);
 
   beforeEach(async () => (originalState = await Snapshot.take()));
 
