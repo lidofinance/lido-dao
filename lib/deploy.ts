@@ -36,6 +36,7 @@ export async function makeTx(
   funcName: string,
   args: ConvertibleToString[],
   txParams: TxParams,
+  withStateFile = true,
 ): Promise<ContractTransactionReceipt> {
   log.withArguments(`Call: ${yl(contract.name)}[${cy(contract.address)}].${yl(funcName)}`, args);
 
@@ -44,7 +45,7 @@ export async function makeTx(
 
   const receipt = await tx.wait();
   const gasUsed = receipt.gasUsed;
-  incrementGasUsed(gasUsed);
+  incrementGasUsed(gasUsed, withStateFile);
 
   log(` Executed (gas used: ${yl(gasUsed)})`);
   log.emptyLine();
@@ -73,6 +74,7 @@ async function deployContractType2(
   artifactName: string,
   constructorArgs: unknown[],
   deployer: string,
+  withStateFile = true,
 ): Promise<DeployedContract> {
   const txParams = await getDeployTxParams(deployer);
   const factory = (await ethers.getContractFactory(artifactName)) as ContractFactory;
@@ -90,7 +92,7 @@ async function deployContractType2(
   }
 
   const gasUsed = receipt.gasUsed;
-  incrementGasUsed(gasUsed);
+  incrementGasUsed(gasUsed, withStateFile);
   (contract as DeployedContract).deploymentGasUsed = gasUsed;
   (contract as DeployedContract).deploymentTx = tx.hash;
 
@@ -106,27 +108,29 @@ export async function deployContract(
   artifactName: string,
   constructorArgs: unknown[],
   deployer: string,
+  withStateFile = true,
 ): Promise<DeployedContract> {
   const txParams = await getDeployTxParams(deployer);
   if (txParams.type !== 2) {
     throw new Error("Only EIP-1559 transactions (type 2) are supported");
   }
 
-  return await deployContractType2(artifactName, constructorArgs, deployer);
+  return await deployContractType2(artifactName, constructorArgs, deployer, withStateFile);
 }
 
 export async function deployWithoutProxy(
-  nameInState: Sk | null,
+  nameInState: Sk,
   artifactName: string,
   deployer: string,
   constructorArgs: ConvertibleToString[] = [],
   addressFieldName = "address",
+  withStateFile = true,
 ): Promise<DeployedContract> {
   logWithConstructorArgs(`Deploying: ${yl(artifactName)} (without proxy)`, constructorArgs);
 
-  const contract = await deployContract(artifactName, constructorArgs, deployer);
+  const contract = await deployContract(artifactName, constructorArgs, deployer, withStateFile);
 
-  if (nameInState) {
+  if (withStateFile) {
     const contractPath = await getContractPath(artifactName);
     updateObjectInState(nameInState, {
       contract: contractPath,
@@ -143,28 +147,33 @@ export async function deployImplementation(
   artifactName: string,
   deployer: string,
   constructorArgs: ConvertibleToString[] = [],
+  withStateFile = true,
 ): Promise<DeployedContract> {
   logWithConstructorArgs(`Deploying implementation: ${yl(artifactName)}`, constructorArgs);
 
-  const contract = await deployContract(artifactName, constructorArgs, deployer);
+  const contract = await deployContract(artifactName, constructorArgs, deployer, withStateFile);
 
-  updateObjectInState(nameInState, {
-    implementation: {
-      contract: contract.contractPath,
-      address: contract.address,
-      constructorArgs: constructorArgs,
-    },
-  });
+  if (withStateFile) {
+    updateObjectInState(nameInState, {
+      implementation: {
+        contract: contract.contractPath,
+        address: contract.address,
+        constructorArgs: constructorArgs,
+      },
+    });
+  }
+
   return contract;
 }
 
 export async function deployBehindOssifiableProxy(
-  nameInState: Sk | null,
+  nameInState: Sk,
   artifactName: string,
   proxyOwner: string,
   deployer: string,
   constructorArgs: ConvertibleToString[] = [],
   implementation: null | string = null,
+  withStateFile = true,
 ) {
   if (implementation !== null) {
     log(`Using pre-deployed implementation of ${yl(artifactName)}: ${cy(implementation)}`);
@@ -180,9 +189,9 @@ export async function deployBehindOssifiableProxy(
     proxyConstructorArgs,
   );
 
-  const proxy = await deployContract(PROXY_CONTRACT_NAME, proxyConstructorArgs, deployer);
+  const proxy = await deployContract(PROXY_CONTRACT_NAME, proxyConstructorArgs, deployer, withStateFile);
 
-  if (nameInState) {
+  if (withStateFile) {
     updateObjectInState(nameInState, {
       proxy: {
         contract: await getContractPath(PROXY_CONTRACT_NAME),
@@ -206,24 +215,27 @@ export async function updateProxyImplementation(
   proxyAddress: string,
   proxyOwner: string,
   constructorArgs: unknown[],
+  withStateFile = true,
 ) {
   logWithConstructorArgs(
     `Upgrading proxy ${cy(proxyAddress)} to new implementation: ${yl(artifactName)}`,
     constructorArgs as ConvertibleToString[],
   );
 
-  const implementation = await deployContract(artifactName, constructorArgs, proxyOwner);
+  const implementation = await deployContract(artifactName, constructorArgs, proxyOwner, withStateFile);
 
   const proxy = await getContractAt(PROXY_CONTRACT_NAME, proxyAddress);
   await makeTx(proxy, "proxy__upgradeTo", [implementation.address], { from: proxyOwner });
 
-  updateObjectInState(nameInState, {
-    implementation: {
-      contract: implementation.contractPath,
-      address: implementation.address,
-      constructorArgs: constructorArgs,
-    },
-  });
+  if (withStateFile) {
+    updateObjectInState(nameInState, {
+      implementation: {
+        contract: implementation.contractPath,
+        address: implementation.address,
+        constructorArgs: constructorArgs,
+      },
+    });
+  }
 }
 
 async function getLocatorConfig(locatorAddress: string) {
@@ -253,9 +265,14 @@ async function getLocatorConfig(locatorAddress: string) {
   return Object.fromEntries(addresses.map((n, i) => [n, config[i]])) as LidoLocator.ConfigStruct;
 }
 
-export async function deployLidoLocatorImplementation(locatorAddress: string, configUpdate = {}, proxyOwner: string) {
+export async function deployLidoLocatorImplementation(
+  locatorAddress: string,
+  configUpdate = {},
+  proxyOwner: string,
+  withStateFile = true,
+) {
   const config = await getLocatorConfig(locatorAddress);
   const updated = { ...config, ...configUpdate };
 
-  await updateProxyImplementation(Sk.lidoLocator, "LidoLocator", locatorAddress, proxyOwner, [updated]);
+  await updateProxyImplementation(Sk.lidoLocator, "LidoLocator", locatorAddress, proxyOwner, [updated], withStateFile);
 }

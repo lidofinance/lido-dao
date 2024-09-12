@@ -2,7 +2,7 @@ import * as process from "node:process";
 
 import { ethers } from "hardhat";
 
-import { deployWithoutProxy, ether, impersonate } from "lib";
+import { deployWithoutProxy, ether, impersonate, Sk } from "lib";
 
 import { updateLidoLocatorImplementation } from "../../../../test/deploy";
 
@@ -49,10 +49,12 @@ export async function main() {
   ];
 
   const oracleReportSanityChecker = await deployWithoutProxy(
-    null, // no need to store the contract in the state
+    Sk.oracleReportSanityChecker,
     "OracleReportSanityChecker",
     deployer,
     oracleReportSanityCheckerArgs,
+    "address",
+    false, // no need to save the contract in the state
   );
 
   const proxyLocator = await ethers.getContractAt("OssifiableProxy", locatorAddress);
