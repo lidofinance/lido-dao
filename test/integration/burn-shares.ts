@@ -10,7 +10,7 @@ import { finalizeWithdrawalQueue, handleOracleReport } from "lib/protocol/helper
 
 import { Snapshot } from "test/suite";
 
-describe.skip("Burn Shares", () => {
+describe("Burn Shares", () => {
   let ctx: ProtocolContext;
   let snapshot: string;
 

@@ -1,6 +1,8 @@
 import { ContractFactory, ContractTransactionReceipt } from "ethers";
 import { ethers } from "hardhat";
 
+import { LidoLocator } from "typechain-types";
+
 import {
   addContractHelperFields,
   DeployedContract,
@@ -222,4 +224,38 @@ export async function updateProxyImplementation(
       constructorArgs: constructorArgs,
     },
   });
+}
+
+async function getLocatorConfig(locatorAddress: string) {
+  const locator = await ethers.getContractAt("LidoLocator", locatorAddress);
+
+  const addresses = [
+    "accountingOracle",
+    "depositSecurityModule",
+    "elRewardsVault",
+    "legacyOracle",
+    "lido",
+    "oracleReportSanityChecker",
+    "postTokenRebaseReceiver",
+    "burner",
+    "stakingRouter",
+    "treasury",
+    "validatorsExitBusOracle",
+    "withdrawalQueue",
+    "withdrawalVault",
+    "oracleDaemonConfig",
+  ] as (keyof LidoLocator.ConfigStruct)[];
+
+  const configPromises = addresses.map((name) => locator[name]());
+
+  const config = await Promise.all(configPromises);
+
+  return Object.fromEntries(addresses.map((n, i) => [n, config[i]])) as LidoLocator.ConfigStruct;
+}
+
+export async function updateLidoLocatorImplementation(locatorAddress: string, configUpdate = {}, proxyOwner: string) {
+  const config = await getLocatorConfig(locatorAddress);
+  const updated = { ...config, ...configUpdate };
+
+  await updateProxyImplementation(Sk.lidoLocator, "LidoLocator", locatorAddress, proxyOwner, [updated]);
 }

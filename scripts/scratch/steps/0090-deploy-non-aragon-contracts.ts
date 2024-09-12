@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
 
+import { certainAddress } from "lib";
 import { getContractPath } from "lib/contract";
 import {
   deployBehindOssifiableProxy,
@@ -30,8 +31,6 @@ export async function main() {
   const proxyContractsOwner = deployer;
   const admin = deployer;
 
-  const sanityChecks = state["oracleReportSanityChecker"].deployParameters;
-
   if (!chainSpec.depositContract) {
     throw new Error(`please specify deposit contract address in state file at /chainSpec/depositContract`);
   }
@@ -55,33 +54,6 @@ export async function main() {
     deployer,
     [],
     dummyContract.address,
-  );
-
-  // Deploy OracleReportSanityChecker
-  const oracleReportSanityCheckerArgs = [
-    locator.address,
-    admin,
-    [
-      sanityChecks.churnValidatorsPerDayLimit,
-      sanityChecks.deprecatedOneOffCLBalanceDecreaseBPLimit,
-      sanityChecks.annualBalanceIncreaseBPLimit,
-      sanityChecks.simulatedShareRateDeviationBPLimit,
-      sanityChecks.maxValidatorExitRequestsPerReport,
-      sanityChecks.maxAccountingExtraDataListItemsCount,
-      sanityChecks.maxNodeOperatorsPerExtraDataItemCount,
-      sanityChecks.requestTimestampMargin,
-      sanityChecks.maxPositiveTokenRebase,
-      sanityChecks.initialSlashingAmountPWei,
-      sanityChecks.inactivityPenaltiesAmountPWei,
-      sanityChecks.clBalanceOraclesErrorUpperBPLimit,
-    ],
-  ];
-
-  const oracleReportSanityChecker = await deployWithoutProxy(
-    Sk.oracleReportSanityChecker,
-    "OracleReportSanityChecker",
-    deployer,
-    oracleReportSanityCheckerArgs,
   );
 
   // Deploy EIP712StETH
@@ -221,7 +193,7 @@ export async function main() {
     elRewardsVault.address,
     legacyOracleAddress,
     lidoAddress,
-    oracleReportSanityChecker.address,
+    certainAddress("dummy-locator:oracleReportSanityChecker"),
     legacyOracleAddress, // postTokenRebaseReceiver
     burner.address,
     stakingRouter.address,
