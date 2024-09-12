@@ -1,7 +1,7 @@
 import { ContractTransactionReceipt } from "ethers";
 import hre from "hardhat";
 
-import { deployScratchProtocol, ether, findEventsWithInterfaces, impersonate, log } from "lib";
+import { deployScratchProtocol, deployUpgrade, ether, findEventsWithInterfaces, impersonate, log } from "lib";
 
 import { discover } from "./discover";
 import { isNonForkingHardhatNetwork } from "./networks";
@@ -16,6 +16,8 @@ const getSigner = async (signer: Signer, balance = ether("100"), signers: Protoc
 export const getProtocolContext = async (): Promise<ProtocolContext> => {
   if (isNonForkingHardhatNetwork()) {
     await deployScratchProtocol(hre.network.name);
+  } else {
+    await deployUpgrade(hre.network.name);
   }
 
   const { contracts, signers } = await discover();

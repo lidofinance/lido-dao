@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { deployWithoutProxy, updateLidoLocatorImplementation } from "lib/deploy";
+import { deployLidoLocatorImplementation, deployWithoutProxy } from "lib/deploy";
 import { readNetworkState, Sk } from "lib/state-file";
 
 export async function main() {
@@ -42,7 +42,7 @@ export async function main() {
     oracleReportSanityCheckerArgs,
   );
 
-  await updateLidoLocatorImplementation(
+  await deployLidoLocatorImplementation(
     locatorAddress,
     { oracleReportSanityChecker: oracleReportSanityChecker.address },
     proxyContractsOwner,

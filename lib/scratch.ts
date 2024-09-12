@@ -8,16 +8,7 @@ import { resetStateFile } from "./state-file";
 
 const deployedSteps: string[] = [];
 
-export async function deployScratchProtocol(networkName: string): Promise<void> {
-  const stepsFile = process.env.STEPS_FILE || "scratch/steps.json";
-  const steps = loadSteps(stepsFile);
-
-  if (steps.every((step) => deployedSteps.includes(step))) {
-    return; // All steps have been deployed
-  }
-
-  await resetStateFile(networkName);
-
+async function applySteps(steps: string[]) {
   for (const step of steps) {
     const migrationFile = resolveMigrationFile(step);
 
@@ -28,17 +19,45 @@ export async function deployScratchProtocol(networkName: string): Promise<void> 
   }
 }
 
+export async function deployUpgrade(networkName: string): Promise<void> {
+  const stepsFile = `upgrade/steps-${networkName}.json`;
+  const steps = loadSteps(stepsFile);
+
+  await applySteps(steps);
+}
+
+export async function deployScratchProtocol(networkName: string): Promise<void> {
+  const stepsFile = process.env.STEPS_FILE || "scratch/steps.json";
+  const steps = loadSteps(stepsFile);
+
+  if (steps.every((step) => deployedSteps.includes(step))) {
+    return; // All steps have been deployed
+  }
+
+  await resetStateFile(networkName);
+  await applySteps(steps);
+}
+
 type StepsFile = {
   steps: string[];
 };
 
 export const loadSteps = (stepsFile: string): string[] => {
   const stepsPath = path.resolve(process.cwd(), `scripts/${stepsFile}`);
+  if (!fs.existsSync(stepsPath)) {
+    throw new Error(`Steps file ${stepsPath} not found!`);
+  }
+
   return (JSON.parse(fs.readFileSync(stepsPath, "utf8")) as StepsFile).steps;
 };
 
 export const resolveMigrationFile = (step: string): string => {
-  return path.resolve(process.cwd(), `scripts/${step}`);
+  const migrationFile = path.resolve(process.cwd(), `scripts/${step}.ts`);
+  if (!fs.existsSync(migrationFile)) {
+    throw new Error(`Migration file ${migrationFile} not found!`);
+  }
+
+  return migrationFile;
 };
 
 /**

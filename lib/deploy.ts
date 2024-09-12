@@ -253,7 +253,7 @@ async function getLocatorConfig(locatorAddress: string) {
   return Object.fromEntries(addresses.map((n, i) => [n, config[i]])) as LidoLocator.ConfigStruct;
 }
 
-export async function updateLidoLocatorImplementation(locatorAddress: string, configUpdate = {}, proxyOwner: string) {
+export async function deployLidoLocatorImplementation(locatorAddress: string, configUpdate = {}, proxyOwner: string) {
   const config = await getLocatorConfig(locatorAddress);
   const updated = { ...config, ...configUpdate };
 
