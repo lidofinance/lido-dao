@@ -14,15 +14,15 @@ export async function main() {
   const agent = process.env.MAINNET_AGENT_ADDRESS;
 
   const sanityChecks = {
-    churnValidatorsPerDayLimit: 1500,
+    churnValidatorsPerDayLimit: 20000,
     deprecatedOneOffCLBalanceDecreaseBPLimit: 500,
     annualBalanceIncreaseBPLimit: 10_00, // 10%
-    simulatedShareRateDeviationBPLimit: 2_50, // 2.5%
-    maxValidatorExitRequestsPerReport: 2000,
-    maxAccountingExtraDataListItemsCount: 100,
-    maxNodeOperatorsPerExtraDataItemCount: 100,
-    requestTimestampMargin: 128,
-    maxPositiveTokenRebase: 5_000_000, // 0.05%
+    simulatedShareRateDeviationBPLimit: 50, // 0.5%
+    maxValidatorExitRequestsPerReport: 600,
+    maxAccountingExtraDataListItemsCount: 4,
+    maxNodeOperatorsPerExtraDataItemCount: 50,
+    requestTimestampMargin: 7680,
+    maxPositiveTokenRebase: 750_000, // 0.0075%
     initialSlashingAmountPWei: 1000, // 1 ETH = 1000 PWei
     inactivityPenaltiesAmountPWei: 101, // 0.101 ETH = 101 PWei
     clBalanceOraclesErrorUpperBPLimit: 74, // 0.74%

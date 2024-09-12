@@ -9,6 +9,10 @@ import { resetStateFile } from "./state-file";
 const deployedSteps: string[] = [];
 
 async function applySteps(steps: string[]) {
+  if (steps.every((step) => deployedSteps.includes(step))) {
+    return; // All steps have been deployed
+  }
+
   for (const step of steps) {
     const migrationFile = resolveMigrationFile(step);
 
@@ -34,10 +38,6 @@ export async function deployUpgrade(networkName: string): Promise<void> {
 export async function deployScratchProtocol(networkName: string): Promise<void> {
   const stepsFile = process.env.STEPS_FILE || "scratch/steps.json";
   const steps = loadSteps(stepsFile);
-
-  if (steps.every((step) => deployedSteps.includes(step))) {
-    return; // All steps have been deployed
-  }
 
   await resetStateFile(networkName);
   await applySteps(steps);
