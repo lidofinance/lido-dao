@@ -193,9 +193,9 @@ the project (you can use `.env.example` as a template).
 
 ###### Hardhat Mainnet Fork
 
-This is the most common way to run integration tests. It uses the Hardhat mainnet fork to simulate the mainnet
-environment. Requires `HARDHAT_FORKING_URL` and `HARDHAT_FORKING_BLOCK_NUMBER` (optional) to be set in the `.env` file
-along with some `MAINNET_*` env variables (see `.env.example`).
+This is the most common way to run integration tests. It uses instance of Hardhat Network that forks mainnet
+environment. Requires `MAINNET_FORKING_URL` to be set in the `.env` file along with some `MAINNET_*` env variables (see
+`.env.example`).
 
 ```bash
 yarn test:integration             # Run all integration tests
@@ -203,24 +203,35 @@ yarn test:integration:trace       # Run all integration tests with trace logging
 yarn test:integration:fulltrace   # Run all integration tests with full trace logging (calls and storage ops)
 ```
 
-###### Local setup
+###### Hardhat Scratch Deploy Fork
 
-This method is used to run integration tests against a local scratch deployment (
-see [scratch-deploy.md](./docs/scratch-deploy.md)).
-Requires a local deployment to be running on port `8555` and `deployed-local.json` with the deployed addresses
-(automatically generated during the scratch deployment).
+This method is used to run integration tests against a Hardhat local scratch deployment instead of the mainnet fork.
+Requires `DEPLOYER`, `GENESIS_TIME`, `GAS_PRIORITY_FEE` and `GAS_MAX_FEE` to be set in the `.env` file.
 
 ```bash
-yarn test:integration:local
+yarn test:integration:scratch            # Run all integration tests
+yarn test:integration:scratch:trace      # Run all integration tests with trace logging (calls only)
+yarn test:integration:scratch:fulltrace  # Run all integration tests with full trace logging (calls and storage ops)
 ```
 
-###### Any fork setup
+###### Any Mainnet Fork
 
 This method is used to run integration tests against any fork. Requires `MAINNET_*` env variables to be set in the
 `.env` file and a fork to be running on port `8545`.
 
 ```bash
-yarn test:integration:fork
+yarn test:integration:fork:mainnet
+```
+
+###### Any Scratch Deploy Fork
+
+This method is used to run integration tests against a local scratch deployment
+(see [scratch-deploy.md](./docs/scratch-deploy.md)).
+Requires a local deployment to be running on port `8555` and `deployed-local.json` with the deployed addresses
+(automatically generated during the scratch deployment).
+
+```bash
+yarn test:integration:fork:local
 ```
 
 #### Foundry tests
