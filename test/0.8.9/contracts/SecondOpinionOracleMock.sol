@@ -26,6 +26,17 @@ contract SecondOpinionOracleMock is ISecondOpinionOracle {
         reports[refSlot] = report;
     }
 
+    function addPlainReport(uint256 refSlot, uint256 clBalanceGwei, uint256 withdrawalVaultBalanceWei) external {
+
+        reports[refSlot] = Report({
+            success: true,
+            clBalanceGwei: clBalanceGwei,
+            withdrawalVaultBalanceWei: withdrawalVaultBalanceWei,
+            numValidators: 0,
+            exitedValidators: 0
+        });
+    }
+
     function removeReport(uint256 refSlot) external {
         delete reports[refSlot];
     }
