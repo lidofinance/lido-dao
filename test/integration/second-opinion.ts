@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ContractTransactionReceipt, TransactionResponse } from "ethers";
+import { TransactionResponse } from "ethers";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
@@ -8,24 +8,13 @@ import { SecondOpinionOracleMock } from "typechain-types";
 
 import { ether, impersonate } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
-import {
-  finalizeWithdrawalQueue,
-  norEnsureOperators,
-  report,
-  sdvtEnsureOperators
-} from "lib/protocol/helpers";
+import { finalizeWithdrawalQueue, norEnsureOperators, report, sdvtEnsureOperators } from "lib/protocol/helpers";
 
 import { Snapshot } from "test/suite";
 
-const LIMITER_PRECISION_BASE = BigInt(10 ** 9);
-
-const SHARE_RATE_PRECISION = BigInt(10 ** 27);
-const ONE_DAY = 86400n;
-const MAX_BASIS_POINTS = 10000n;
 const AMOUNT = ether("100");
 const MAX_DEPOSIT = 150n;
 const CURATED_MODULE_ID = 1n;
-const SIMPLE_DVT_MODULE_ID = 2n;
 
 const ZERO_HASH = new Uint8Array(32).fill(0);
 
@@ -73,25 +62,22 @@ describe("Second opinion", () => {
     const soAddress = await secondOpinion.getAddress();
     console.log("second opinion address", soAddress);
 
-
     const sanityAddr = await oracleReportSanityChecker.getAddress();
     console.log("sanityAddr", sanityAddr);
 
-    const adminSigner = await impersonate("0xc00c0beC9F5C6b245A5c232598b3A2cc1558C3c7", AMOUNT);
-    await oracleReportSanityChecker.connect(adminSigner).grantRole(
-      await oracleReportSanityChecker.SECOND_OPINION_MANAGER_ROLE(), adminSigner.address);
-
-
-    console.log("Finish init");
-    await oracleReportSanityChecker.connect(adminSigner).setSecondOpinionOracleAndCLBalanceUpperMargin(
-      soAddress, 74n);
-
+    const agentSigner = await ctx.getSigner("agent", AMOUNT);
+    await oracleReportSanityChecker
+      .connect(agentSigner)
+      .grantRole(await oracleReportSanityChecker.SECOND_OPINION_MANAGER_ROLE(), agentSigner.address);
 
     await report(ctx, {
       clDiff: ether("32") * 3n, // 32 ETH * 3 validators
       clAppearedValidators: 3n,
       excludeVaultsBalances: true,
     });
+
+    await oracleReportSanityChecker.connect(agentSigner).setSecondOpinionOracleAndCLBalanceUpperMargin(soAddress, 74n);
+    console.log("Finish init");
   });
 
   // beforeEach(bailOnFailure);
@@ -102,27 +88,25 @@ describe("Second opinion", () => {
 
   after(async () => await Snapshot.restore(snapshot)); // Rollback to the initial state pre deployment
 
-  const getFirstEvent = (receipt: ContractTransactionReceipt, eventName: string) => {
-    const events = ctx.getEvents(receipt, eventName);
-    expect(events.length).to.be.greaterThan(0);
-    return events[0];
-  };
-
   it("Should account correctly with no CL rebase", async () => {
     const { hashConsensus, accountingOracle } = ctx.contracts;
 
     const curFrame = await hashConsensus.getCurrentFrame();
-    console.log('curFrame', curFrame);
+    console.log("curFrame", curFrame);
 
     await secondOpinion.addPlainReport(curFrame.reportProcessingDeadlineSlot, 86000000000n, 0n);
-    await secondOpinion.addPlainReport(curFrame.refSlot, 86000000000n, 0n);
-    const testReport = await secondOpinion.getReport(curFrame.reportProcessingDeadlineSlot);
-    console.log('testReport', testReport);
+    // await secondOpinion.addPlainReport(curFrame.refSlot, 86000000000n, 0n);
+    const testReport = await secondOpinion.getReport(curFrame.refSlot);
+    console.log("testReport refSlot", curFrame.refSlot, testReport);
+    const testReport2 = await secondOpinion.getReport(curFrame.reportProcessingDeadlineSlot);
+    console.log("testReport reportProcessingDeadlineSlot", curFrame.reportProcessingDeadlineSlot, testReport2);
 
     const lastProcessingRefSlotBefore = await accountingOracle.getLastProcessingRefSlot();
     console.log("lastProcessingRefSlotBefore", lastProcessingRefSlotBefore.toString());
     // Report
     const params = { clDiff: ether("-10"), excludeVaultsBalances: true };
+
+    // Tracing.enable();
     const { reportTx } = (await report(ctx, params)) as {
       reportTx: TransactionResponse;
       extraDataTx: TransactionResponse;
@@ -130,6 +114,7 @@ describe("Second opinion", () => {
     console.log("Finished report");
 
     const reportTxReceipt = (await reportTx.wait()) as ContractTransactionReceipt;
+    console.log("reportTxReceipt", reportTxReceipt);
 
     const lastProcessingRefSlotAfter = await accountingOracle.getLastProcessingRefSlot();
     console.log("lastProcessingRefSlotAfter", lastProcessingRefSlotAfter.toString());
@@ -137,6 +122,5 @@ describe("Second opinion", () => {
       lastProcessingRefSlotAfter,
       "LastProcessingRefSlot should be updated",
     );
-
   });
 });
