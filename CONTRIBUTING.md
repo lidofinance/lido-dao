@@ -248,15 +248,20 @@ WIP
 
 ### Tracing
 
-The `hardhat-tracer` tool is utilized during Hardhat tests to trace contract calls and state changes.
-Full-scale transaction tracing is disabled by default to prevent tests from slowing down.
+During Hardhat tests, the `hardhat-tracer` tool can trace contract calls and state changes, which is helpful for
+debugging and analyzing contract interactions. However, full-scale transaction tracing is disabled by default to
+maintain optimal test performance.
 
 > [!NOTE]
-> Tracing is supported ONLY in Hardhat unit and integration tests using the Hardhat mainnet fork (see below).
+> Tracing is supported only in Hardhat unit and integration tests using the Hardhat mainnet fork (see below for
+> details).
 
-To enable tracing, wrap the code intended for tracing with the `Tracer.enable()` and `Tracer.disable()` functions, and
-execute
-the tests with the appropriate command postfix, such as `yarn test:trace`.
+To enable tracing:
+
+- Wrap the code you want to trace with `Tracer.enable()` and `Tracer.disable()` functions.
+- Run the tests with the appropriate command that enables tracing (e.g., `yarn test:trace`).
+
+Here's an example:
 
 ```typescript
 import { Tracer } from "test/suite";
@@ -272,19 +277,37 @@ describe("MyContract", () => {
 
 ### Running Unit Tests
 
-You can run unit tests in multiple ways:
+Unit tests can be run in multiple ways, depending on your needs:
 
 ```bash
-# Unit Tests
-yarn test               # Run all unit tests in parallel
-yarn test:sequential    # Run all unit tests sequentially
-yarn test:trace         # Run all unit tests with trace logging (calls only)
-yarn test:fulltrace     # Run all unit tests with full trace logging (calls and storage ops)
-yarn test:watch         # Run all unit tests in watch mode (useful for development; use .only to run specific tests, supports tracing)
-yarn test:coverage      # Run all unit tests and generate a coverage report
+# Run all unit tests in parallel
+yarn test
+
+# Run all unit tests sequentially
+yarn test:sequential
+
+# Run all unit tests with trace logging (calls only)
+yarn test:trace
+
+# Run all unit tests with full trace logging (calls and storage operations)
+yarn test:fulltrace
+
+# Run all unit tests in watch mode (useful during development)
+# Supports tracing; use .only in your test files to focus on specific tests
+yarn test:watch
+
+# Run all unit tests and generate a coverage report
+yarn test:coverage
 ```
 
+> [!NOTE]
+> The best way to run single test or test suite is to use `.only` in the test file and run any test command except the
+> parallel one.
+
 ### Running Fuzzing and Invariant Tests
+
+Fuzzing and invariant tests help ensure that your contracts behave correctly under a wide range of inputs and
+conditions. These tests are crucial for catching edge cases and potential vulnerabilities.
 
 ```bash
 yarn test:foundry       # Run all Foundry-based fuzzing and invariant tests
@@ -292,56 +315,70 @@ yarn test:foundry       # Run all Foundry-based fuzzing and invariant tests
 
 ### Running Integration Tests
 
-To run integration tests, ensure you have a `.env` file in the root of the project. You can use the `.env.example` file.
-There are several ways to run integration tests, please choose the most appropriate one.
+Before running integration tests, ensure you have a `.env` file in the root of the project with the necessary
+environment variables configured. You can use the `.env.example` file as a template.
+
+There are several ways to run integration tests; choose the one that best fits your requirements.
 
 #### On Mainnet Fork via Hardhat Network (with Tracing)
 
-By default, integration tests are executed on a Hardhat Network (mainnet-fork). This method is the most common for
-running integration tests as it utilizes an instance of the Hardhat Network that forks the mainnet environment and
-allows running integration tests with trace logging.
+This is the most common method for running integration tests. It uses an instance of the Hardhat Network that forks the
+mainnet environment, allowing you to run integration tests with trace logging.
 
 > [!NOTE]
 > Ensure that `MAINNET_FORKING_URL` and other `MAINNET_*` environment variables are set in the `.env` file (refer to
 > `.env.example` for guidance).
 
 ```bash
-yarn test:integration            # Run all integration tests
-yarn test:integration:trace      # Run all integration tests with trace logging (calls only)
-yarn test:integration:fulltrace  # Run all integration tests with full trace logging (calls and storage ops)
+# Run all integration tests
+yarn test:integration
+
+# Run all integration tests with trace logging (calls only)
+yarn test:integration:trace
+
+# Run all integration tests with full trace logging (calls and storage operations)
+yarn test:integration:fulltrace
 ```
 
 #### On Mainnet Fork Using Separate Ethereum Development Environment (without Tracing)
 
-This method is for running tests on a separate Ethereum development environment, such as a local Anvil instance.
+This method is suitable for running integration tests on a local mainnet fork using an alternative Ethereum node, such
+as Anvil. Tracing is not supported in this setup.
 
 > [!NOTE]
 > Ensure that `MAINNET_RPC_URL` and other `MAINNET_*` environment variables are configured in the `.env` file.
 
 ```bash
+# Run integration tests on a local mainnet fork
 yarn test:integration:fork:mainnet
 ```
 
 #### On Scratch Deployment of Protocol via Hardhat Network (with Tracing)
 
-Consult the [Scratch Deploy](./docs/scratch-deploy.md) documentation for more details.
-This method allows running integration tests against a scratch deployment on the Hardhat Network. The necessary
-deployment scripts will be automatically provisioned.
+This method allows you to run integration tests against a scratch deployment on the Hardhat Network. Deployment scripts
+will be automatically executed.
 
 > [!NOTE]
 > This approach runs integration tests against a local Hardhat scratch deployment instead of a mainnet fork.
 > Ensure that `DEPLOYER`, `GENESIS_TIME`, `GAS_PRIORITY_FEE`, and `GAS_MAX_FEE` are set in the `.env` file.
 
+For more details, refer to the [Scratch Deploy](./docs/scratch-deploy.md) documentation.
+
 ```bash
-yarn test:integration:scratch            # Run all integration tests
-yarn test:integration:scratch:trace      # Run all integration tests with trace logging (calls only)
-yarn test:integration:scratch:fulltrace  # Run all integration tests with full trace logging (calls and storage ops)
+# Run all integration tests against a scratch deployment
+yarn test:integration:scratch
+
+# Run all integration tests with trace logging (calls only)
+yarn test:integration:scratch:trace
+
+# Run all integration tests with full trace logging (calls and storage operations)
+yarn test:integration:scratch:fulltrace
 ```
 
 #### On Scratch Deployment of Protocol via Local Ethereum Development Environment (e.g., Anvil, Hardhat Network, Ganache) (without Tracing)
 
-This method enables running integration tests against a local deployment using alternative Ethereum nodes such as Anvil,
-Hardhat Network, or Ganache.
+This method enables you to run integration tests against a local deployment using alternative Ethereum nodes like Anvil,
+Hardhat Network, or Ganache. Tracing is not supported in this setup.
 
 > [!NOTE]
 > Ensure that a local deployment is running on port `8555` and that the `deployed-local.json` file with the deployed
@@ -350,6 +387,7 @@ Hardhat Network, or Ganache.
 > `LOCAL_*` environment variables.
 
 ```bash
+# Run integration tests against a local deployment
 yarn test:integration:fork:local
 ```
 
