@@ -26,7 +26,8 @@ Good documentation is crucial for any project. If you notice areas where the doc
 fixing typos, adding examples, or clarifying explanations, your contributions are highly valued. These improvements help
 make the project more accessible and understandable for everyone.
 
-For more extensive documentation, visit the [Lido Docs repository](https://github.com/lidofinance/docs) deployed at [docs.lido.fi](https://docs.lido.fi).
+For more extensive documentation, visit the [Lido Docs repository](https://github.com/lidofinance/docs) deployed
+at [docs.lido.fi](https://docs.lido.fi).
 
 ### Contributing to the Codebase
 
@@ -49,8 +50,7 @@ the [Lido Research Forum](https://research.lido.fi/).
 - [Foundry](https://book.getfoundry.sh/) latest available version
 
 > [!TIP]
-> On macOS with Homebrew, it is recommended to install Node.js using [`n`](https://github.com/tj/n) or [
-> `nvm`](https://github.com/nvm-sh/nvm) version managers.
+> On macOS with Homebrew, it is recommended to install Node.js using [`n`](https://github.com/tj/n) or [ > `nvm`](https://github.com/nvm-sh/nvm) version managers.
 > Example setup process using `n` package manager for zsh users:
 >
 > ```bash
@@ -240,7 +240,8 @@ review.
 
 ## Local Deployment
 
-WIP
+For local deployment instructions, please refer to the [Scratch Deploy](./docs/scratch-deploy.md) documentation. This
+guide provides detailed steps for setting up and deploying the project in a local environment.
 
 ## Tests
 
