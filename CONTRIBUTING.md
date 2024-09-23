@@ -128,38 +128,6 @@ This repository features a Hardhat-Foundry dual setup:
 - Hardhat gives much more flexibility when writing complex tests;
 - The Foundry's fuzzing capabilities enable better coverage of edge cases.
 
-#### Tracing
-
-`hardhat-tracer` is used to trace contract calls and state changes during tests.
-Full-scale transaction tracing is disabled by default because it can significantly slow down the tests.
-
-To enable tracing, you need to wrap the code you want to trace with the `Tracer.enable()` and `Tracer.disable()`
-functions:
-
-```typescript
-import { Tracer } from 'test/suite';
-
-describe('MyContract', () => {
-  it('should do something', async () => {
-    Tracer.enable();
-    // code to trace
-    Tracer.disable();
-  });
-});
-```
-
-Then run the tests with the following commands:
-
-```bash
-yarn test:trace                   # Run all tests with trace logging (calls only)
-yarn test:fulltrace               # Run all tests with full trace logging (calls and storage ops)
-yarn test:integration:trace       # Run all integration tests with trace logging
-yarn test:integration:fulltrace   # Run all integration tests with full trace logging
-```
-
-> [!NOTE]
-> Tracing is not supported in Foundry tests and integration tests other than Hardhat mainnet fork tests.
-
 #### Hardhat
 
 Hardhat tests are all located in `/tests` at the root of the project.
@@ -167,14 +135,106 @@ Each subdirectory name corresponds to the version of the contract being tested, 
 structure. Integration, regression, and other non-unit tests are placed into corresponding subdirectories,
 e.g. `/tests/integration/`, ` /tests/regression`, etc.
 
+##### Tracing
+
+During Hardhat tests, the `hardhat-tracer` is used to trace contract calls and state changes.
+Full-scale transaction tracing is disabled by default because it can significantly slow down the tests.
+
+> [!NOTE]
+> Tracing is ONLY supported in Hardhat unit tests and integration tests using Hardhat mainnet fork (see below).
+
+To enable tracing, you need to wrap the code you want to trace with the `Tracer.enable()` and `Tracer.disable()`
+functions and run the tests with the appropriate command postfix, e.g. `yarn test:trace`.
+
+```typescript
+import { Tracer } from "test/suite";
+
+describe("MyContract", () => {
+  it("should do something", async () => {
+    Tracer.enable();
+    // code to trace
+    Tracer.disable();
+  });
+});
+```
+
+##### Unit tests
+
+Unit tests are located in `/tests` at the root of the project.
+These tests are designed to verify the behavior of individual contracts and functions.
+Naming conventions follow utilizes the `*.test.ts` postfix, e.g. `myContract.test.ts`.
+
+If you require mocks or wrappers for external contracts, please place them in the appropriate subdirectories, such as
+`/tests/0.4.24/contracts` and adhere to the naming conventions:
+
+- Use the `Mock` postfix for self-established contracts that simulate the behavior of the target contract. For example,
+  `MyContract_Mock.sol` or `MyContract_MockForAnotherContract.sol`.
+- Use the `Harness` postfix for a wrapper that exposes private functions of a contract and may include test-specific
+  actions. For example, `MyContract_Wrapper.sol` or `MyContract_WrapperForAnotherContract.sol`.
+
+You can run unit tests in multiple ways:
+
 ```bash
 yarn test               # Run all tests in parallel
 yarn test:sequential    # Run all tests sequentially
-yarn test:trace         # Run all tests with trace logging (see Tracing section)
+yarn test:trace         # Run all tests with trace logging (calls only)
+yarn test:fulltrace     # Run all tests with full trace logging (calls and storage ops)
 yarn test:watch         # Run all tests in watch mode
 ```
 
-#### Foundry
+##### Integration tests
+
+Integration tests are located in `/tests/integration` at the root of the project.
+These tests are used to verify the interaction between different contracts and their behavior in a real-world scenario.
+Naming conventions follow the `*.int.ts` postfix, e.g. `myScenario.int.ts`.
+
+You can run integration tests in multiple ways, but for all of them, you need to have a `.env` file in the root of
+the project (you can use `.env.example` as a template).
+
+###### Hardhat Mainnet Fork
+
+This is the most common way to run integration tests. It uses instance of Hardhat Network that forks mainnet
+environment. Requires `MAINNET_FORKING_URL` to be set in the `.env` file along with some `MAINNET_*` env variables (see
+`.env.example`).
+
+```bash
+yarn test:integration             # Run all integration tests
+yarn test:integration:trace       # Run all integration tests with trace logging (calls only)
+yarn test:integration:fulltrace   # Run all integration tests with full trace logging (calls and storage ops)
+```
+
+###### Hardhat Scratch Deploy Fork
+
+This method is used to run integration tests against a Hardhat local scratch deployment instead of the mainnet fork.
+Requires `DEPLOYER`, `GENESIS_TIME`, `GAS_PRIORITY_FEE` and `GAS_MAX_FEE` to be set in the `.env` file.
+
+```bash
+yarn test:integration:scratch            # Run all integration tests
+yarn test:integration:scratch:trace      # Run all integration tests with trace logging (calls only)
+yarn test:integration:scratch:fulltrace  # Run all integration tests with full trace logging (calls and storage ops)
+```
+
+###### Any Mainnet Fork
+
+This method is used to run integration tests against any fork. Requires `MAINNET_*` env variables to be set in the
+`.env` file and a fork to be running on port `8545`.
+
+```bash
+yarn test:integration:fork:mainnet
+```
+
+###### Any Scratch Deploy Fork
+
+This method is used to run integration tests against a local scratch deployment
+(see [scratch-deploy.md](./docs/scratch-deploy.md)).
+Requires a local deployment to be running on port `8555` and `deployed-local.json` with the deployed addresses
+(automatically generated during the scratch deployment).
+
+```bash
+yarn test:integration:fork:local
+```
+
+#### Foundry tests
 
 Foundry's Solidity tests are used only for fuzzing library contracts or functions performing complex calculations
 or byte juggling. Solidity tests are located under ` / tests` and in the appropriate subdirectories. Naming conventions
@@ -189,44 +249,6 @@ proper execution of Hardhat tests.
 
 ```bash
 yarn test:foundry        # Run all Foundry tests
-```
-
-#### Integration tests
-
-Integration tests are located in `/tests/integration` at the root of the project.
-These tests are used to verify the interaction between different contracts and their behavior in a real-world scenario.
-
-You can run integration tests in multiple ways, but for all of them, you need to have a `.env` file in the root of
-the project (you can use `.env.example` as a template).
-
-##### Hardhat Mainnet Fork
-
-This is the most common way to run integration tests. It uses the Hardhat mainnet fork to simulate the mainnet
-environment. Requires `HARDHAT_FORKING_URL` and `HARDHAT_FORKING_BLOCK_NUMBER` (optional) to be set in the `.env` file
-along with `MAINNET_*` env variables (see `.env.example`).
-
-```bash
-yarn test:integration         # Run all integration tests
-yarn test:integration:trace   # Run all integration tests with trace logging (see Tracing section) 
-```
-
-##### Local setup
-
-This method is used to run integration tests against a local scratch deployment (
-see [scratch-deploy.md](./docs/scratch-deploy.md)).
-Requires `LOCAL_*` env variables to be set and a local deployment to be running on port `8555`.
-
-```bash
-yarn test:integration:local
-```
-
-##### Any fork setup
-
-This method is used to run integration tests against any fork. Requires `MAINNET_*` env variables to be set in the
-`.env` file and a fork to be running on port `8545`.
-
-```bash
-yarn test:integration:fork
 ```
 
 #### Coverage

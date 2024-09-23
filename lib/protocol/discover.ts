@@ -1,6 +1,6 @@
 import hre from "hardhat";
 
-import { AccountingOracle, Lido, LidoLocator, StakingRouter } from "typechain-types";
+import { AccountingOracle, Lido, LidoLocator, StakingRouter, WithdrawalQueueERC721 } from "typechain-types";
 
 import { batch, log } from "lib";
 
@@ -15,6 +15,7 @@ import {
   ProtocolContracts,
   ProtocolSigners,
   StakingModuleContracts,
+  WstETHContracts,
 } from "./types";
 
 const guard = (address: string, env: string) => {
@@ -39,6 +40,7 @@ const getDiscoveryConfig = async () => {
 
   log.debug("Discovery config", {
     "Network": hre.network.name,
+    "Source": config.source,
     "Locator address": locatorAddress,
     "Agent address": agentAddress,
     "Voting address": votingAddress,
@@ -60,55 +62,56 @@ const loadContract = async <Name extends ContractName>(name: Name, address: stri
 /**
  * Load all Lido protocol foundation contracts.
  */
-const getFoundationContracts = async (locator: LoadedContract<LidoLocator>, config: ProtocolNetworkConfig) =>
-  (await batch({
+const getCoreContracts = async (locator: LoadedContract<LidoLocator>, config: ProtocolNetworkConfig) => {
+  return (await batch({
     accountingOracle: loadContract(
       "AccountingOracle",
-      config.get("accountingOracle") || await locator.accountingOracle(),
+      config.get("accountingOracle") || (await locator.accountingOracle()),
     ),
     depositSecurityModule: loadContract(
       "DepositSecurityModule",
-      config.get("depositSecurityModule") || await locator.depositSecurityModule(),
+      config.get("depositSecurityModule") || (await locator.depositSecurityModule()),
     ),
     elRewardsVault: loadContract(
       "LidoExecutionLayerRewardsVault",
-      config.get("elRewardsVault") || await locator.elRewardsVault(),
+      config.get("elRewardsVault") || (await locator.elRewardsVault()),
     ),
-    legacyOracle: loadContract("LegacyOracle", config.get("legacyOracle") || await locator.legacyOracle()),
-    lido: loadContract("Lido", config.get("lido") || await locator.lido()),
+    legacyOracle: loadContract("LegacyOracle", config.get("legacyOracle") || (await locator.legacyOracle())),
+    lido: loadContract("Lido", config.get("lido") || (await locator.lido())),
     oracleReportSanityChecker: loadContract(
       "OracleReportSanityChecker",
-      config.get("oracleReportSanityChecker") || await locator.oracleReportSanityChecker(),
+      config.get("oracleReportSanityChecker") || (await locator.oracleReportSanityChecker()),
     ),
-    burner: loadContract("Burner", config.get("burner") || await locator.burner()),
-    stakingRouter: loadContract("StakingRouter", config.get("stakingRouter") || await locator.stakingRouter()),
+    burner: loadContract("Burner", config.get("burner") || (await locator.burner())),
+    stakingRouter: loadContract("StakingRouter", config.get("stakingRouter") || (await locator.stakingRouter())),
     validatorsExitBusOracle: loadContract(
       "ValidatorsExitBusOracle",
-      config.get("validatorsExitBusOracle") || await locator.validatorsExitBusOracle(),
+      config.get("validatorsExitBusOracle") || (await locator.validatorsExitBusOracle()),
     ),
     withdrawalQueue: loadContract(
       "WithdrawalQueueERC721",
-      config.get("withdrawalQueue") || await locator.withdrawalQueue(),
+      config.get("withdrawalQueue") || (await locator.withdrawalQueue()),
     ),
     withdrawalVault: loadContract(
       "WithdrawalVault",
-      config.get("withdrawalVault") || await locator.withdrawalVault(),
+      config.get("withdrawalVault") || (await locator.withdrawalVault()),
     ),
     oracleDaemonConfig: loadContract(
       "OracleDaemonConfig",
-      config.get("oracleDaemonConfig") || await locator.oracleDaemonConfig(),
+      config.get("oracleDaemonConfig") || (await locator.oracleDaemonConfig()),
     ),
   })) as CoreContracts;
+};
 
 /**
  * Load Aragon contracts required for protocol.
  */
 const getAragonContracts = async (lido: LoadedContract<Lido>, config: ProtocolNetworkConfig) => {
-  const kernelAddress = config.get("kernel") || await lido.kernel();
+  const kernelAddress = config.get("kernel") || (await lido.kernel());
   const kernel = await loadContract("Kernel", kernelAddress);
   return (await batch({
     kernel: new Promise((resolve) => resolve(kernel)), // Avoiding double loading
-    acl: loadContract("ACL", config.get("acl") || await kernel.acl()),
+    acl: loadContract("ACL", config.get("acl") || (await kernel.acl())),
   })) as AragonContracts;
 };
 
@@ -126,24 +129,42 @@ const getStakingModules = async (stakingRouter: LoadedContract<StakingRouter>, c
 /**
  * Load HashConsensus contract for accounting oracle.
  */
-const getHashConsensus = async (accountingOracle: LoadedContract<AccountingOracle>, config: ProtocolNetworkConfig) => {
-  const hashConsensusAddress = config.get("hashConsensus") || await accountingOracle.getConsensusContract();
+const getHashConsensusContract = async (
+  accountingOracle: LoadedContract<AccountingOracle>,
+  config: ProtocolNetworkConfig,
+) => {
+  const hashConsensusAddress = config.get("hashConsensus") || (await accountingOracle.getConsensusContract());
   return (await batch({
     hashConsensus: loadContract("HashConsensus", hashConsensusAddress),
   })) as HashConsensusContracts;
 };
 
+/**
+ * Load wstETH contracts.
+ * @notice https://github.com/lidofinance/core/issues/163 – wstETH contract should be a part of the CoreContracts
+ */
+const getWstEthContract = async (
+  withdrawalQueue: LoadedContract<WithdrawalQueueERC721>,
+  config: ProtocolNetworkConfig,
+) => {
+  const wstETHAddress = config.get("wstETH") || (await withdrawalQueue.WSTETH());
+  return (await batch({
+    wstETH: loadContract("WstETH", wstETHAddress),
+  })) as WstETHContracts;
+};
+
 export async function discover() {
   const networkConfig = await getDiscoveryConfig();
   const locator = await loadContract("LidoLocator", networkConfig.get("locator"));
-  const foundationContracts = await getFoundationContracts(locator, networkConfig);
+  const foundationContracts = await getCoreContracts(locator, networkConfig);
 
   const contracts = {
     locator,
     ...foundationContracts,
     ...(await getAragonContracts(foundationContracts.lido, networkConfig)),
     ...(await getStakingModules(foundationContracts.stakingRouter, networkConfig)),
-    ...(await getHashConsensus(foundationContracts.accountingOracle, networkConfig)),
+    ...(await getHashConsensusContract(foundationContracts.accountingOracle, networkConfig)),
+    ...(await getWstEthContract(foundationContracts.withdrawalQueue, networkConfig)),
   } as ProtocolContracts;
 
   log.debug("Contracts discovered", {
@@ -165,6 +186,7 @@ export async function discover() {
     "ACL": contracts.acl.address,
     "Burner": foundationContracts.burner.address,
     "Legacy Oracle": foundationContracts.legacyOracle.address,
+    "wstETH": contracts.wstETH.address,
   });
 
   const signers = {
