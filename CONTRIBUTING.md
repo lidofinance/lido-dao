@@ -95,9 +95,10 @@ If you encounter any issues during setup, please open an issue on GitHub.
 
 ### Contracts
 
-Production contracts are located in the `/contracts` directory at the root of the project. Subdirectory names indicate the
-Solidity version of the contracts they contain. For example, contracts in `/contracts/0.4.24` are written in Solidity v0.4.24.
-Common interfaces and libraries shared by contracts of different versions are located in the `/contracts/common` subdirectory.
+Production contracts are located in the `/contracts` directory at the root of the project. Subdirectory names indicate
+the Solidity version of the contracts they contain. For example, contracts in `/contracts/0.4.24` are written in
+Solidity v0.4.24. Common interfaces and libraries shared by contracts of different versions are located in the
+`/contracts/common` subdirectory.
 
 ### Tests
 
@@ -111,35 +112,45 @@ Each subdirectory name corresponds to the version of the contract being tested, 
 structure. Integration, regression, and other non-unit tests are placed into corresponding subdirectories,
 e.g. `/tests/integration`, `/tests/regression`, etc.
 
-For creating mocks or harness contracts for external dependencies, refer to the [Mocking and Harnessing Contracts](#mocking-and-harnessing-contracts) section for guidance.
+For creating mocks or harness contracts for external dependencies, refer to
+the [Mocking and Harnessing Contracts](#mocking-and-harnessing-contracts) section for guidance.
 
 #### Unit Tests
 
-Unit tests are crucial for ensuring the functionality of individual contracts and their components. These tests should be written using Hardhat and placed in the `/tests` directory. Each subdirectory should correspond to the version of the contract being tested, mirroring the structure of the `/contracts` directory.
+Unit tests are crucial for ensuring the functionality of individual contracts and their components. These tests should
+be written using Hardhat and placed in the `/tests` directory. Each subdirectory should correspond to the version of the
+contract being tested, mirroring the structure of the `/contracts` directory.
 
-Follow the naming convention `*.test.ts` for unit test files, such as `myContract.test.ts`. This convention aids in the easy identification and organization of tests.
+Follow the naming convention `*.test.ts` for unit test files, such as `myContract.test.ts`. This convention aids in the
+easy identification and organization of tests.
 
 ##### Coverage
 
-The project utilizes the `hardhat-coverage` plugin to generate coverage reports. Note that Foundry tests are not included in the coverage.
+The project utilizes the `hardhat-coverage` plugin to generate coverage reports. Note that Foundry tests are not
+included in the coverage.
 
 #### Integration Tests
 
-Integration tests are located in the `/tests/integration` directory at the root of the project. These tests verify the interaction between different contracts and their behavior in real-world scenarios. The naming convention for integration tests follows the `*.integration.ts` postfix, for example, `myScenario.integration.ts`.
+Integration tests are located in the `/tests/integration` directory at the root of the project. These tests verify the
+interaction between different contracts and their behavior in real-world scenarios. The naming convention for
+integration tests follows the `*.integration.ts` postfix, for example, `myScenario.integration.ts`.
 
-To run integration tests, ensure you have a `.env` file in the root of the project. You can use the `.env.example` file as a template.
+To run integration tests, ensure you have a `.env` file in the root of the project. You can use the `.env.example` file
+as a template.
 
 #### Fuzzing and Invariant Tests
 
-Foundry's Solidity tests are specifically used for fuzzing library contracts or functions that perform complex calculations
-or byte manipulation. These Solidity tests are located under `/tests` and organized into appropriate subdirectories. The naming conventions follow Foundry's [documentation](https://book.getfoundry.sh/tutorials/best-practices#general-test-guidance):
+Foundry's Solidity tests are specifically used for fuzzing library contracts or functions that perform complex
+calculations or byte manipulation. These Solidity tests are located under `/tests` and organized into appropriate
+subdirectories. The naming conventions follow
+Foundry's [documentation](https://book.getfoundry.sh/tutorials/best-practices#general-test-guidance):
 
 - For tests, use the `.t.sol` postfix (e.g., `MyContract.t.sol`).
 - For scripts, use the `.s.sol` postfix (e.g., `MyScript.s.sol`).
 - For helpers, use the `.h.sol` postfix (e.g., `MyHelper.h.sol`).
 
-It is crucial to follow these naming conventions to distinguish Hardhat test files from Foundry-related files, ensuring the
-proper execution of Hardhat tests.
+It is crucial to follow these naming conventions to distinguish Hardhat test files from Foundry-related files, ensuring
+the proper execution of Hardhat tests.
 
 #### Mocking and Harnessing Contracts
 
@@ -155,7 +166,9 @@ in `/tests/0.4.24/contracts`.
 
 ### Library
 
-TypeScript utilities and helpers are located in the `/lib` directory at the root of the project. When adding a new file to this directory, ensure you re-export all new modules from the `/lib/index.ts` file to maintain clean and organized import statements.
+TypeScript utilities and helpers are located in the `/lib` directory at the root of the project. When adding a new file
+to this directory, ensure you re-export all new modules from the `/lib/index.ts` file to maintain clean and organized
+import statements.
 
 ### Typechain Types
 
@@ -164,14 +177,16 @@ The Typechain types are located in the `/typechain-types` directory at the root 
 > [!WARNING]
 > Do not manually edit any files in this directory, as they are autogenerated with each compilation.
 
-If you encounter issues with your IDE not properly indexing this directory and causing import errors, try the following solutions:
+If you encounter issues with your IDE not properly indexing this directory and causing import errors, try the following
+solutions:
 
 - Open the `/typechain-types/index.ts` file to prompt the IDE to index it.
 - Delete the `/typechain-types` directory and recompile the project using `yarn hardhat compile --force`.
 
 ### Configuration Files
 
-All configuration files can be found in the root directory of the project. This includes files for environment variables, build settings, and other project-specific configurations.
+All configuration files can be found in the root directory of the project. This includes files for environment
+variables, build settings, and other project-specific configurations.
 
 ## Conventions
 
@@ -179,14 +194,14 @@ All contributions must adhere to the following established conventions.
 
 ### Solidity Code
 
-- Must be autoformatted using Solhint
+- Must be auto-formatted using Solhint
 - Generally follows the [Official Solidity Style Guide](https://docs.soliditylang.org/en/latest/style-guide.html), with
   some project-specific exceptions
 - When writing new contracts, refer to existing ones for project-specific conventions, naming patterns, and formatting
 
 ### TypeScript Code
 
-- Must be autoformatted using ESLint
+- Must be auto-formatted using ESLint
 - Follow patterns and conventions established in the existing codebase for tests and scripts
 
 ### Commit Messages
@@ -208,7 +223,8 @@ All contributions must adhere to the following established conventions.
 - Write appropriate tests (unit tests, integration tests, and fuzzing tests) for new features or bug fixes
 - Ensure all tests pass before submitting a pull request
 
-Distinguishing Hardhat test files from Foundry-related files is crucial for proper test execution and maintaining code consistency. For any questions, contact the maintainers.
+Distinguishing Hardhat test files from Foundry-related files is crucial for proper test execution and maintaining code
+consistency. For any questions, contact the maintainers.
 
 ## Branches
 
@@ -228,11 +244,123 @@ for peer review.
 
 WIP
 
-## CI/CD Integration
+## Tests
 
-To integrate the core repository's integration tests into other repositories using GitHub Actions, you can follow the example workflow below. This workflow demonstrates how to set up and run integration tests from the core repository in another repository.
+### Tracing
 
-By default, the workflow will run the integration tests against the latest version of the deployed protocol on Ethereum Mainnet utilizing contract addresses from [deployed protocol contracts](https://docs.lido.fi/deployed-contracts/).
+The `hardhat-tracer` tool is utilized during Hardhat tests to trace contract calls and state changes.
+Full-scale transaction tracing is disabled by default to prevent tests from slowing down.
+
+> [!NOTE]
+> Tracing is supported ONLY in Hardhat unit and integration tests using the Hardhat mainnet fork (see below).
+
+To enable tracing, wrap the code intended for tracing with the `Tracer.enable()` and `Tracer.disable()` functions, and
+execute
+the tests with the appropriate command postfix, such as `yarn test:trace`.
+
+```typescript
+import { Tracer } from "test/suite";
+
+describe("MyContract", () => {
+  it("should do something", async () => {
+    Tracer.enable();
+    // code to trace
+    Tracer.disable();
+  });
+});
+```
+
+### Running Unit Tests
+
+You can run unit tests in multiple ways:
+
+```bash
+# Unit Tests
+yarn test               # Run all unit tests in parallel
+yarn test:sequential    # Run all unit tests sequentially
+yarn test:trace         # Run all unit tests with trace logging (calls only)
+yarn test:fulltrace     # Run all unit tests with full trace logging (calls and storage ops)
+yarn test:watch         # Run all unit tests in watch mode (useful for development; use .only to run specific tests, supports tracing)
+yarn test:coverage      # Run all unit tests and generate a coverage report
+```
+
+### Running Fuzzing and Invariant Tests
+
+```bash
+yarn test:foundry       # Run all Foundry-based fuzzing and invariant tests
+```
+
+### Running Integration Tests
+
+To run integration tests, ensure you have a `.env` file in the root of the project. You can use the `.env.example` file.
+There are several ways to run integration tests, please choose the most appropriate one.
+
+#### On Mainnet Fork via Hardhat Network (with Tracing)
+
+By default, integration tests are executed on a Hardhat Network (mainnet-fork). This method is the most common for
+running integration tests as it utilizes an instance of the Hardhat Network that forks the mainnet environment and
+allows running integration tests with trace logging.
+
+> [!NOTE]
+> Ensure that `MAINNET_FORKING_URL` and other `MAINNET_*` environment variables are set in the `.env` file (refer to
+> `.env.example` for guidance).
+
+```bash
+yarn test:integration            # Run all integration tests
+yarn test:integration:trace      # Run all integration tests with trace logging (calls only)
+yarn test:integration:fulltrace  # Run all integration tests with full trace logging (calls and storage ops)
+```
+
+#### On Mainnet Fork Using Separate Ethereum Development Environment (without Tracing)
+
+This method is for running tests on a separate Ethereum development environment, such as a local Anvil instance.
+
+> [!NOTE]
+> Ensure that `MAINNET_RPC_URL` and other `MAINNET_*` environment variables are configured in the `.env` file.
+
+```bash
+yarn test:integration:fork:mainnet
+```
+
+#### On Scratch Deployment of Protocol via Hardhat Network (with Tracing)
+
+Consult the [Scratch Deploy](./docs/scratch-deploy.md) documentation for more details.
+This method allows running integration tests against a scratch deployment on the Hardhat Network. The necessary
+deployment scripts will be automatically provisioned.
+
+> [!NOTE]
+> This approach runs integration tests against a local Hardhat scratch deployment instead of a mainnet fork.
+> Ensure that `DEPLOYER`, `GENESIS_TIME`, `GAS_PRIORITY_FEE`, and `GAS_MAX_FEE` are set in the `.env` file.
+
+```bash
+yarn test:integration:scratch            # Run all integration tests
+yarn test:integration:scratch:trace      # Run all integration tests with trace logging (calls only)
+yarn test:integration:scratch:fulltrace  # Run all integration tests with full trace logging (calls and storage ops)
+```
+
+#### On Scratch Deployment of Protocol via Local Ethereum Development Environment (e.g., Anvil, Hardhat Network, Ganache) (without Tracing)
+
+This method enables running integration tests against a local deployment using alternative Ethereum nodes such as Anvil,
+Hardhat Network, or Ganache.
+
+> [!NOTE]
+> Ensure that a local deployment is running on port `8555` and that the `deployed-local.json` file with the deployed
+> addresses is available. This file is automatically generated during the scratch deployment process. Refer
+> to [scratch-deploy.md](./docs/scratch-deploy.md) for more details. This setup is controlled by the `LOCAL_RPC_URL` and
+> `LOCAL_*` environment variables.
+
+```bash
+yarn test:integration:fork:local
+```
+
+## Adding CI/CD Integration Tests Workflow to Other Repositories
+
+To integrate the core repository's integration tests into other repositories using GitHub Actions, you can follow the
+example workflow below. This workflow demonstrates how to set up and run integration tests from the core repository in
+another repository.
+
+By default, the workflow will run the integration tests against the latest version of the deployed protocol on Ethereum
+Mainnet utilizing contract addresses from [deployed protocol contracts](https://docs.lido.fi/deployed-contracts/).
 
 <details>
 <summary>Example GitHub Actions workflow file</summary>
