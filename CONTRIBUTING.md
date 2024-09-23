@@ -18,7 +18,7 @@ Issues are a great way to contribute to the project by reporting bugs or suggest
   only applies to off-chain code (tests, scripts, etc.). For on-chain code, please refer to
   the [Bug Bounty](/README.md#bug-bounty) program.
 - **Feature Requests**: Have an idea for a new feature or an improvement to an existing one? Submit a feature request
-  through GitHub issues, detailing your proposed enhancements and how they would benefit the Lido Finance Core.
+  through GitHub issues, detailing your proposed enhancements and how they would benefit the Lido protocol middleware.
 
 ### Improving Documentation
 
@@ -26,7 +26,7 @@ Good documentation is crucial for any project. If you notice areas where the doc
 fixing typos, adding examples, or clarifying explanations, your contributions are highly valued. These improvements help
 make the project more accessible and understandable for everyone.
 
-For more extensive documentation, visit the [Lido Docs repository](https://github.com/lidofinance/docs).
+For more extensive documentation, visit the [Lido Docs repository](https://github.com/lidofinance/docs) deployed at [docs.lido.fi](https://docs.lido.fi).
 
 ### Contributing to the Codebase
 
@@ -38,7 +38,7 @@ If you're interested in improving tooling and CI in this repository, consider op
 discuss your ideas with the community of contributors.
 
 For larger ideas on how to improve the protocol, consider publishing your proposal in
-the [Lido Forum](https://research.lido.fi/).
+the [Lido Research Forum](https://research.lido.fi/).
 
 ## Getting Started
 

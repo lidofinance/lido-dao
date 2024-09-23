@@ -1,4 +1,4 @@
-# Deploy Lido Protocol from Scratch
+# Deploy Lido protocol middleware from scratch
 
 > [!NOTE]
 > Work in progress. The document is a draft and may contain inaccuracies.
