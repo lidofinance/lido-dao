@@ -8,7 +8,7 @@ improving the documentation, your contribution is valuable and your effort to ma
 
 ### Opening an Issue
 
-> [!IMPORTANT]
+> [!CAUTION]
 > For bugs in contracts and protocol vulnerabilities, please refer to the [Bug Bounty](/README.md#bug-bounty) program!
 
 Issues are a great way to contribute to the project by reporting bugs or suggesting enhancements.
@@ -17,7 +17,6 @@ Issues are a great way to contribute to the project by reporting bugs or suggest
   the bug has already been reported. If it has, you can contribute by adding more details to the existing report. This
   only applies to off-chain code (tests, scripts, etc.). For on-chain code, please refer to
   the [Bug Bounty](/README.md#bug-bounty) program.
-
 - **Feature Requests**: Have an idea for a new feature or an improvement to an existing one? Submit a feature request
   through GitHub issues, detailing your proposed enhancements and how they would benefit the Lido Finance Core.
 
@@ -49,9 +48,9 @@ the [Lido Forum](https://research.lido.fi/).
 - [Yarn](https://yarnpkg.com/) installed via corepack (see below)
 - [Foundry](https://book.getfoundry.sh/) latest available version
 
-> [!NOTE]
-> On macOS with Homebrew, it is recommended to install Node.js using [`n`](https://github.com/tj/n)
-> or [`nvm`](https://github.com/nvm-sh/nvm) version managers.
+> [!TIP]
+> On macOS with Homebrew, it is recommended to install Node.js using [`n`](https://github.com/tj/n) or [
+> `nvm`](https://github.com/nvm-sh/nvm) version managers.
 > Example setup process using `n` package manager for zsh users:
 >
 > ```bash
@@ -107,10 +106,9 @@ This repository uses both Hardhat and Foundry for testing:
 - Hardhat offers greater flexibility for writing complex tests.
 - Foundry's fuzzing capabilities provide better coverage of edge cases.
 
-All tests are all located in `/tests` at the root of the project.
-Each subdirectory name corresponds to the version of the contract being tested, mirroring the `/contracts` directory
-structure. Integration, regression, and other non-unit tests are placed into corresponding subdirectories,
-e.g. `/tests/integration`, `/tests/regression`, etc.
+All tests are located in `/tests` at the root of the project. Each subdirectory name corresponds to the version of the
+contract being tested, mirroring the `/contracts` directory structure. Integration, regression, and other non-unit tests
+are placed into corresponding subdirectories, e.g., `/tests/integration`, `/tests/regression`, etc.
 
 For creating mocks or harness contracts for external dependencies, refer to
 the [Mocking and Harnessing Contracts](#mocking-and-harnessing-contracts) section for guidance.
@@ -124,10 +122,9 @@ contract being tested, mirroring the structure of the `/contracts` directory.
 Follow the naming convention `*.test.ts` for unit test files, such as `myContract.test.ts`. This convention aids in the
 easy identification and organization of tests.
 
-##### Coverage
-
-The project utilizes the `hardhat-coverage` plugin to generate coverage reports. Note that Foundry tests are not
-included in the coverage.
+> [!NOTE]
+> The project utilizes the `hardhat-coverage` plugin to generate coverage reports. Foundry-based tests are not included
+> in the coverage.
 
 #### Integration Tests
 
@@ -135,8 +132,9 @@ Integration tests are located in the `/tests/integration` directory at the root 
 interaction between different contracts and their behavior in real-world scenarios. The naming convention for
 integration tests follows the `*.integration.ts` postfix, for example, `myScenario.integration.ts`.
 
-To run integration tests, ensure you have a `.env` file in the root of the project. You can use the `.env.example` file
-as a template.
+> [!IMPORTANT]
+> To run integration tests, ensure you have a `.env` file in the root of the project. You can use the `.env.example`
+> file as a template.
 
 #### Fuzzing and Invariant Tests
 
@@ -156,8 +154,8 @@ the proper execution of Hardhat tests.
 
 The `/tests` directory also contains contract mocks and helpers, which are placed in the `.../contracts` subdirectory,
 e.g., `/tests/0.4.24/contracts`. Mocks and helpers do not need to be written using the same version of Solidity as the
-contract being tested. For example, it is acceptable to have a mock contract written in Solidity v0.8.9
-in `/tests/0.4.24/contracts`.
+contract being tested. For example, it is acceptable to have a mock contract written in Solidity v0.8.9 in
+`/tests/0.4.24/contracts`.
 
 - Use the `__Harness` postfix for wrappers that expose private functions of a contract and may include test-specific
   actions. For example, `MyContract__Harness.sol` or `MyContract__HarnessForAnotherContract.sol`.
@@ -232,15 +230,15 @@ consistency. For any questions, contact the maintainers.
 
 This is the production branch and the default branch of the repository.
 The [deployed protocol contracts](https://docs.lido.fi/deployed-contracts/) must match the contracts stored in the
-`/contracts` directory. All pull requests to `master` must originate from the `develop` branch and require at least
-one approving review before merging.
+`/contracts` directory. All pull requests to `master` must originate from the `develop` branch and require at least one
+approving review before merging.
 
 ### `develop`
 
-This is the main development branch. All pull requests to `master` should be submitted to `develop` first
-for peer review.
+This is the main development branch. All pull requests to `master` should be submitted to `develop` first for peer
+review.
 
-## Local deployment
+## Local Deployment
 
 WIP
 
@@ -300,8 +298,8 @@ yarn test:watch
 yarn test:coverage
 ```
 
-> [!NOTE]
-> The best way to run single test or test suite is to use `.only` in the test file and run any test command except the
+> [!TIP]
+> The best way to run a single test or test suite is to use `.only` in the test file and run any test command except the
 > parallel one.
 
 ### Running Fuzzing and Invariant Tests
@@ -359,8 +357,8 @@ This method allows you to run integration tests against a scratch deployment on 
 will be automatically executed.
 
 > [!NOTE]
-> This approach runs integration tests against a local Hardhat scratch deployment instead of a mainnet fork.
-> Ensure that `DEPLOYER`, `GENESIS_TIME`, `GAS_PRIORITY_FEE`, and `GAS_MAX_FEE` are set in the `.env` file.
+> This approach runs integration tests against a local Hardhat scratch deployment instead of a mainnet fork. Ensure that
+> `DEPLOYER`, `GENESIS_TIME`, `GAS_PRIORITY_FEE`, and `GAS_MAX_FEE` are set in the `.env` file.
 
 For more details, refer to the [Scratch Deploy](./docs/scratch-deploy.md) documentation.
 
