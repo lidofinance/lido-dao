@@ -8,7 +8,7 @@ import { StakingRouter } from "typechain-types";
 
 import { MAX_UINT256, proxify, randomAddress } from "lib";
 
-describe("StakingRouter:Versioned", () => {
+describe("StakingRouter.sol:Versioned", () => {
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
 

@@ -128,7 +128,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     ).to.be.revertedWithCustomError(oracleReportSanityChecker, "AdminCannotBeZero");
   });
 
-  describe("Sanity checker public getters", () => {
+  context("Sanity checker public getters", () => {
     it("retrieves correct locator address", async () => {
       expect(await oracleReportSanityChecker.getLidoLocator()).to.equal(await lidoLocatorMock.getAddress());
     });
@@ -138,7 +138,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("setOracleReportLimits()", () => {
+  context("setOracleReportLimits", () => {
     it("sets limits correctly", async () => {
       const newLimitsList = {
         exitedValidatorsPerDayLimit: 50,
@@ -206,7 +206,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("checkAccountingOracleReport()", () => {
+  context("checkAccountingOracleReport", () => {
     beforeEach(async () => {
       await oracleReportSanityChecker
         .connect(admin)
@@ -453,7 +453,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("checkWithdrawalQueueOracleReport()", () => {
+  context("checkWithdrawalQueueOracleReport", () => {
     const oldRequestId = 1n;
     const newRequestId = 2n;
     let oldRequestCreationTimestamp;
@@ -517,7 +517,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("checkSimulatedShareRate", () => {
+  context("checkSimulatedShareRate", () => {
     const correctSimulatedShareRate = {
       postTotalPooledEther: ether("9"),
       postTotalShares: ether("4"),
@@ -576,7 +576,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("max positive rebase", () => {
+  context("max positive rebase", () => {
     const defaultSmoothenTokenRebaseParams = {
       preTotalPooledEther: ether("100"),
       preTotalShares: ether("100"),
@@ -1153,7 +1153,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("validators limits", () => {
+  context("validators limits", () => {
     it("setExitedValidatorsPerDayLimit works", async () => {
       const oldExitedLimit = defaultLimitsList.exitedValidatorsPerDayLimit;
 
@@ -1267,7 +1267,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("checkExitBusOracleReport", () => {
+  context("checkExitBusOracleReport", () => {
     beforeEach(async () => {
       await oracleReportSanityChecker
         .connect(admin)
@@ -1334,7 +1334,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("extra data reporting", () => {
+  context("extra data reporting", () => {
     beforeEach(async () => {
       await oracleReportSanityChecker
         .connect(admin)
@@ -1415,7 +1415,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
     });
   });
 
-  describe("check limit boundaries", () => {
+  context("check limit boundaries", () => {
     it("values must be less or equal to MAX_BASIS_POINTS", async () => {
       const MAX_BASIS_POINTS = 10000;
       const INVALID_BASIS_POINTS = MAX_BASIS_POINTS + 1;
