@@ -354,7 +354,7 @@ describe("NodeOperatorsRegistry.sol:initialize-and-upgrade", () => {
         impl,
         rootAccount: deployer,
       });
-      const registry = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
+      const registry = await ethers.getContractAt("NodeOperatorsRegistry__Harness", appProxy, deployer);
       await expect(registry.finalizeUpgrade_v3()).to.be.revertedWith("CONTRACT_NOT_INITIALIZED");
     });
 

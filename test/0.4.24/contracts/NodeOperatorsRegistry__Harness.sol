@@ -108,16 +108,16 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
         emit ValidatorsKeysLoaded(publicKeys, signatures);
     }
 
-  function harness__loadAllocatedSigningKeys(
-    uint256 _keysCountToLoad,
-    uint256[] _nodeOperatorIds,
-    uint256[] _activeKeyCountsAfterAllocation
-  ) external returns (bytes memory pubkeys, bytes memory signatures) {
-    (pubkeys, signatures) = _loadAllocatedSigningKeys(
-      _keysCountToLoad,
-      _nodeOperatorIds,
-      _activeKeyCountsAfterAllocation
-    );
+    function harness__loadAllocatedSigningKeys(
+        uint256 _keysCountToLoad,
+        uint256[] _nodeOperatorIds,
+        uint256[] _activeKeyCountsAfterAllocation
+    ) external returns (bytes memory pubkeys, bytes memory signatures) {
+        (pubkeys, signatures) = _loadAllocatedSigningKeys(
+            _keysCountToLoad,
+            _nodeOperatorIds,
+            _activeKeyCountsAfterAllocation
+        );
 
         obtainedPublicKeys = pubkeys;
         obtainedSignatures = signatures;
@@ -125,19 +125,19 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
         emit ValidatorsKeysLoaded(pubkeys, signatures);
     }
 
-  function harness__getSigningKeysAllocationData(
-    uint256 _keysCount
-  )
+    function harness__getSigningKeysAllocationData(
+        uint256 _keysCount
+    )
     external
     view
     returns (
-      uint256 allocatedKeysCount,
-      uint256[] memory nodeOperatorIds,
-      uint256[] memory activeKeyCountsAfterAllocation
+        uint256 allocatedKeysCount,
+        uint256[] memory nodeOperatorIds,
+        uint256[] memory activeKeyCountsAfterAllocation
     )
     {
-    return _getSigningKeysAllocationData(_keysCount);
-  }
+        return _getSigningKeysAllocationData(_keysCount);
+    }
 
     event ValidatorsKeysLoaded(bytes publicKeys, bytes signatures);
 
@@ -173,11 +173,11 @@ contract NodeOperatorsRegistry__Harness is NodeOperatorsRegistry {
         _saveOperatorSigningKeysStats(_nodeOperatorId, signingKeysStats);
     }
 
-  function harness__setRewardDistributionState(RewardDistributionState _state) external {
-    _updateRewardDistributionState(_state);
-  }
+    function harness__setRewardDistributionState(RewardDistributionState _state) external {
+        _updateRewardDistributionState(_state);
+    }
 
-  function harness__setBaseVersion(uint256 _newBaseVersion) external {
-    _setContractVersion(_newBaseVersion);
-  }
+    function harness__setBaseVersion(uint256 _newBaseVersion) external {
+        _setContractVersion(_newBaseVersion);
+    }
 }

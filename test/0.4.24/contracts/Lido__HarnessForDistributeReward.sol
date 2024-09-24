@@ -1,17 +1,16 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 
 pragma solidity 0.4.24;
 
 import {Lido} from "contracts/0.4.24/Lido.sol";
-// import "./StETHMock.sol";
-// distributeReward
+
 /**
  * @dev Only for testing purposes! Lido version with some functions exposed.
  */
-contract Lido__DistributeRewardMock is Lido {
+contract Lido__HarnessForDistributeReward is Lido {
     bytes32 internal constant ALLOW_TOKEN_POSITION = keccak256("lido.Lido.allowToken");
-    uint256 internal constant UNLIMITED_TOKEN_REBASE = uint256(-1);
+    uint256 internal constant UNLIMITED_TOKEN_REBASE = uint256(- 1);
     uint256 private totalPooledEther;
 
     function initialize(
@@ -83,7 +82,7 @@ contract Lido__DistributeRewardMock is Lido {
         _emitTransferAfterMintingShares(_to, _sharesAmount);
     }
 
-    function mintSteth(address _to) public payable  {
+    function mintSteth(address _to) public payable {
         uint256 sharesAmount = getSharesByPooledEth(msg.value);
         mintShares(_to, sharesAmount);
         setTotalPooledEther(_getTotalPooledEther().add(msg.value));

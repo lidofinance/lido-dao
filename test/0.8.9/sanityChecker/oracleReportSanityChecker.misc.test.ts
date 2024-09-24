@@ -1160,12 +1160,13 @@ describe("OracleReportSanityChecker.sol:misc", () => {
       await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldExitedLimit);
       await expect(oracleReportSanityChecker.checkExitedValidatorsRatePerDay(oldExitedLimit + 1n))
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "ExitedValidatorsLimitExceeded")
-        .withArgs(oldExitedLimit, oldExitedLimit + 1);
+        .withArgs(oldExitedLimit, oldExitedLimit + 1n);
+
       expect((await oracleReportSanityChecker.getOracleReportLimits()).exitedValidatorsPerDayLimit).to.be.equal(
         oldExitedLimit,
       );
 
-      const newExitedLimit = 30;
+      const newExitedLimit = 30n;
       expect(newExitedLimit).to.not.equal(oldExitedLimit);
 
       await expect(
@@ -1192,9 +1193,9 @@ describe("OracleReportSanityChecker.sol:misc", () => {
       );
 
       await oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newExitedLimit);
-      await expect(oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newExitedLimit + 1))
+      await expect(oracleReportSanityChecker.checkExitedValidatorsRatePerDay(newExitedLimit + 1n))
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "ExitedValidatorsLimitExceeded")
-        .withArgs(newExitedLimit, newExitedLimit + 1);
+        .withArgs(newExitedLimit, newExitedLimit + 1n);
     });
 
     it("setAppearedValidatorsPerDayLimit works", async () => {
@@ -1211,14 +1212,14 @@ describe("OracleReportSanityChecker.sol:misc", () => {
         oracleReportSanityChecker.checkAccountingOracleReport(
           ...(Object.values({
             ...correctLidoOracleReport,
-            postCLValidators: oldAppearedLimit + 1,
+            postCLValidators: oldAppearedLimit + 1n,
           }) as CheckAccountingOracleReportParameters),
         ),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, `IncorrectAppearedValidators`)
-        .withArgs(oldAppearedLimit + 1);
+        .withArgs(oldAppearedLimit + 1n);
 
-      const newAppearedLimit = 30;
+      const newAppearedLimit = 30n;
       expect(newAppearedLimit).not.equal(oldAppearedLimit);
 
       await expect(
@@ -1548,7 +1549,7 @@ describe("OracleReportSanityChecker.sol:misc", () => {
           .setMaxPositiveTokenRebase(0),
       )
         .to.be.revertedWithCustomError(oracleReportSanityChecker, "IncorrectLimitValue")
-        .withArgs(INVALID_VALUE, 1, MAX_UINT_64);
+        .withArgs(INVALID_VALUE, 1n, MAX_UINT_64);
     });
   });
 });

@@ -4,7 +4,14 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { ACL, Kernel, LidoLocator, NodeOperatorsRegistry__Harness } from "typechain-types";
+import {
+  ACL,
+  Burner__MockForLidoHandleOracleReport,
+  Kernel,
+  Lido__HarnessForDistributeReward,
+  LidoLocator,
+  NodeOperatorsRegistry__Harness,
+} from "typechain-types";
 
 import {
   addNodeOperator,
@@ -19,6 +26,8 @@ import {
 import { addAragonApp, deployLidoDaoForNor } from "test/deploy";
 import { Snapshot } from "test/suite";
 
+const ONE_DAY = 86400n;
+
 describe("NodeOperatorsRegistry.sol:management", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
@@ -30,7 +39,7 @@ describe("NodeOperatorsRegistry.sol:management", () => {
   let user1: HardhatEthersSigner;
   let user2: HardhatEthersSigner;
   let user3: HardhatEthersSigner;
-  let lido: Lido__DistributeRewardMock;
+  let lido: Lido__HarnessForDistributeReward;
   let dao: Kernel;
   let acl: ACL;
   let locator: LidoLocator;
@@ -823,7 +832,7 @@ describe("NodeOperatorsRegistry.sol:management", () => {
       await nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperator, 1);
       expect(await nor.isOperatorPenalized(firstNodeOperator)).to.be.true;
 
-      await advanceChainTime(2 * 24 * 60 * 60 + 10);
+      await advanceChainTime(2n * ONE_DAY);
 
       expect(await nor.isOperatorPenalized(firstNodeOperator)).to.be.false;
 

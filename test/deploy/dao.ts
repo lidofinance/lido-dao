@@ -85,7 +85,7 @@ export async function deployLidoDao({ rootAccount, initialized, locatorConfig = 
 export async function deployLidoDaoForNor({ rootAccount, initialized, locatorConfig = {} }: DeployLidoDaoArgs) {
   const { dao, acl } = await createAragonDao(rootAccount);
 
-  const impl = await ethers.deployContract("Lido__DistributeRewardMock", rootAccount);
+  const impl = await ethers.deployContract("Lido__HarnessForDistributeReward", rootAccount);
 
   const lidoProxyAddress = await addAragonApp({
     dao,
@@ -94,7 +94,7 @@ export async function deployLidoDaoForNor({ rootAccount, initialized, locatorCon
     rootAccount,
   });
 
-  const lido = await ethers.getContractAt("Lido__DistributeRewardMock", lidoProxyAddress, rootAccount);
+  const lido = await ethers.getContractAt("Lido__HarnessForDistributeReward", lidoProxyAddress, rootAccount);
 
   const burner = await ethers.deployContract("Burner__MockForDistributeReward", rootAccount);
 

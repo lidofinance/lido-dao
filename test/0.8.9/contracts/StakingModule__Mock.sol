@@ -29,16 +29,17 @@ contract StakingModule__Mock is IStakingModule {
         depositableValidatorsCount = depositableValidatorsCount__mocked;
     }
 
-  function mock__getStakingModuleSummary(
-    uint256 totalExitedValidators,
-    uint256 totalDepositedValidators,
-    uint256 depositableValidatorsCount
-  ) external {
-    totalExitedValidators__mocked = totalExitedValidators;
-    totalDepositedValidators__mocked = totalDepositedValidators;
-    depositableValidatorsCount__mocked = depositableValidatorsCount;
-  }
-  uint256 private nodeOperatorTargetLimitMode__mocked;
+    function mock__getStakingModuleSummary(
+        uint256 totalExitedValidators,
+        uint256 totalDepositedValidators,
+        uint256 depositableValidatorsCount
+    ) external {
+        totalExitedValidators__mocked = totalExitedValidators;
+        totalDepositedValidators__mocked = totalDepositedValidators;
+        depositableValidatorsCount__mocked = depositableValidatorsCount;
+    }
+
+    uint256 private nodeOperatorTargetLimitMode__mocked;
     uint256 private nodeOperatorTargetValidatorsCount__mocked;
     uint256 private nodeOperatorStuckValidatorsCount__mocked;
     uint256 private nodeOperatorRefundedValidatorsCount__mocked;
@@ -156,14 +157,14 @@ contract StakingModule__Mock is IStakingModule {
 
     event Mock__VettedSigningKeysCountDecreased(bytes _nodeOperatorIds, bytes _stuckValidatorsCounts);
 
-  function decreaseVettedSigningKeysCount(
-    bytes calldata _nodeOperatorIds,
-    bytes calldata _vettedSigningKeysCounts
-  ) external {
-    emit Mock__VettedSigningKeysCountDecreased(_nodeOperatorIds, _vettedSigningKeysCounts);
-  }
+    function decreaseVettedSigningKeysCount(
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _vettedSigningKeysCounts
+    ) external {
+        emit Mock__VettedSigningKeysCountDecreased(_nodeOperatorIds, _vettedSigningKeysCounts);
+    }
 
-  event Mock__StuckValidatorsCountUpdated(bytes _nodeOperatorIds, bytes _stuckValidatorsCounts);
+    event Mock__StuckValidatorsCountUpdated(bytes _nodeOperatorIds, bytes _stuckValidatorsCounts);
 
     function updateStuckValidatorsCount(
         bytes calldata _nodeOperatorIds,
