@@ -12,6 +12,7 @@ import {
   loadContract,
   log,
   persistNetworkState,
+  rd,
   readNetworkState,
   Sk,
   updateObjectInState,
@@ -35,8 +36,36 @@ function getEnvVariable(name: string, defaultValue?: string) {
 // Accounting Oracle args
 const SECONDS_PER_SLOT = 12;
 const GENESIS_TIME = 1606824023;
+
 // Oracle report sanity checker
-const LIMITS = [9000, 43200, 1000, 50, 600, 8, 24, 7680, 750000, 1000, 101, 74];
+const EXITED_VALIDATORS_PER_DAY_LIMIT = 9000;
+const APPEARED_VALIDATORS_PER_DAY_LIMIT = 43200;
+const ANNUAL_BALANCE_INCREASE_BP_LIMIT = 1000;
+const SIMULATED_SHARE_RATE_DEVIATION_BP_LIMIT = 50;
+const MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT = 600;
+const MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION = 8;
+const MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM = 24;
+const REQUEST_TIMESTAMP_MARGIN = 7680;
+const MAX_POSITIVE_TOKEN_REBASE = 750000;
+const INITIAL_SLASHING_AMOUNT_P_WEI = 1000;
+const INACTIVITY_PENALTIES_AMOUNT_P_WEI = 101;
+const CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT = 74;
+
+const LIMITS = [
+  EXITED_VALIDATORS_PER_DAY_LIMIT,
+  APPEARED_VALIDATORS_PER_DAY_LIMIT,
+  ANNUAL_BALANCE_INCREASE_BP_LIMIT,
+  SIMULATED_SHARE_RATE_DEVIATION_BP_LIMIT,
+  MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT,
+  MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION,
+  MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM,
+  REQUEST_TIMESTAMP_MARGIN,
+  MAX_POSITIVE_TOKEN_REBASE,
+  INITIAL_SLASHING_AMOUNT_P_WEI,
+  INACTIVITY_PENALTIES_AMOUNT_P_WEI,
+  CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT,
+];
+
 // DSM args
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 6646;
 const MAX_OPERATORS_PER_UNVETTING = 200;
@@ -53,6 +82,11 @@ const quorum = 4;
 async function main() {
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
   const chainId = (await ethers.provider.getNetwork()).chainId;
+
+  if (chainId !== 1n) {
+    log(rd(`Expected mainnet, got chain id ${chainId}`));
+    return;
+  }
 
   log(cy(`Deploy of contracts on chain ${chainId}`));
 
