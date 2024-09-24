@@ -100,7 +100,6 @@ contract AccountingOracle is BaseOracle {
     error ExtraDataAlreadyProcessed();
     error UnexpectedExtraDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error UnexpectedExtraDataFormat(uint256 expectedFormat, uint256 receivedFormat);
-    error UnexpectedExtraDataLength();
     error ExtraDataItemsCountCannotBeZeroForNonEmptyData();
     error ExtraDataHashCannotBeZeroForNonEmptyData();
     error UnexpectedExtraDataItemsCount(uint256 expectedCount, uint256 receivedCount);
@@ -735,11 +734,6 @@ contract AccountingOracle is BaseOracle {
 
         if (procState.itemsProcessed == procState.itemsCount) {
             revert ExtraDataAlreadyProcessed();
-        }
-
-        // at least 32 bytes for the next hash value + 35 bytes for the first item with 1 node operator
-        if (data.length < 67) {
-            revert UnexpectedExtraDataLength();
         }
 
         bytes32 dataHash = keccak256(data);
