@@ -5,6 +5,8 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
+import { StakingRouterMock } from "typechain-types";
+
 import { certainAddress, proxify } from "lib";
 
 import { Snapshot } from "test/suite";
@@ -29,13 +31,15 @@ context("StakingRouter.sol:status-control", () => {
     [deployer, admin, user] = await ethers.getSigners();
 
     // deploy staking router
-    const depositContract = await new DepositContract__MockForBeaconChainDepositor__factory(deployer).deploy();
-    const allocLib = await new MinFirstAllocationStrategy__factory(deployer).deploy();
-    const allocLibAddr: StakingRouterLibraryAddresses = {
-      ["contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy"]: await allocLib.getAddress(),
-    };
+    const depositContract = await ethers.deployContract("DepositContract__MockForBeaconChainDepositor", deployer);
+    const allocLib = await ethers.deployContract("MinFirstAllocationStrategy", deployer);
+    const stakingRouterMockFactory = await ethers.getContractFactory("StakingRouterMock", {
+      libraries: {
+        ["contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy"]: await allocLib.getAddress(),
+      },
+    });
 
-    const impl = await new StakingRouterMock__factory(allocLibAddr, deployer).deploy(depositContract);
+    const impl = await stakingRouterMockFactory.connect(deployer).deploy(depositContract);
 
     [stakingRouter] = await proxify({ impl, admin });
 

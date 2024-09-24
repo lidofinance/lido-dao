@@ -40,14 +40,15 @@ describe("StakingRouter.sol:module-sync", () => {
   before(async () => {
     [deployer, admin, user, lido] = await ethers.getSigners();
 
-    depositContract = await new DepositContract__MockForBeaconChainDepositor__factory(deployer).deploy();
+    depositContract = await ethers.deployContract("DepositContract__MockForBeaconChainDepositor", deployer);
+    const allocLib = await ethers.deployContract("MinFirstAllocationStrategy", deployer);
+    const stakingRouterFactory = await ethers.getContractFactory("StakingRouter", {
+      libraries: {
+        ["contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy"]: await allocLib.getAddress(),
+      },
+    });
 
-    const allocLib = await new MinFirstAllocationStrategy__factory(deployer).deploy();
-    const allocLibAddr: StakingRouterLibraryAddresses = {
-      ["contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy"]: await allocLib.getAddress(),
-    };
-
-    const impl = await new StakingRouter__factory(allocLibAddr, deployer).deploy(depositContract);
+    const impl = await stakingRouterFactory.connect(deployer).deploy(depositContract);
 
     [stakingRouter] = await proxify({ impl, admin });
 

@@ -108,12 +108,15 @@ describe("NodeOperatorsRegistry.sol:management", () => {
       },
     }));
     // await burner.grantRole(web3.utils.keccak256(`REQUEST_BURN_SHARES_ROLE`), app.address, { from: voting })
-    const allocLib = await new MinFirstAllocationStrategy__factory(deployer).deploy();
-    const allocLibAddr: NodeOperatorsRegistryLibraryAddresses = {
-      ["__contracts/common/lib/MinFirstAllocat__"]: await allocLib.getAddress(),
-    };
+    const allocLib = await ethers.deployContract("MinFirstAllocationStrategy", deployer);
+    const norHarnessFactory = await ethers.getContractFactory("NodeOperatorsRegistry__Harness", {
+      libraries: {
+        ["contracts/common/lib/MinFirstAllocationStrategy.sol:MinFirstAllocationStrategy"]: await allocLib.getAddress(),
+      },
+    });
 
-    impl = await new NodeOperatorsRegistry__Harness__factory(allocLibAddr, deployer).deploy();
+    impl = await norHarnessFactory.connect(deployer).deploy();
+
     const appProxy = await addAragonApp({
       dao,
       name: "node-operators-registry",
