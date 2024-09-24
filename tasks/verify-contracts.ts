@@ -123,8 +123,13 @@ function getDeployedContract(contract: Contract): DeployedContract[] {
 async function isContractVerified(address: string, hre: HardhatRuntimeEnvironment): Promise<boolean> {
   try {
     const apiURL = getEtherscanApiUrl(hre.network.name);
-    const etherscanApiKey = getEtherscanApiKey(hre);
-    const params = buildApiParams(address, etherscanApiKey);
+    const params = new URLSearchParams({
+      module: "contract",
+      action: "getsourcecode",
+      address,
+      apikey: getEtherscanApiKey(hre),
+    });
+
     const result = await fetchContractSourceCode(apiURL, params);
     return isSourceCodeVerified(result);
   } catch (error) {
@@ -138,25 +143,17 @@ function getEtherscanApiUrl(network: string): string {
 }
 
 function getEtherscanApiKey(hre: HardhatRuntimeEnvironment): string {
-  return hre.config.etherscan.apiKey as string;
-}
-
-function buildApiParams(address: string, apiKey: string): URLSearchParams {
-  return new URLSearchParams({
-    module: "contract",
-    action: "getsourcecode",
-    address,
-    apikey: apiKey,
-  });
+  const apiKey = hre.config.etherscan.apiKey;
+  if (typeof apiKey === "string") {
+    return apiKey;
+  } else if (typeof apiKey === "object" && apiKey !== null) {
+    return apiKey[hre.network.name] || "";
+  }
+  return "";
 }
 
 async function fetchContractSourceCode(apiURL: string, params: URLSearchParams) {
   return await retryFetch(`${apiURL}?${params}`, MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isSourceCodeVerified(result: any): boolean {
-  return result.status === "1" && result.result.length > 0 && result.result[0].SourceCode !== "";
 }
 
 async function retryFetch(url: string, maxRetries: number, retryDelay: number) {
@@ -173,4 +170,9 @@ async function retryFetch(url: string, maxRetries: number, retryDelay: number) {
     }
   }
   throw new Error(`Max retries reached. Unable to fetch.`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isSourceCodeVerified(result: any): boolean {
+  return result.status === "1" && result.result.length > 0 && result.result[0].SourceCode !== "";
 }
