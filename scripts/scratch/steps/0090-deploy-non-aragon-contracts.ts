@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
 
+import { certainAddress } from "lib";
 import { getContractPath } from "lib/contract";
 import {
   deployBehindOssifiableProxy,
@@ -28,8 +29,6 @@ export async function main() {
   const withdrawalQueueERC721Params = state[Sk.withdrawalQueueERC721].deployParameters;
   const minFirstAllocationStrategyAddress = state[Sk.minFirstAllocationStrategy].address;
 
-  const sanityChecks = state["oracleReportSanityChecker"].deployParameters;
-
   const proxyContractsOwner = deployer;
   const admin = deployer;
 
@@ -56,31 +55,6 @@ export async function main() {
     deployer,
     [],
     dummyContract.address,
-  );
-
-  // Deploy OracleReportSanityChecker
-  const oracleReportSanityChecker = await deployWithoutProxy(
-    Sk.oracleReportSanityChecker,
-    "OracleReportSanityChecker",
-    deployer,
-    [
-      locator.address,
-      admin,
-      [
-        sanityChecks.exitedValidatorsPerDayLimit,
-        sanityChecks.appearedValidatorsPerDayLimit,
-        sanityChecks.annualBalanceIncreaseBPLimit,
-        sanityChecks.simulatedShareRateDeviationBPLimit,
-        sanityChecks.maxValidatorExitRequestsPerReport,
-        sanityChecks.maxItemsPerExtraDataTransaction,
-        sanityChecks.maxNodeOperatorsPerExtraDataItem,
-        sanityChecks.requestTimestampMargin,
-        sanityChecks.maxPositiveTokenRebase,
-        sanityChecks.initialSlashingAmountPWei,
-        sanityChecks.inactivityPenaltiesAmountPWei,
-        sanityChecks.clBalanceOraclesErrorUpperBPLimit,
-      ],
-    ],
   );
 
   // Deploy EIP712StETH
@@ -138,6 +112,7 @@ export async function main() {
     deployer,
     [depositContract],
     null,
+    true,
     {
       libraries: { MinFirstAllocationStrategy: minFirstAllocationStrategyAddress },
     },
@@ -223,7 +198,7 @@ export async function main() {
     elRewardsVault.address,
     legacyOracleAddress,
     lidoAddress,
-    oracleReportSanityChecker.address,
+    certainAddress("dummy-locator:oracleReportSanityChecker"), // requires LidoLocator in the constructor, so deployed after it
     legacyOracleAddress, // postTokenRebaseReceiver
     burner.address,
     stakingRouter.address,

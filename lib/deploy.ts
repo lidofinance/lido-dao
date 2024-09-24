@@ -194,13 +194,7 @@ export async function deployBehindOssifiableProxy(
     proxyConstructorArgs,
   );
 
-  const proxy = await deployContract(
-    PROXY_CONTRACT_NAME,
-    proxyConstructorArgs,
-    deployer,
-    withStateFile,
-    signerOrOptions,
-  );
+  const proxy = await deployContract(PROXY_CONTRACT_NAME, proxyConstructorArgs, deployer, withStateFile);
 
   if (withStateFile) {
     updateObjectInState(nameInState, {
