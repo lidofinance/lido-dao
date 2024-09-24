@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { MinFirstAllocationStrategy__factory, StakingRouter, StakingRouter__factory } from "typechain-types";
+import { MinFirstAllocationStrategy__factory, StakingRouter } from "typechain-types";
 import { StakingRouterLibraryAddresses } from "typechain-types/factories/contracts/0.8.9/StakingRouter__factory";
 
 import { MAX_UINT256, proxify, randomAddress } from "lib";

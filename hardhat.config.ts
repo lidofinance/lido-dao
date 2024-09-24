@@ -5,6 +5,7 @@ import "@nomicfoundation/hardhat-chai-matchers";
 import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
 
+import "dotenv/config";
 import "solidity-coverage";
 import "tsconfig-paths/register";
 import "hardhat-tracer";
@@ -18,8 +19,17 @@ import { HardhatUserConfig, subtask } from "hardhat/config";
 import { mochaRootHooks } from "test/hooks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
-const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
+const MAINNET_FORKING_URL = process.env.MAINNET_FORKING_URL || "";
+const INTEGRATION_SCRATCH_DEPLOY = process.env.INTEGRATION_SCRATCH_DEPLOY || "off";
 const ACCOUNTS_PATH = "./accounts.json";
+
+/**
+ * Determines the forking configuration for Hardhat.
+ * @returns The forking configuration object or undefined.
+ */
+function getHardhatForkingConfig() {
+  return INTEGRATION_SCRATCH_DEPLOY === "on" || !MAINNET_FORKING_URL ? undefined : { url: MAINNET_FORKING_URL };
+}
 
 function loadAccounts(networkName: string) {
   // TODO: this plaintext accounts.json private keys management is a subject
@@ -37,10 +47,14 @@ function loadAccounts(networkName: string) {
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
-    local: {
-      url: RPC_URL,
+    "local": {
+      url: process.env.LOCAL_RPC_URL || RPC_URL,
     },
-    hardhat: {
+    "mainnet-fork": {
+      url: process.env.MAINNET_RPC_URL || RPC_URL,
+      timeout: 20 * 60 * 1000, // 20 minutes
+    },
+    "hardhat": {
       // setting base fee to 0 to avoid extra calculations doesn't work :(
       // minimal base fee is 1 for EIP-1559
       // gasPrice: 0,
@@ -53,9 +67,9 @@ const config: HardhatUserConfig = {
         count: 30,
         accountsBalance: "100000000000000000000000",
       },
-      forking: HARDHAT_FORKING_URL ? { url: HARDHAT_FORKING_URL } : undefined,
+      forking: getHardhatForkingConfig(),
     },
-    sepolia: {
+    "sepolia": {
       url: RPC_URL,
       chainId: 11155111,
       accounts: loadAccounts("sepolia"),
@@ -115,6 +129,9 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  tracer: {
+    tasks: ["watch"],
+  },
   typechain: {
     outDir: "typechain-types",
     target: "ethers-v6",
@@ -132,6 +149,7 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     rootHooks: mochaRootHooks,
+    timeout: 20 * 60 * 1000, // 20 minutes
   },
   warnings: {
     "@aragon/**/*": {

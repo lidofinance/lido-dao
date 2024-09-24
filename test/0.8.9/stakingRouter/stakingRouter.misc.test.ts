@@ -4,18 +4,13 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
-  DepositContract__MockForBeaconChainDepositor,
-  DepositContract__MockForBeaconChainDepositor__factory,
-  MinFirstAllocationStrategy__factory,
-  StakingRouterMock,
-  StakingRouterMock__factory,
-} from "typechain-types";
-import { StakingRouterLibraryAddresses } from "typechain-types/factories/contracts/0.8.9/StakingRouter__factory";
+import { DepositContract__MockForBeaconChainDepositor } from "typechain-types";
 
 import { certainAddress, ether, MAX_UINT256, proxify, randomString } from "lib";
 
-describe("StakingRouter", () => {
+import { Snapshot } from "test/suite";
+
+describe("StakingRouter.sol:misc", () => {
   let deployer: HardhatEthersSigner;
   let proxyAdmin: HardhatEthersSigner;
   let stakingRouterAdmin: HardhatEthersSigner;
@@ -25,10 +20,12 @@ describe("StakingRouter", () => {
   let stakingRouter: StakingRouterMock;
   let impl: StakingRouterMock;
 
+  let originalState: string;
+
   const lido = certainAddress("test:staking-router:lido");
   const withdrawalCredentials = hexlify(randomBytes(32));
 
-  beforeEach(async () => {
+  before(async () => {
     [deployer, proxyAdmin, stakingRouterAdmin, user] = await ethers.getSigners();
 
     depositContract = await new DepositContract__MockForBeaconChainDepositor__factory(deployer).deploy();
@@ -42,6 +39,10 @@ describe("StakingRouter", () => {
 
     [stakingRouter] = await proxify({ impl, admin: proxyAdmin, caller: user });
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("initialize", () => {
     it("Reverts if admin is zero address", async () => {

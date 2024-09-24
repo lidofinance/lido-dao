@@ -5,24 +5,14 @@ import { ethers } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-import {
-  ACL,
-  Kernel,
-  Lido,
-  LidoLocator,
-  LidoLocator__factory,
-  MinFirstAllocationStrategy__factory,
-  NodeOperatorsRegistry__Harness,
-  NodeOperatorsRegistry__Harness__factory,
-} from "typechain-types";
-import { NodeOperatorsRegistryLibraryAddresses } from "typechain-types/factories/contracts/0.4.24/nos/NodeOperatorsRegistry.sol/NodeOperatorsRegistry__factory";
+import { ACL, Kernel, Lido, LidoLocator, NodeOperatorsRegistry__Harness } from "typechain-types";
 
 import { addNodeOperator, certainAddress, NodeOperatorConfig, RewardDistributionState } from "lib";
 
 import { addAragonApp, deployLidoDao, deployLidoLocator } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
+describe("NodeOperatorsRegistry.sol:initialize-and-upgrade", () => {
   let deployer: HardhatEthersSigner;
   let user: HardhatEthersSigner;
 
@@ -123,7 +113,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
       rootAccount: deployer,
     });
 
-    nor = NodeOperatorsRegistry__Harness__factory.connect(appProxy, deployer);
+    nor = await ethers.getContractAt("NodeOperatorsRegistry__Harness", appProxy, deployer);
 
     await acl.createPermission(user, lido, await lido.RESUME_ROLE(), deployer);
 
@@ -136,7 +126,7 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
     // inside the harness__requestValidatorsKeysForDeposits() method
     await acl.grantPermission(nor, nor, await nor.STAKING_ROUTER_ROLE());
 
-    locator = LidoLocator__factory.connect(await lido.getLidoLocator(), user);
+    locator = await ethers.getContractAt("LidoLocator", await lido.getLidoLocator(), user);
   });
 
   beforeEach(async () => (originalState = await Snapshot.take()));
@@ -284,24 +274,24 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
     });
 
     it("Migrates the contract storage from v1 to v2", async () => {
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.be.equal(
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[firstNodeOperatorId])).to.equal(
         firstNodeOperatorId,
       );
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.be.equal(
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[secondNodeOperatorId])).to.equal(
         secondNodeOperatorId,
       );
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.be.equal(
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[thirdNodeOperatorId])).to.equal(
         thirdNodeOperatorId,
       );
-      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.be.equal(
+      expect(await addNodeOperator(nor, nodeOperatorsManager, NODE_OPERATORS[fourthNodeOperatorId])).to.equal(
         fourthNodeOperatorId,
       );
 
       await nor.harness__unsafeResetModuleSummary();
       const resetSummary = await nor.getStakingModuleSummary();
-      expect(resetSummary.totalExitedValidators).to.be.equal(0n);
-      expect(resetSummary.totalDepositedValidators).to.be.equal(0n);
-      expect(resetSummary.depositableValidatorsCount).to.be.equal(0n);
+      expect(resetSummary.totalExitedValidators).to.equal(0n);
+      expect(resetSummary.totalDepositedValidators).to.equal(0n);
+      expect(resetSummary.depositableValidatorsCount).to.equal(0n);
 
       await nor.harness__unsafeSetVettedKeys(
         firstNodeOperatorId,
@@ -327,29 +317,21 @@ describe("NodeOperatorsRegistry:initialize-and-upgrade", () => {
         .withArgs(moduleType);
 
       const summary = await nor.getStakingModuleSummary();
-      expect(summary.totalExitedValidators).to.be.equal(1n + 0n + 0n + 1n);
-      expect(summary.totalDepositedValidators).to.be.equal(5n + 7n + 0n + 2n);
-      expect(summary.depositableValidatorsCount).to.be.equal(0n + 8n + 0n + 0n);
+      expect(summary.totalExitedValidators).to.equal(1n + 0n + 0n + 1n);
+      expect(summary.totalDepositedValidators).to.equal(5n + 7n + 0n + 2n);
+      expect(summary.depositableValidatorsCount).to.equal(0n + 8n + 0n + 0n);
 
       const firstNoInfo = await nor.getNodeOperator(firstNodeOperatorId, true);
-      expect(firstNoInfo.totalVettedValidators).to.be.equal(
-        NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount,
-      );
+      expect(firstNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[firstNodeOperatorId].depositedSigningKeysCount);
 
       const secondNoInfo = await nor.getNodeOperator(secondNodeOperatorId, true);
-      expect(secondNoInfo.totalVettedValidators).to.be.equal(
-        NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount,
-      );
+      expect(secondNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[secondNodeOperatorId].totalSigningKeysCount);
 
       const thirdNoInfo = await nor.getNodeOperator(thirdNodeOperatorId, true);
-      expect(thirdNoInfo.totalVettedValidators).to.be.equal(
-        NODE_OPERATORS[thirdNodeOperatorId].depositedSigningKeysCount,
-      );
+      expect(thirdNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[thirdNodeOperatorId].depositedSigningKeysCount);
 
       const fourthNoInfo = await nor.getNodeOperator(fourthNodeOperatorId, true);
-      expect(fourthNoInfo.totalVettedValidators).to.be.equal(
-        NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount,
-      );
+      expect(fourthNoInfo.totalVettedValidators).to.equal(NODE_OPERATORS[fourthNodeOperatorId].vettedSigningKeysCount);
     });
   });
 

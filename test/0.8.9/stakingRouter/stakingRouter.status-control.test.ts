@@ -5,15 +5,9 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
-  DepositContract__MockForBeaconChainDepositor__factory,
-  MinFirstAllocationStrategy__factory,
-  StakingRouterMock,
-  StakingRouterMock__factory,
-} from "typechain-types";
-import { StakingRouterLibraryAddresses } from "typechain-types/factories/contracts/0.8.9/StakingRouter__factory";
-
 import { certainAddress, proxify } from "lib";
+
+import { Snapshot } from "test/suite";
 
 enum Status {
   Active,
@@ -21,7 +15,7 @@ enum Status {
   Stopped,
 }
 
-context("StakingRouter:status-control", () => {
+context("StakingRouter.sol:status-control", () => {
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
   let user: HardhatEthersSigner;
@@ -29,7 +23,9 @@ context("StakingRouter:status-control", () => {
   let stakingRouter: StakingRouterMock;
   let moduleId: bigint;
 
-  beforeEach(async () => {
+  let originalState: string;
+
+  before(async () => {
     [deployer, admin, user] = await ethers.getSigners();
 
     // deploy staking router
@@ -66,6 +62,10 @@ context("StakingRouter:status-control", () => {
 
     moduleId = await stakingRouter.getStakingModulesCount();
   });
+
+  beforeEach(async () => (originalState = await Snapshot.take()));
+
+  afterEach(async () => await Snapshot.restore(originalState));
 
   context("setStakingModuleStatus", () => {
     it("Reverts if the caller does not have the role", async () => {

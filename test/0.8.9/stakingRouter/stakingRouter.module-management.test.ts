@@ -4,19 +4,13 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import {
-  DepositContract__MockForBeaconChainDepositor__factory,
-  MinFirstAllocationStrategy__factory,
-  StakingRouter,
-  StakingRouter__factory,
-} from "typechain-types";
-import { StakingRouterLibraryAddresses } from "typechain-types/factories/contracts/0.8.9/StakingRouter__factory";
+import { StakingRouter } from "typechain-types";
 
 import { certainAddress, getNextBlock, proxify, randomString } from "lib";
 
 const UINT64_MAX = 2n ** 64n - 1n;
 
-describe("StakingRouter:module-management", () => {
+describe("StakingRouter.sol:module-management", () => {
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
   let user: HardhatEthersSigner;
@@ -155,7 +149,7 @@ describe("StakingRouter:module-management", () => {
       ).to.be.revertedWithCustomError(stakingRouter, "StakingModuleWrongName");
     });
 
-    it("Reverts if the number of staking modules is reached", async () => {
+    it("Reverts if the staking module name is too long", async () => {
       const MAX_STAKING_MODULE_NAME_LENGTH = await stakingRouter.MAX_STAKING_MODULE_NAME_LENGTH();
       const NAME_TOO_LONG = randomString(Number(MAX_STAKING_MODULE_NAME_LENGTH + 1n));
 
@@ -286,7 +280,7 @@ describe("StakingRouter:module-management", () => {
 
     let ID: bigint;
 
-    const NEW_STAKE_SHARE_LIMIT = 2_00;
+    const NEW_STAKE_SHARE_LIMIT = 2_00n;
     const NEW_PRIORITY_EXIT_SHARE_THRESHOLD = NEW_STAKE_SHARE_LIMIT;
 
     const NEW_MODULE_FEE = 6_00n;
@@ -356,13 +350,13 @@ describe("StakingRouter:module-management", () => {
     });
 
     it("Reverts if the new priority exit share is less than stake share limit", async () => {
-      const NEW_STAKE_SHARE_LIMIT = 55_00n;
-      const NEW_PRIORITY_EXIT_SHARE_THRESHOLD = 50_00n;
+      const UPGRADED_STAKE_SHARE_LIMIT = 55_00n;
+      const UPGRADED_PRIORITY_EXIT_SHARE_THRESHOLD = 50_00n;
       await expect(
         stakingRouter.updateStakingModule(
           ID,
-          NEW_STAKE_SHARE_LIMIT,
-          NEW_PRIORITY_EXIT_SHARE_THRESHOLD,
+          UPGRADED_STAKE_SHARE_LIMIT,
+          UPGRADED_PRIORITY_EXIT_SHARE_THRESHOLD,
           NEW_MODULE_FEE,
           NEW_TREASURY_FEE,
           NEW_MAX_DEPOSITS_PER_BLOCK,

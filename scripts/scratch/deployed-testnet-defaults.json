@@ -103,7 +103,7 @@
     "deployParameters": {
       "exitedValidatorsPerDayLimit": 1500,
       "appearedValidatorsPerDayLimit": 1500,
-      "oneOffCLBalanceDecreaseBPLimit": 500,
+      "deprecatedOneOffCLBalanceDecreaseBPLimit": 500,
       "annualBalanceIncreaseBPLimit": 1000,
       "simulatedShareRateDeviationBPLimit": 250,
       "maxValidatorExitRequestsPerReport": 2000,
