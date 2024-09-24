@@ -22,7 +22,7 @@ jobs:
         run: yarn compile
 
       - name: Extract ABIs
-        run: yarn extract-abis
+        run: yarn abis:extract
 
       - name: Create ABIs archive
         run: zip -j ABIs.zip lib/abi/*.json
