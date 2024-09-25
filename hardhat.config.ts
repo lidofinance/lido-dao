@@ -14,11 +14,11 @@ import "hardhat-ignore-warnings";
 import "hardhat-contract-sizer";
 import { globSync } from "glob";
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
-import { HardhatUserConfig, subtask, task } from "hardhat/config";
+import { HardhatUserConfig, subtask } from "hardhat/config";
 
 import { mochaRootHooks } from "test/hooks";
 
-import { extractABIs, verifyDeployedContracts } from "./tasks";
+import "./tasks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
 const MAINNET_FORKING_URL = process.env.MAINNET_FORKING_URL || "";
@@ -193,8 +193,5 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, hre, runSupe
 
   return [...paths, ...otherPaths];
 });
-
-task("verify:deployed", "Verifies deployed contracts based on state file").setAction(verifyDeployedContracts);
-task("abis:extract", "Extract ABIs from artifacts").setAction(extractABIs);
 
 export default config;

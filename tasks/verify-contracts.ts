@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { cy, log, yl } from "lib/log";
@@ -26,14 +27,16 @@ type NetworkState = {
 const MAX_RETRY_ATTEMPTS = 5;
 const RETRY_DELAY_MS = 1000;
 
-export async function verifyDeployedContracts(_: unknown, hre: HardhatRuntimeEnvironment) {
-  try {
-    await verifyContracts(hre);
-  } catch (error) {
-    log.error("Error verifying deployed contracts:", error as Error);
-    throw error;
-  }
-}
+task("verify:deployed", "Verifies deployed contracts based on state file").setAction(
+  async (_: unknown, hre: HardhatRuntimeEnvironment) => {
+    try {
+      await verifyContracts(hre);
+    } catch (error) {
+      log.error("Error verifying deployed contracts:", error as Error);
+      throw error;
+    }
+  },
+);
 
 async function verifyContracts(hre: HardhatRuntimeEnvironment) {
   const network = hre.network.name;

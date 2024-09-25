@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { log, yl } from "lib/log";
@@ -15,7 +16,7 @@ const ARAGON_ARTIFACT_PATHS = [
 ];
 const SKIP_NAMES_REGEX = /(Mock|Harness|test_helpers|Imports|deposit_contract|Pausable|.dbg.json|build-info)/;
 
-export async function extractABIs(_: unknown, hre: HardhatRuntimeEnvironment) {
+task("abis:extract", "Extract ABIs from artifacts").setAction(async (_: unknown, hre: HardhatRuntimeEnvironment) => {
   await hre.run("compile");
 
   const artifactNames = await hre.artifacts.getAllFullyQualifiedNames();
@@ -37,4 +38,4 @@ export async function extractABIs(_: unknown, hre: HardhatRuntimeEnvironment) {
   }
 
   log.success("All ABIs have been extracted and saved!");
-}
+});
