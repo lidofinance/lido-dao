@@ -18,9 +18,6 @@ jobs:
       - name: Common setup
         uses: ./.github/workflows/setup
 
-      - name: Compile contracts
-        run: yarn compile
-
       - name: Extract ABIs
         run: yarn abis:extract
 
