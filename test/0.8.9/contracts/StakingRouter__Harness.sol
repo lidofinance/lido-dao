@@ -1,13 +1,12 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {StakingRouter} from "../StakingRouter.sol";
-import {UnstructuredStorage} from "../lib/UnstructuredStorage.sol";
+import {StakingRouter} from "contracts/0.8.9/StakingRouter.sol";
+import {UnstructuredStorage} from "contracts/0.8.9/lib/UnstructuredStorage.sol";
 
-contract StakingRouterMock is StakingRouter {
+contract StakingRouter__Harness is StakingRouter {
     using UnstructuredStorage for bytes32;
 
     constructor(address _depositContract) StakingRouter(_depositContract) {}

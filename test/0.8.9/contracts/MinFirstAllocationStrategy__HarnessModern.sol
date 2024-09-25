@@ -1,12 +1,11 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: UNLICENSED
+// for testing purposes only
 
-/* See contracts/COMPILERS.md */
 pragma solidity 0.8.9;
 
-import {MinFirstAllocationStrategy} from "../../common/lib/MinFirstAllocationStrategy.sol";
+import {MinFirstAllocationStrategy} from "contracts/common/lib/MinFirstAllocationStrategy.sol";
 
-contract MinFirstAllocationStrategyConsumerMockModernVersion {
+contract MinFirstAllocationStrategy__HarnessModern {
     function allocate(
         uint256[] memory allocations,
         uint256[] memory capacities,

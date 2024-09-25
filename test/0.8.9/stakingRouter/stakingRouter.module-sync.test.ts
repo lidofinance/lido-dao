@@ -5,7 +5,11 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { DepositContract__MockForBeaconChainDepositor, StakingModule__Mock, StakingRouter } from "typechain-types";
+import {
+  DepositContract__MockForBeaconChainDepositor,
+  StakingModule__MockForStakingRouter,
+  StakingRouter,
+} from "typechain-types";
 
 import { ether, getNextBlock, proxify } from "lib";
 
@@ -18,7 +22,7 @@ describe("StakingRouter.sol:module-sync", () => {
   let lido: HardhatEthersSigner;
 
   let stakingRouter: StakingRouter;
-  let stakingModule: StakingModule__Mock;
+  let stakingModule: StakingModule__MockForStakingRouter;
   let depositContract: DepositContract__MockForBeaconChainDepositor;
 
   let moduleId: bigint;
@@ -71,7 +75,7 @@ describe("StakingRouter.sol:module-sync", () => {
     ]);
 
     // add staking module
-    stakingModule = await ethers.deployContract("StakingModule__Mock", deployer);
+    stakingModule = await ethers.deployContract("StakingModule__MockForStakingRouter", deployer);
     stakingModuleAddress = await stakingModule.getAddress();
     const { timestamp, number } = await getNextBlock();
     lastDepositAt = timestamp;
@@ -113,13 +117,17 @@ describe("StakingRouter.sol:module-sync", () => {
     ];
 
     // module mock state
-    const stakingModuleSummary: Parameters<StakingModule__Mock["mock__getStakingModuleSummary"]> = [
+    const stakingModuleSummary: Parameters<
+      StakingModule__MockForStakingRouterDepositAndSync["mock__getStakingModuleSummary"]
+    > = [
       100n, // exitedValidators
       1000, // depositedValidators
       200, // depositableValidators
     ];
 
-    const nodeOperatorSummary: Parameters<StakingModule__Mock["mock__getNodeOperatorSummary"]> = [
+    const nodeOperatorSummary: Parameters<
+      StakingModule__MockForStakingRouterDepositAndSync["mock__getNodeOperatorSummary"]
+    > = [
       1, // targetLimitMode
       100n, // targetValidatorsCount
       1n, // stuckValidatorsCount
@@ -130,7 +138,9 @@ describe("StakingRouter.sol:module-sync", () => {
       200n, // depositableValidatorsCount
     ];
 
-    const nodeOperatorsCounts: Parameters<StakingModule__Mock["mock__nodeOperatorsCount"]> = [
+    const nodeOperatorsCounts: Parameters<
+      StakingModule__MockForStakingRouterDepositAndSync["mock__nodeOperatorsCount"]
+    > = [
       100n, // nodeOperatorsCount
       95n, // activeNodeOperatorsCount
     ];
@@ -660,7 +670,9 @@ describe("StakingRouter.sol:module-sync", () => {
         moduleSummary.depositableValidatorsCount,
       );
 
-      const nodeOperatorSummary: Parameters<StakingModule__Mock["mock__getNodeOperatorSummary"]> = [
+      const nodeOperatorSummary: Parameters<
+        StakingModule__MockForStakingRouterDepositAndSync["mock__getNodeOperatorSummary"]
+      > = [
         operatorSummary.targetLimitMode,
         operatorSummary.targetValidatorsCount,
         operatorSummary.stuckValidatorsCount,

@@ -4,13 +4,13 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { StakingModule__Mock, StakingRouter } from "typechain-types";
+import { StakingModule__MockForStakingRouter, StakingRouter } from "typechain-types";
 
 import { certainAddress, ether, proxify } from "lib";
 
 import { Snapshot } from "test/suite";
 
-describe("StakingRouter.sol:deposits", () => {
+describe("StakingRouter.sol:rewards", () => {
   let deployer: HardhatEthersSigner;
   let admin: HardhatEthersSigner;
 
@@ -456,9 +456,9 @@ describe("StakingRouter.sol:deposits", () => {
     deposited = 0n,
     depositable = 0n,
     status = Status.Active,
-  }: ModuleConfig): Promise<[StakingModule__Mock, bigint]> {
+  }: ModuleConfig): Promise<[StakingModule__MockForStakingRouter, bigint]> {
     const modulesCount = await stakingRouter.getStakingModulesCount();
-    const module = await ethers.deployContract("StakingModule__Mock", deployer);
+    const module = await ethers.deployContract("StakingModule__MockForStakingRouter", deployer);
 
     await stakingRouter
       .connect(admin)

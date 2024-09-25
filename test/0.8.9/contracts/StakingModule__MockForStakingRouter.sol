@@ -5,7 +5,7 @@ pragma solidity 0.8.9;
 
 import {IStakingModule} from "contracts/0.8.9/interfaces/IStakingModule.sol";
 
-contract StakingModule__Mock is IStakingModule {
+contract StakingModule__MockForStakingRouter is IStakingModule {
     event Mock__TargetValidatorsLimitsUpdated(uint256 _nodeOperatorId, uint256 _targetLimitMode, uint256 _targetLimit);
     event Mock__RefundedValidatorsCountUpdated(uint256 _nodeOperatorId, uint256 _refundedValidatorsCount);
     event Mock__OnRewardsMinted(uint256 _totalShares);
