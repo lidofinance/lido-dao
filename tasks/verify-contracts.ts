@@ -82,18 +82,18 @@ async function verifyContractList(contracts: DeployedContract[], hre: HardhatRun
 }
 
 async function verifyContract(contract: DeployedContract, hre: HardhatRuntimeEnvironment) {
+  if (await isContractVerified(contract.address, hre)) {
+    log.success(`Contract ${yl(contract.contract)} at ${cy(contract.address)} is already verified!`);
+    return;
+  }
+
+  const verificationParams = buildVerificationParams(contract);
+  log.withArguments(
+    `Verifying contract: ${yl(contract.contract)} at ${cy(contract.address)} with constructor args `,
+    verificationParams.constructorArguments as string[],
+  );
+
   try {
-    if (await isContractVerified(contract.address, hre)) {
-      log.success(`Contract ${yl(contract.contract)} at ${cy(contract.address)} is already verified!`);
-      return;
-    }
-
-    const verificationParams = buildVerificationParams(contract);
-    log.withArguments(
-      `Verifying contract: ${yl(contract.contract)} at ${cy(contract.address)} with constructor args `,
-      verificationParams.constructorArguments as string[],
-    );
-
     await hre.run("verify:verify", verificationParams);
     log.success(`Successfully verified ${yl(contract.contract)}!`);
   } catch (error) {
