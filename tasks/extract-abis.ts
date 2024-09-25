@@ -16,6 +16,8 @@ const ARAGON_ARTIFACT_PATHS = [
 const SKIP_NAMES_REGEX = /(Mock|Harness|test_helpers|Imports|deposit_contract|Pausable|.dbg.json|build-info)/;
 
 export async function extractABIs(_: unknown, hre: HardhatRuntimeEnvironment) {
+  await hre.run("compile");
+
   const artifactNames = await hre.artifacts.getAllFullyQualifiedNames();
 
   const artifactNamesToPublish = artifactNames
