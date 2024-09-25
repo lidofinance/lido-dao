@@ -117,17 +117,13 @@ describe("StakingRouter.sol:module-sync", () => {
     ];
 
     // module mock state
-    const stakingModuleSummary: Parameters<
-      StakingModule__MockForStakingRouterDepositAndSync["mock__getStakingModuleSummary"]
-    > = [
+    const stakingModuleSummary: Parameters<StakingModule__MockForStakingRouter["mock__getStakingModuleSummary"]> = [
       100n, // exitedValidators
       1000, // depositedValidators
       200, // depositableValidators
     ];
 
-    const nodeOperatorSummary: Parameters<
-      StakingModule__MockForStakingRouterDepositAndSync["mock__getNodeOperatorSummary"]
-    > = [
+    const nodeOperatorSummary: Parameters<StakingModule__MockForStakingRouter["mock__getNodeOperatorSummary"]> = [
       1, // targetLimitMode
       100n, // targetValidatorsCount
       1n, // stuckValidatorsCount
@@ -138,9 +134,7 @@ describe("StakingRouter.sol:module-sync", () => {
       200n, // depositableValidatorsCount
     ];
 
-    const nodeOperatorsCounts: Parameters<
-      StakingModule__MockForStakingRouterDepositAndSync["mock__nodeOperatorsCount"]
-    > = [
+    const nodeOperatorsCounts: Parameters<StakingModule__MockForStakingRouter["mock__nodeOperatorsCount"]> = [
       100n, // nodeOperatorsCount
       95n, // activeNodeOperatorsCount
     ];
@@ -670,9 +664,7 @@ describe("StakingRouter.sol:module-sync", () => {
         moduleSummary.depositableValidatorsCount,
       );
 
-      const nodeOperatorSummary: Parameters<
-        StakingModule__MockForStakingRouterDepositAndSync["mock__getNodeOperatorSummary"]
-      > = [
+      const nodeOperatorSummary: Parameters<StakingModule__MockForStakingRouter["mock__getNodeOperatorSummary"]> = [
         operatorSummary.targetLimitMode,
         operatorSummary.targetValidatorsCount,
         operatorSummary.stuckValidatorsCount,
