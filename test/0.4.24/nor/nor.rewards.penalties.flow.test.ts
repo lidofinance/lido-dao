@@ -749,17 +749,17 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
 
       await expect(await nor.clearNodeOperatorPenalty(firstNodeOperatorId))
         .to.emit(nor, "KeysOpIndexSet")
-        .withArgs(nonce + 3n)
+        .withArgs(nonce + 5n)
         .to.emit(nor, "NonceChanged")
-        .withArgs(nonce + 3n)
+        .withArgs(nonce + 5n)
         .to.emit(nor, "NodeOperatorPenaltyCleared")
         .withArgs(firstNodeOperatorId);
 
       await expect(await nor.clearNodeOperatorPenalty(secondNodeOperatorId))
         .to.emit(nor, "KeysOpIndexSet")
-        .withArgs(nonce + 4n)
+        .withArgs(nonce + 6n)
         .to.emit(nor, "NonceChanged")
-        .withArgs(nonce + 4n)
+        .withArgs(nonce + 6n)
         .to.emit(nor, "NodeOperatorPenaltyCleared")
         .withArgs(secondNodeOperatorId);
 
