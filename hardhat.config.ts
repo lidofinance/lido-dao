@@ -18,7 +18,7 @@ import { HardhatUserConfig, subtask, task } from "hardhat/config";
 
 import { mochaRootHooks } from "test/hooks";
 
-import { verifyDeployedContracts } from "./tasks";
+import { extractABIs, verifyDeployedContracts } from "./tasks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
 const MAINNET_FORKING_URL = process.env.MAINNET_FORKING_URL || "";
@@ -195,5 +195,6 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, hre, runSupe
 });
 
 task("verify:deployed", "Verifies deployed contracts based on state file").setAction(verifyDeployedContracts);
+task("abis:extract", "Extract ABIs from artifacts").setAction(extractABIs);
 
 export default config;
