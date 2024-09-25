@@ -436,38 +436,51 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
     });
 
     it("Allows updating a single NO", async () => {
+      const nonce = await nor.getNonce();
       await expect(nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperatorId, 1n))
         .to.emit(nor, "StuckPenaltyStateChanged")
         .withArgs(firstNodeOperatorId, 0n, 1n, 0n)
-        .to.not.emit(nor, "KeysOpIndexSet")
-        .to.not.emit(nor, "NonceChanged");
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n);
     });
 
     it("Does nothing if refunded keys haven't changed", async () => {
+      const nonce = await nor.getNonce();
       await expect(nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperatorId, 1n))
         .to.emit(nor, "StuckPenaltyStateChanged")
         .withArgs(firstNodeOperatorId, 0n, 1n, 0n)
-        .to.not.emit(nor, "KeysOpIndexSet")
-        .to.not.emit(nor, "NonceChanged");
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n);
 
       await expect(nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperatorId, 1n))
-        .to.not.emit(nor, "KeysOpIndexSet")
-        .to.not.emit(nor, "NonceChanged")
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 2n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 2n)
         .to.not.emit(nor, "StuckPenaltyStateChanged");
     });
 
     it("Allows setting refunded count to zero after all", async () => {
+      const nonce = await nor.getNonce();
       await expect(nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperatorId, 1n))
         .to.emit(nor, "StuckPenaltyStateChanged")
         .withArgs(firstNodeOperatorId, 0n, 1n, 0n)
-        .to.not.emit(nor, "KeysOpIndexSet")
-        .to.not.emit(nor, "NonceChanged");
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 1n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 1n);
 
       await expect(nor.connect(stakingRouter).updateRefundedValidatorsCount(firstNodeOperatorId, 0n))
         .to.emit(nor, "StuckPenaltyStateChanged")
         .withArgs(firstNodeOperatorId, 0n, 0n, 0n)
-        .to.not.emit(nor, "KeysOpIndexSet")
-        .to.not.emit(nor, "NonceChanged");
+        .to.emit(nor, "KeysOpIndexSet")
+        .withArgs(nonce + 2n)
+        .to.emit(nor, "NonceChanged")
+        .withArgs(nonce + 2n);
     });
   });
 
@@ -605,6 +618,7 @@ describe("NodeOperatorsRegistry:rewards-penalties", () => {
         .withArgs(firstNodeOperatorId, 2n, 1n, 0n);
 
       idsPayload = prepIdsCountsPayload([BigInt(secondNodeOperatorId)], [2n]);
+
       await expect(nor.connect(stakingRouter).updateStuckValidatorsCount(idsPayload.operatorIds, idsPayload.keysCounts))
         .to.emit(nor, "KeysOpIndexSet")
         .withArgs(nonce + 2n)
