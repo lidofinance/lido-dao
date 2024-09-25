@@ -589,6 +589,7 @@ contract NodeOperatorsRegistry is AragonApp, Versioned {
         _auth(STAKING_ROUTER_ROLE);
 
         _updateRefundValidatorsKeysCount(_nodeOperatorId, _refundedValidatorsCount);
+        _increaseValidatorsKeysNonce();
     }
 
     /// @notice Permissionless method for distributing all accumulated module rewards among node operators
