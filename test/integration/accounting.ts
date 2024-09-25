@@ -29,7 +29,7 @@ const SIMPLE_DVT_MODULE_ID = 2n;
 
 const ZERO_HASH = new Uint8Array(32).fill(0);
 
-describe.skip("Accounting integration", () => {
+describe("Accounting integration", () => {
   let ctx: ProtocolContext;
 
   let ethHolder: HardhatEthersSigner;
