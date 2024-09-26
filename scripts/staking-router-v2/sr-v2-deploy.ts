@@ -322,18 +322,18 @@ function getLocatorAddressesToString(
   ORACLE_DAEMON_CONFIG: string,
 ) {
   return [
-    { toString: () => `ACCOUNTING_ORACLE_PROXY: ${ACCOUNTING_ORACLE_PROXY}` },
-    { toString: () => `EL_REWARDS_VAULT: ${EL_REWARDS_VAULT}` },
-    { toString: () => `LEGACY_ORACLE: ${LEGACY_ORACLE}` },
-    { toString: () => `LIDO: ${LIDO}` },
-    { toString: () => `POST_TOKEN_REABSE_RECEIVER: ${POST_TOKEN_REABSE_RECEIVER}` },
-    { toString: () => `BURNER: ${BURNER}` },
-    { toString: () => `STAKING_ROUTER: ${STAKING_ROUTER}` },
-    { toString: () => `TREASURY_ADDRESS: ${TREASURY_ADDRESS}` },
-    { toString: () => `VEBO: ${VEBO}` },
-    { toString: () => `WQ: ${WQ}` },
-    { toString: () => `WITHDRAWAL_VAULT: ${WITHDRAWAL_VAULT}` },
-    { toString: () => `ORACLE_DAEMON_CONFIG: ${ORACLE_DAEMON_CONFIG}` },
+    `ACCOUNTING_ORACLE_PROXY: ${ACCOUNTING_ORACLE_PROXY}`,
+    `EL_REWARDS_VAULT: ${EL_REWARDS_VAULT}`,
+    `LEGACY_ORACLE: ${LEGACY_ORACLE}`,
+    `LIDO: ${LIDO}`,
+    `POST_TOKEN_REABSE_RECEIVER: ${POST_TOKEN_REABSE_RECEIVER}`,
+    `BURNER: ${BURNER}`,
+    `STAKING_ROUTER: ${STAKING_ROUTER}`,
+    `TREASURY_ADDRESS: ${TREASURY_ADDRESS}`,
+    `VEBO: ${VEBO}`,
+    `WQ: ${WQ}`,
+    `WITHDRAWAL_VAULT: ${WITHDRAWAL_VAULT}`,
+    `ORACLE_DAEMON_CONFIG: ${ORACLE_DAEMON_CONFIG}`,
   ];
 }
 
