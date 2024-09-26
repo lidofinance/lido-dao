@@ -3,7 +3,12 @@ import { ethers, run } from "hardhat";
 import { join } from "path";
 import readline from "readline";
 
-import { DepositSecurityModule, DepositSecurityModule__factory } from "typechain-types";
+import {
+  DepositSecurityModule,
+  DepositSecurityModule__factory,
+  LidoLocator,
+  LidoLocator__factory,
+} from "typechain-types";
 
 import {
   cy,
@@ -91,26 +96,46 @@ async function main() {
   log(cy(`Deploy of contracts on chain ${chainId}`));
 
   const state = readNetworkState();
-  state[Sk.scratchDeployGasUsed] = 0n.toString();
   persistNetworkState(state);
 
   // Read contracts addresses from config
   const DEPOSIT_CONTRACT_ADDRESS = state[Sk.chainSpec].depositContractAddress;
   const APP_AGENT_ADDRESS = state[Sk.appAgent].proxy.address;
   const SC_ADMIN = APP_AGENT_ADDRESS;
-  const LIDO = state[Sk.appLido].proxy.address;
-  const STAKING_ROUTER = state[Sk.stakingRouter].proxy.address;
   const LOCATOR = state[Sk.lidoLocator].proxy.address;
-  const LEGACY_ORACLE = state[Sk.appOracle].proxy.address;
-  const ACCOUNTING_ORACLE_PROXY = state[Sk.accountingOracle].proxy.address;
-  const EL_REWARDS_VAULT = state[Sk.executionLayerRewardsVault].address;
-  const BURNER = state[Sk.burner].address;
-  const TREASURY_ADDRESS = APP_AGENT_ADDRESS;
-  const VEBO = state[Sk.validatorsExitBusOracle].proxy.address;
-  const WQ = state[Sk.withdrawalQueueERC721].proxy.address;
-  const WITHDRAWAL_VAULT = state[Sk.withdrawalVault].proxy.address;
-  const ORACLE_DAEMON_CONFIG = state[Sk.oracleDaemonConfig].address;
 
+  const locatorContract = await loadContract<LidoLocator>(LidoLocator__factory, LOCATOR);
+  // fetch contract addresses that will not changed
+  const ACCOUNTING_ORACLE_PROXY = await locatorContract.accountingOracle();
+  const EL_REWARDS_VAULT = await locatorContract.elRewardsVault();
+  const LEGACY_ORACLE = await locatorContract.legacyOracle();
+  const LIDO = await locatorContract.lido();
+  const POST_TOKEN_REABSE_RECEIVER = await locatorContract.postTokenRebaseReceiver();
+  const BURNER = await locatorContract.burner();
+  const STAKING_ROUTER = await locatorContract.stakingRouter();
+  const TREASURY_ADDRESS = await locatorContract.treasury();
+  const VEBO = await locatorContract.validatorsExitBusOracle();
+  const WQ = await locatorContract.withdrawalQueue();
+  const WITHDRAWAL_VAULT = await locatorContract.withdrawalVault();
+  const ORACLE_DAEMON_CONFIG = await locatorContract.oracleDaemonConfig();
+
+  log.lineWithArguments(
+    `Fetched addresses from locator ${LOCATOR}, result: `,
+    getLocatorAddressesToString(
+      ACCOUNTING_ORACLE_PROXY,
+      EL_REWARDS_VAULT,
+      LEGACY_ORACLE,
+      LIDO,
+      POST_TOKEN_REABSE_RECEIVER,
+      BURNER,
+      STAKING_ROUTER,
+      TREASURY_ADDRESS,
+      VEBO,
+      WQ,
+      WITHDRAWAL_VAULT,
+      ORACLE_DAEMON_CONFIG,
+    ),
+  );
   // Deploy MinFirstAllocationStrategy
   const minFirstAllocationStrategyAddress = (
     await deployWithoutProxy(Sk.minFirstAllocationStrategy, "MinFirstAllocationStrategy", deployer)
@@ -197,7 +222,7 @@ async function main() {
       LEGACY_ORACLE,
       LIDO,
       oracleReportSanityCheckerAddress,
-      LEGACY_ORACLE,
+      POST_TOKEN_REABSE_RECEIVER,
       BURNER,
       STAKING_ROUTER,
       TREASURY_ADDRESS,
@@ -280,6 +305,36 @@ async function waitForPressButton(): Promise<void> {
       resolve();
     });
   });
+}
+
+function getLocatorAddressesToString(
+  ACCOUNTING_ORACLE_PROXY: string,
+  EL_REWARDS_VAULT: string,
+  LEGACY_ORACLE: string,
+  LIDO: string,
+  POST_TOKEN_REABSE_RECEIVER: string,
+  BURNER: string,
+  STAKING_ROUTER: string,
+  TREASURY_ADDRESS: string,
+  VEBO: string,
+  WQ: string,
+  WITHDRAWAL_VAULT: string,
+  ORACLE_DAEMON_CONFIG: string,
+) {
+  return [
+    { toString: () => `ACCOUNTING_ORACLE_PROXY: ${ACCOUNTING_ORACLE_PROXY}` },
+    { toString: () => `EL_REWARDS_VAULT: ${EL_REWARDS_VAULT}` },
+    { toString: () => `LEGACY_ORACLE: ${LEGACY_ORACLE}` },
+    { toString: () => `LIDO: ${LIDO}` },
+    { toString: () => `POST_TOKEN_REABSE_RECEIVER: ${POST_TOKEN_REABSE_RECEIVER}` },
+    { toString: () => `BURNER: ${BURNER}` },
+    { toString: () => `STAKING_ROUTER: ${STAKING_ROUTER}` },
+    { toString: () => `TREASURY_ADDRESS: ${TREASURY_ADDRESS}` },
+    { toString: () => `VEBO: ${VEBO}` },
+    { toString: () => `WQ: ${WQ}` },
+    { toString: () => `WITHDRAWAL_VAULT: ${WITHDRAWAL_VAULT}` },
+    { toString: () => `ORACLE_DAEMON_CONFIG: ${ORACLE_DAEMON_CONFIG}` },
+  ];
 }
 
 main()
