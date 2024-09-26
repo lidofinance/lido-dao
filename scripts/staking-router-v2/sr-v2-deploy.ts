@@ -38,22 +38,67 @@ function getEnvVariable(name: string, defaultValue?: string) {
   }
 }
 
-// Accounting Oracle args
+/* Accounting Oracle args */
+
+// Must comply with the specification
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#time-parameters-1
 const SECONDS_PER_SLOT = 12;
+
+// Must match the beacon chain genesis_time: https://beaconstate-mainnet.chainsafe.io/eth/v1/beacon/genesis
+// and the current value: https://etherscan.io/address/0x852deD011285fe67063a08005c71a85690503Cee#readProxyContract#F6
 const GENESIS_TIME = 1606824023;
 
-// Oracle report sanity checker
+/* Oracle report sanity checker */
 const EXITED_VALIDATORS_PER_DAY_LIMIT = 9000;
+
+// Defines the maximum number of validators that can be reported as "appeared"
+// in a single day, limited by the maximum daily deposits via DSM
+//
+// BLOCKS_PER_DAY = (24 * 60 * 60) / 12 = 7200
+// MAX_DEPOSITS_PER_BLOCK = 150
+// MIN_DEPOSIT_BLOCK_DISTANCE = 25
+//
+// APPEARED_VALIDATORS_PER_DAY_LIMIT = BLOCKS_PER_DAY / MIN_DEPOSIT_BLOCK_DISTANCE * MAX_DEPOSITS_PER_BLOCK = 43200
+// Current limits: https://etherscan.io/address/0xC77F8768774E1c9244BEed705C4354f2113CFc09#readContract#F10
+//                 https://etherscan.io/address/0xC77F8768774E1c9244BEed705C4354f2113CFc09#readContract#F11
+// The proposed limits remain unchanged for curated modules and reduced for CSM
 const APPEARED_VALIDATORS_PER_DAY_LIMIT = 43200;
+
+// Must match the current value https://docs.lido.fi/guides/verify-lido-v2-upgrade-manual/#oraclereportsanitychecker
 const ANNUAL_BALANCE_INCREASE_BP_LIMIT = 1000;
 const SIMULATED_SHARE_RATE_DEVIATION_BP_LIMIT = 50;
 const MAX_VALIDATOR_EXIT_REQUESTS_PER_REPORT = 600;
+
+// The optimal number of items is greater than 6 (2 items for stuck or exited keys per 3 modules) to ensure
+// a small report can fit into a single transaction. However, there is additional capacity in case a module
+// requires more than 2 items. Hence, the limit of 8 items per report was chosen.
 const MAX_ITEMS_PER_EXTRA_DATA_TRANSACTION = 8;
+
+// This parameter defines the maximum number of node operators that can be reported per extra data list item.
+// Gas consumption for updating a single node operator:
+//
+// - CSM:
+//   Average: ~16,650 gas
+//   Max: ~41,150 gas (in cases with unstuck keys under specific conditions)
+// - Curated-based: ~15,500 gas
+//
+// Each transaction can contain up to 8 items, and each item is limited to a maximum of 1,000,000 gas.
+// Thus, the total gas consumption per transaction remains within 8,000,000 gas.
+// Using the higher value of CSM (41,150 gas), the calculation is as follows:
+//
+// Operators per item: 1,000,000 / 41,150 = 24.3
+// Thus, the limit was set at 24 operators per item.
 const MAX_NODE_OPERATORS_PER_EXTRA_DATA_ITEM = 24;
+
+// Must match the current value https://docs.lido.fi/guides/verify-lido-v2-upgrade-manual/#oraclereportsanitychecker
 const REQUEST_TIMESTAMP_MARGIN = 7680;
 const MAX_POSITIVE_TOKEN_REBASE = 750000;
+
+// Must match the value in LIP-23 https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-23.md
 const INITIAL_SLASHING_AMOUNT_P_WEI = 1000;
 const INACTIVITY_PENALTIES_AMOUNT_P_WEI = 101;
+
+// Must match the proposed number https://hackmd.io/@lido/lip-21#TVL-attack
 const CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT = 74;
 
 const LIMITS = [
@@ -71,10 +116,17 @@ const LIMITS = [
   CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT,
 ];
 
-// DSM args
+/* DSM args */
+
+// Must match the current value https://etherscan.io/address/0xC77F8768774E1c9244BEed705C4354f2113CFc09#readContract#F13
 const PAUSE_INTENT_VALIDITY_PERIOD_BLOCKS = 6646;
+
+// Unvetting a single operator requires approximately 20,000 gas. Thus, the maximum number of operators per unvetting
+// is defined as 200 to keep the maximum transaction cost below 4,000,000 gas.
 const MAX_OPERATORS_PER_UNVETTING = 200;
-const guardians = [
+
+// Must match the current list https://etherscan.io/address/0xC77F8768774E1c9244BEed705C4354f2113CFc09#readContract#F9
+const GUARDIANS = [
   "0x5fd0dDbC3351d009eb3f88DE7Cd081a614C519F1",
   "0x7912Fa976BcDe9c2cf728e213e892AD7588E6AaF",
   "0x14D5d5B71E048d2D75a39FfC5B407e3a3AB6F314",
@@ -82,7 +134,9 @@ const guardians = [
   "0xa56b128Ea2Ea237052b0fA2a96a387C0E43157d8",
   "0xd4EF84b638B334699bcf5AF4B0410B8CCD71943f",
 ];
-const quorum = 4;
+
+// Must match the current value https://etherscan.io/address/0xC77F8768774E1c9244BEed705C4354f2113CFc09#readContract#F8
+const QUORUM = 4;
 
 async function main() {
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
@@ -187,7 +241,7 @@ async function main() {
     DepositSecurityModule__factory,
     depositSecurityModuleAddress,
   );
-  await dsmContract.addGuardians(guardians, quorum);
+  await dsmContract.addGuardians(GUARDIANS, QUORUM);
   await dsmContract.setOwner(APP_AGENT_ADDRESS);
   log.success(`Guardians list: ${await dsmContract.getGuardians()}`);
   log.success(`Quorum: ${await dsmContract.getGuardianQuorum()}`);
