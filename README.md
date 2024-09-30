@@ -4,7 +4,7 @@ This repository is currently a **work-in-progress**.
 
 This repository is the modernized iteration of the outdated [`lido-dao` repository](https://github.com/lidofinance/lido-dao). Significant efforts were undertaken to update the tooling and infrastructure to align with current standards and best practices. As part of this modernization process:
 
-- the codebase has been transitioned from JavaScript to TypeScript to leverage TypeScript's robust type-checking, IDE autocompletion, and scalability features;
+- the codebase has been transitioned from JavaScript to TypeScript to leverage TypeScript's robust type-checking, IDE auto-completion, and scalability features;
 - the test suite was revamped and restructured to ensure consistent approach and comprehensive testing coverage;
 - deprecated dependencies (e.g. Waffle testing framework) were removed or replaced by modern alternatives;
 - outdated dependencies such as Hardhat, ethers and others were upgraded to their latest versions to improve performance, compatibility and developer experience;
