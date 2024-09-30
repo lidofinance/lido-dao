@@ -43,7 +43,7 @@ These are the deployment setups, supported currently:
 - local (basically any node at http://127.0.0.1:8545);
 - Holešky testnet.
 
-Each is described in the details in the sections below.
+Each is described in detail in the sections below.
 
 > NB: Aragon UI for Lido DAO is to be deprecated and replaced by a custom solution, thus not included in the deployment
 > script, see https://research.lido.fi/t/discontinuation-of-aragon-ui-use/7992.
