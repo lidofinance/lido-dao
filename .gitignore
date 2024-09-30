@@ -20,6 +20,7 @@ foundry/out/
 # Extracted ABI files
 lib/abi/*.json
 
+# Sensitive data
 .env
 accounts.json
 deployed-local.json
