@@ -7,9 +7,7 @@ jobs:
     name: Hardhat
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      issues: write
+    permissions: write-all
 
     steps:
       - uses: actions/checkout@v4
