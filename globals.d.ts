@@ -67,7 +67,7 @@ declare namespace NodeJS {
     MAINNET_WITHDRAWAL_QUEUE_ADDRESS?: string;
     MAINNET_WITHDRAWAL_VAULT_ADDRESS?: string;
 
-    /* for contract verification */
+    /* for contract sourcecode verification with `hardhat-verify` */
     ETHERSCAN_API_KEY?: string;
   }
 }
