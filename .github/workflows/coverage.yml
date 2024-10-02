@@ -30,9 +30,8 @@ jobs:
           path: ./coverage/cobertura-coverage.xml
           publish: true
           threshold: 95
-          # TODO: uncomment the following lines when the coverage in master branch is ready
-          # diff: true
-          # diff-branch: master
+          diff: true
+          diff-branch: master
           diff-storage: _core_coverage_reports
           coverage-summary-title: "Hardhat Unit Tests Coverage Summary"
           togglable-report: true
