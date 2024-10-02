@@ -66,5 +66,8 @@ declare namespace NodeJS {
     MAINNET_VALIDATORS_EXIT_BUS_ORACLE_ADDRESS?: string;
     MAINNET_WITHDRAWAL_QUEUE_ADDRESS?: string;
     MAINNET_WITHDRAWAL_VAULT_ADDRESS?: string;
+
+    /* for contract sourcecode verification with `hardhat-verify` */
+    ETHERSCAN_API_KEY?: string;
   }
 }
