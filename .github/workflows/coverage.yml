@@ -26,8 +26,5 @@ jobs:
           path: ./coverage/cobertura-coverage.xml
           publish: true
           threshold: 95
-          diff: true
-          diff-branch: master
-          diff-storage: _core_coverage_reports
           coverage-summary-title: "Hardhat Unit Tests Coverage Summary"
           togglable-report: true
