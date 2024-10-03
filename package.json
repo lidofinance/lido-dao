@@ -32,7 +32,8 @@
     "test:integration:fork:mainnet": "hardhat test test/integration/**/*.ts --network mainnet-fork --bail",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
-    "extract-abis": "ts-node scripts/utils/extract-abi.ts"
+    "abis:extract": "hardhat abis:extract",
+    "verify:deployed": "hardhat verify:deployed --no-compile"
   },
   "lint-staged": {
     "./**/*.ts": [
