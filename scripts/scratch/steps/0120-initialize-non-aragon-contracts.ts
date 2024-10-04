@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { getContractAt } from "lib/contract";
+import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
 import { readNetworkState, Sk } from "lib/state-file";
 import { en0x } from "lib/string";
@@ -41,7 +41,7 @@ export async function main() {
     "0x" +
     ethers.AbiCoder.defaultAbiCoder().encode(["string"], [nodeOperatorsRegistryParams.stakingModuleTypeId]).slice(-64);
 
-  const nodeOperatorsRegistry = await getContractAt("NodeOperatorsRegistry", nodeOperatorsRegistryAddress);
+  const nodeOperatorsRegistry = await loadContract("NodeOperatorsRegistry", nodeOperatorsRegistryAddress);
   await makeTx(
     nodeOperatorsRegistry,
     "initialize",
@@ -51,20 +51,20 @@ export async function main() {
 
   // Initialize Lido
   const bootstrapInitBalance = 10n; // wei
-  const lido = await getContractAt("Lido", lidoAddress);
+  const lido = await loadContract("Lido", lidoAddress);
   await makeTx(lido, "initialize", [lidoLocatorAddress, eip712StETHAddress], {
     value: bootstrapInitBalance,
     from: deployer,
   });
 
   // Initialize LegacyOracle
-  const legacyOracle = await getContractAt("LegacyOracle", legacyOracleAddress);
+  const legacyOracle = await loadContract("LegacyOracle", legacyOracleAddress);
   await makeTx(legacyOracle, "initialize", [lidoLocatorAddress, hashConsensusForAccountingAddress], { from: deployer });
 
   const zeroLastProcessingRefSlot = 0;
 
   // Initialize AccountingOracle
-  const accountingOracle = await getContractAt("AccountingOracle", accountingOracleAddress);
+  const accountingOracle = await loadContract("AccountingOracle", accountingOracleAddress);
   await makeTx(
     accountingOracle,
     "initializeWithoutMigration",
@@ -78,7 +78,7 @@ export async function main() {
   );
 
   // Initialize ValidatorsExitBusOracle
-  const validatorsExitBusOracle = await getContractAt("ValidatorsExitBusOracle", ValidatorsExitBusOracleAddress);
+  const validatorsExitBusOracle = await loadContract("ValidatorsExitBusOracle", ValidatorsExitBusOracleAddress);
   await makeTx(
     validatorsExitBusOracle,
     "initialize",
@@ -92,7 +92,7 @@ export async function main() {
   );
 
   // Initialize WithdrawalQueue
-  const withdrawalQueue = await getContractAt("WithdrawalQueueERC721", withdrawalQueueAddress);
+  const withdrawalQueue = await loadContract("WithdrawalQueueERC721", withdrawalQueueAddress);
   await makeTx(withdrawalQueue, "initialize", [withdrawalQueueAdmin], { from: deployer });
 
   // Set WithdrawalQueue base URI if provided
@@ -106,13 +106,13 @@ export async function main() {
 
   // Initialize StakingRouter
   const withdrawalCredentials = `0x010000000000000000000000${withdrawalVaultAddress.slice(2)}`;
-  const stakingRouter = await getContractAt("StakingRouter", stakingRouterAddress);
+  const stakingRouter = await loadContract("StakingRouter", stakingRouterAddress);
   await makeTx(stakingRouter, "initialize", [stakingRouterAdmin, lidoAddress, withdrawalCredentials], {
     from: deployer,
   });
 
   // Set OracleDaemonConfig parameters
-  const oracleDaemonConfig = await getContractAt("OracleDaemonConfig", oracleDaemonConfigAddress);
+  const oracleDaemonConfig = await loadContract("OracleDaemonConfig", oracleDaemonConfigAddress);
   const CONFIG_MANAGER_ROLE = await oracleDaemonConfig.getFunction("CONFIG_MANAGER_ROLE")();
   await makeTx(oracleDaemonConfig, "grantRole", [CONFIG_MANAGER_ROLE, testnetAdmin], { from: testnetAdmin });
 

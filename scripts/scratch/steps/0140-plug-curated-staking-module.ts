@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { getContractAt } from "lib/contract";
+import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
 import { streccak } from "lib/keccak";
 import { readNetworkState, Sk } from "lib/state-file";
@@ -15,8 +15,8 @@ export async function main() {
   const state = readNetworkState({ deployer });
 
   // Get contract instances
-  const stakingRouter = await getContractAt("StakingRouter", state.stakingRouter.proxy.address);
-  const nodeOperatorsRegistry = await getContractAt(
+  const stakingRouter = await loadContract("StakingRouter", state.stakingRouter.proxy.address);
+  const nodeOperatorsRegistry = await loadContract(
     "NodeOperatorsRegistry",
     state[Sk.appNodeOperatorsRegistry].proxy.address,
   );

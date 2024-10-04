@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-import { getContractAt } from "lib/contract";
+import { loadContract } from "lib/contract";
 import { makeTx } from "lib/deploy";
 import { log } from "lib/log";
 import { readNetworkState, Sk } from "lib/state-file";
@@ -20,7 +20,7 @@ export async function main() {
   const depositSecurityModuleAddress = state[Sk.depositSecurityModule].address;
 
   // StakingRouter
-  const stakingRouter = await getContractAt("StakingRouter", stakingRouterAddress);
+  const stakingRouter = await loadContract("StakingRouter", stakingRouterAddress);
   await makeTx(
     stakingRouter,
     "grantRole",
@@ -48,7 +48,7 @@ export async function main() {
 
   // ValidatorsExitBusOracle
   if (gateSealAddress) {
-    const validatorsExitBusOracle = await getContractAt("ValidatorsExitBusOracle", validatorsExitBusOracleAddress);
+    const validatorsExitBusOracle = await loadContract("ValidatorsExitBusOracle", validatorsExitBusOracleAddress);
     await makeTx(
       validatorsExitBusOracle,
       "grantRole",
@@ -61,7 +61,7 @@ export async function main() {
   }
 
   // WithdrawalQueue
-  const withdrawalQueue = await getContractAt("WithdrawalQueueERC721", withdrawalQueueAddress);
+  const withdrawalQueue = await loadContract("WithdrawalQueueERC721", withdrawalQueueAddress);
   if (gateSealAddress) {
     await makeTx(withdrawalQueue, "grantRole", [await withdrawalQueue.getFunction("PAUSE_ROLE")(), gateSealAddress], {
       from: deployer,
@@ -83,7 +83,7 @@ export async function main() {
   );
 
   // Burner
-  const burner = await getContractAt("Burner", burnerAddress);
+  const burner = await loadContract("Burner", burnerAddress);
   // NB: REQUEST_BURN_SHARES_ROLE is already granted to Lido in Burner constructor
   await makeTx(
     burner,
