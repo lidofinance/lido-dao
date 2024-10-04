@@ -60,6 +60,7 @@ export enum Sk {
   lidoTemplateCreateStdAppReposTx = "lidoTemplateCreateStdAppReposTx",
   nodeOperatorsRegistry = "nodeOperatorsRegistry",
   createAppReposTx = "createAppReposTx",
+  createSimpleDVTAppTx = "createSimpleDVTAppTx",
   lidoTemplateNewDaoTx = "lidoTemplateNewDaoTx",
   callsScript = "callsScript",
   vestingParams = "vestingParams",

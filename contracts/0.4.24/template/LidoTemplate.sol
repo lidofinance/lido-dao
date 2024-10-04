@@ -74,6 +74,7 @@ contract LidoTemplate is IsContract {
     string private constant LIDO_APP_NAME = "lido";
     string private constant ORACLE_APP_NAME = "oracle";
     string private constant NODE_OPERATORS_REGISTRY_APP_NAME = "node-operators-registry";
+    string private constant SIMPLE_DVT_APP_NAME = "simple-dvt";
 
     // DAO config constants
     bool private constant TOKEN_TRANSFERABLE = true;
@@ -85,6 +86,7 @@ contract LidoTemplate is IsContract {
         Repo lido;
         Repo oracle;
         Repo nodeOperatorsRegistry;
+        Repo simpleDVT;
         Repo aragonAgent;
         Repo aragonFinance;
         Repo aragonTokenManager;
@@ -261,7 +263,6 @@ contract LidoTemplate is IsContract {
         bytes _nodeOperatorsRegistryContentURI,
         address _oracleImplAddress,
         bytes _oracleContentURI
-
     ) external onlyOwner {
         require(deployState.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
 
@@ -355,6 +356,26 @@ contract LidoTemplate is IsContract {
         emit TmplDAOAndTokenDeployed(address(state.dao), address(state.token));
 
         deployState = state;
+    }
+
+    function createSimpleDVTApp(
+        uint16[3] _initialSemanticVersion,
+        address _impl,
+        bytes _contentURI
+    ) external onlyOwner {
+        APMRegistry lidoRegistry = deployState.lidoRegistry;
+        Kernel dao = deployState.dao;
+
+        apmRepos.simpleDVT = lidoRegistry.newRepoWithVersion(
+            SIMPLE_DVT_APP_NAME,
+            this,
+            _initialSemanticVersion,
+            _impl,
+            _contentURI
+        );
+
+        bytes32 appId = _getAppId(SIMPLE_DVT_APP_NAME, deployState.lidoRegistryEnsNode);
+        dao.setApp(dao.APP_BASES_NAMESPACE(), appId, _impl);
     }
 
     function issueTokens(
