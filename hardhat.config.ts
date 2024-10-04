@@ -21,16 +21,20 @@ import { mochaRootHooks } from "test/hooks";
 import "./tasks";
 
 const RPC_URL: string = process.env.RPC_URL || "";
-const MAINNET_FORKING_URL = process.env.MAINNET_FORKING_URL || "";
-const INTEGRATION_SCRATCH_DEPLOY = process.env.INTEGRATION_SCRATCH_DEPLOY || "off";
 const ACCOUNTS_PATH = "./accounts.json";
 
-/**
- * Determines the forking configuration for Hardhat.
- * @returns The forking configuration object or undefined.
- */
+const HARDHAT_CHAIN_ID_DEFAULT = 31337;
+const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
+const HARDHAT_CHAIN_ID = process.env.HARDHAT_CHAIN_ID || HARDHAT_CHAIN_ID_DEFAULT;
+
+const INTEGRATION_WITH_SCRATCH_DEPLOY = process.env.INTEGRATION_WITH_SCRATCH_DEPLOY || "off";
+
+/* Determines the forking configuration for Hardhat */
 function getHardhatForkingConfig() {
-  return INTEGRATION_SCRATCH_DEPLOY === "on" || !MAINNET_FORKING_URL ? undefined : { url: MAINNET_FORKING_URL };
+  if (INTEGRATION_WITH_SCRATCH_DEPLOY === "on" || !HARDHAT_FORKING_URL) {
+    return undefined;
+  }
+  return { url: HARDHAT_FORKING_URL };
 }
 
 function loadAccounts(networkName: string) {
@@ -51,6 +55,7 @@ const config: HardhatUserConfig = {
   networks: {
     "local": {
       url: process.env.LOCAL_RPC_URL || RPC_URL,
+      chainId: HARDHAT_CHAIN_ID_DEFAULT,
     },
     "mainnet-fork": {
       url: process.env.MAINNET_RPC_URL || RPC_URL,
@@ -69,6 +74,7 @@ const config: HardhatUserConfig = {
         count: 30,
         accountsBalance: "100000000000000000000000",
       },
+      chainId: parseInt(HARDHAT_CHAIN_ID.toString()),
       forking: getHardhatForkingConfig(),
     },
     "sepolia": {

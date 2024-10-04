@@ -23,8 +23,8 @@ export const getProtocolContext = async (): Promise<ProtocolContext> => {
 
   // By default, all flags are "on"
   const flags = {
-    isScratchDeploy: process.env.INTEGRATION_SCRATCH_DEPLOY === "on",
-    withSimpleDvtModule: process.env.INTEGRATION_SIMPLE_DVT_MODULE !== "off",
+    isScratchDeploy: process.env.INTEGRATION_WITH_SCRATCH_DEPLOY === "on",
+    withSimpleDvtModule: process.env.INTEGRATION_WITH_SIMPLE_DVT_MODULE !== "off",
   } as ProtocolContextFlags;
 
   log.debug("Protocol context flags", {
