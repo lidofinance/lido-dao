@@ -1,8 +1,7 @@
 import { expect } from "chai";
-import { ZeroAddress } from "ethers";
 import { ethers } from "hardhat";
 
-import { Kernel, LidoTemplate, NodeOperatorsRegistry } from "typechain-types";
+import { AppProxyUpgradeable, Kernel, LidoTemplate, NodeOperatorsRegistry } from "typechain-types";
 
 import { findEvents, getContractPath, loadContract, makeTx, setValueInState, updateObjectInState } from "lib";
 import { cy, log, yl } from "lib/log";
@@ -54,11 +53,6 @@ async function deployEmptyAppProxy(deployer: string, appName: string) {
   });
 
   log.success(`Deployed ${yl(appName)} proxy at ${cy(proxyAddress)}`);
-
-  const appProxyUpgradeable = await ethers.getContractAt("AppProxyUpgradeable", proxyAddress);
-  expect(await appProxyUpgradeable.kernel()).to.equal(kernelAddress);
-  expect(await appProxyUpgradeable.appId()).to.equal(appId);
-  expect(await appProxyUpgradeable.implementation()).to.equal(ZeroAddress);
 }
 
 async function deploySimpleDvt(deployer: string) {
@@ -69,15 +63,20 @@ async function deploySimpleDvt(deployer: string) {
     return;
   }
 
-  const norImplAddress = state[Sk.appNodeOperatorsRegistry].implementation.address;
   const lidoLocatorAddress = state[Sk.lidoLocator].proxy.address;
+  const norImplAddress = state[Sk.appNodeOperatorsRegistry].implementation.address;
 
   const template = await loadContract<LidoTemplate>("LidoTemplate", state[Sk.lidoTemplate].address);
 
   // Set the simple DVT app implementation address to the Node Operators Registry implementation address
-  const receipt = await makeTx(template, "createSimpleDVTApp", [[1, 0, 0], norImplAddress, NULL_CONTENT_URI], {
-    from: deployer,
-  });
+  const receipt = await makeTx(
+    template,
+    "createSimpleDVTApp",
+    [[1, 0, 0], norImplAddress, state[Sk.stakingRouter].proxy.address, NULL_CONTENT_URI],
+    {
+      from: deployer,
+    },
+  );
 
   setValueInState(Sk.createSimpleDVTAppTx, receipt.hash);
 
@@ -94,6 +93,37 @@ async function deploySimpleDvt(deployer: string) {
   ];
 
   await makeTx(proxy, "initialize", simpleDvtInitOptions, { from: deployer });
+
+  updateObjectInState(Sk.appSimpleDvt, {
+    ...state[Sk.appSimpleDvt],
+    implementation: {
+      address: norImplAddress,
+      contract: await getContractPath("NodeOperatorsRegistry"),
+      constructorArgs: [],
+    },
+  });
+}
+
+async function validateSimpleDvt(deployer: string) {
+  const state = readNetworkState({ deployer });
+
+  const proxyAddress = state[Sk.appSimpleDvt].proxy.address;
+  const kernelAddress = state[Sk.aragonKernel].proxy.address;
+  const appId = state[Sk.appSimpleDvt].aragonApp.id;
+
+  const appProxyUpgradeable = await loadContract<AppProxyUpgradeable>("AppProxyUpgradeable", proxyAddress);
+  expect(await appProxyUpgradeable.kernel()).to.equal(kernelAddress);
+  expect(await appProxyUpgradeable.appId()).to.equal(appId);
+  expect(await appProxyUpgradeable.implementation()).to.equal(
+    state[Sk.appNodeOperatorsRegistry].implementation.address,
+  );
+
+  const app = await loadContract<NodeOperatorsRegistry>("NodeOperatorsRegistry", proxyAddress);
+
+  expect(await app.appId()).to.equal(appId);
+  expect(await app.kernel()).to.equal(kernelAddress);
+  expect(await app.hasInitialized()).to.be.true;
+  expect(await app.getLocator()).to.equal(state[Sk.lidoLocator].proxy.address);
 }
 
 export async function main() {
@@ -102,4 +132,6 @@ export async function main() {
   await deployEmptyAppProxy(deployer, SIMPLE_DVT_APP_NAME);
 
   await deploySimpleDvt(deployer);
+
+  await validateSimpleDvt(deployer);
 }

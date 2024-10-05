@@ -361,10 +361,12 @@ contract LidoTemplate is IsContract {
     function createSimpleDVTApp(
         uint16[3] _initialSemanticVersion,
         address _impl,
+        address _stakingRouter,
         bytes _contentURI
     ) external onlyOwner {
         APMRegistry lidoRegistry = deployState.lidoRegistry;
         Kernel dao = deployState.dao;
+        ACL acl = deployState.acl;
 
         apmRepos.simpleDVT = lidoRegistry.newRepoWithVersion(
             SIMPLE_DVT_APP_NAME,
@@ -376,6 +378,24 @@ contract LidoTemplate is IsContract {
 
         bytes32 appId = _getAppId(SIMPLE_DVT_APP_NAME, deployState.lidoRegistryEnsNode);
         dao.setApp(dao.APP_BASES_NAMESPACE(), appId, _impl);
+
+
+        bytes32 stakingRouterRole = deployState.operators.STAKING_ROUTER_ROLE();
+        address app = address(apmRepos.simpleDVT);
+
+        // grant perm for staking router
+        // https://github.com/lidofinance/lido-dao/blob/291ea9e191f62692f0a17d6af77b66de0abe0a53/scripts/simpledvt/02-clone-nor.js#L220
+        acl.createPermission(_stakingRouter, app,deployState.operators.STAKING_ROUTER_ROLE(),this);
+        acl.grantPermission(deployState.agent, app, stakingRouterRole);
+        _transferPermissionFromTemplate(acl, app, deployState.voting, stakingRouterRole);
+
+        // grant perm for agent to manage signing keys and set node operator limit
+        // https://github.com/lidofinance/lido-dao/blob/291ea9e191f62692f0a17d6af77b66de0abe0a53/scripts/simpledvt/02-clone-nor.js#L228
+        acl.createPermission(deployState.agent, app, deployState.operators.MANAGE_SIGNING_KEYS(), deployState.voting);
+        acl.createPermission(deployState.agent, app, deployState.operators.SET_NODE_OPERATOR_LIMIT_ROLE(), deployState.voting);
+
+        // TODO: grant perms to easy track factories ?
+        // https://github.com/lidofinance/lido-dao/blob/291ea9e191f62692f0a17d6af77b66de0abe0a53/scripts/simpledvt/02-clone-nor.js#L257
     }
 
     function issueTokens(

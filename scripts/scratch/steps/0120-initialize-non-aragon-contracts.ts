@@ -13,7 +13,7 @@ export async function main() {
   const lidoAddress = state[Sk.appLido].proxy.address;
   const legacyOracleAddress = state[Sk.appOracle].proxy.address;
   const nodeOperatorsRegistryAddress = state[Sk.appNodeOperatorsRegistry].proxy.address;
-  const nodeOperatorsRegistryParams = state["nodeOperatorsRegistry"].deployParameters;
+  const nodeOperatorsRegistryParams = state[Sk.nodeOperatorsRegistry].deployParameters;
   const validatorsExitBusOracleParams = state[Sk.validatorsExitBusOracle].deployParameters;
   const accountingOracleParams = state[Sk.accountingOracle].deployParameters;
   const stakingRouterAddress = state[Sk.stakingRouter].proxy.address;
