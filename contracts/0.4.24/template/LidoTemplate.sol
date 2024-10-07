@@ -298,11 +298,7 @@ contract LidoTemplate is IsContract {
         emit TmplReposCreated();
     }
 
-    function newDAO(
-        string _tokenName,
-        string _tokenSymbol,
-        uint64[4] _votingSettings
-    ) external onlyOwner {
+    function newDAO(string _tokenName, string _tokenSymbol, uint64[4] _votingSettings) external onlyOwner {
         DeployState memory state = deployState;
 
         require(state.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
@@ -330,7 +326,7 @@ contract LidoTemplate is IsContract {
             _votingSettings[0], // support
             _votingSettings[1], // acceptance
             _votingSettings[2], // duration
-            _votingSettings[3]  // objectionPhaseDuration
+            _votingSettings[3] // objectionPhaseDuration
         );
 
         bytes memory noInit = new bytes(0);
@@ -363,12 +359,10 @@ contract LidoTemplate is IsContract {
         uint16[3] _initialSemanticVersion,
         address _proxy,
         address _impl,
-        address _stakingRouter,
         bytes _contentURI
     ) external onlyOwner {
         APMRegistry lidoRegistry = deployState.lidoRegistry;
         Kernel dao = deployState.dao;
-        ACL acl = deployState.acl;
 
         apmRepos.simpleDVT = lidoRegistry.newRepoWithVersion(
             SIMPLE_DVT_APP_NAME,
@@ -413,13 +407,7 @@ contract LidoTemplate is IsContract {
         emit TmplTokensIssued(totalAmount);
     }
 
-    function finalizeDAO(
-        string _daoName,
-        uint256 _unvestedTokensAmount,
-        address _stakingRouter
-    )
-        external onlyOwner
-    {
+    function finalizeDAO(string _daoName, uint256 _unvestedTokensAmount, address _stakingRouter) external onlyOwner {
         require(_stakingRouter != address(0));
         DeployState memory state = deployState;
         APMRepos memory repos = apmRepos;
@@ -500,9 +488,7 @@ contract LidoTemplate is IsContract {
         uint64 _acceptance,
         uint64 _duration,
         uint64 _objectionPhaseDuration
-    )
-        private returns (Voting)
-    {
+    ) private returns (Voting) {
         bytes32 appId = _getAppId(ARAGON_VOTING_APP_NAME, _lidoRegistryEnsNode);
         bytes memory initializeData = abi.encodeWithSelector(
             Voting(0).initialize.selector,
@@ -537,11 +523,7 @@ contract LidoTemplate is IsContract {
 
     /* TOKEN */
 
-    function _createToken(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
-    ) internal returns (MiniMeToken) {
+    function _createToken(string memory _name, string memory _symbol, uint8 _decimals) internal returns (MiniMeToken) {
         MiniMeToken token = miniMeFactory.createCloneToken(MiniMeToken(address(0)), 0, _name, _decimals, _symbol, true);
         return token;
     }
@@ -556,10 +538,7 @@ contract LidoTemplate is IsContract {
         uint64 _vestingEnd,
         bool _vestingRevokable,
         uint256 _expectedFinalTotalSupply
-    )
-        private
-        returns (uint256 totalAmount)
-    {
+    ) private returns (uint256 totalAmount) {
         totalAmount = 0;
         uint256 i;
 
@@ -640,17 +619,19 @@ contract LidoTemplate is IsContract {
         acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
         acl.createPermission(_state.agent, _state.operators, _state.operators.MANAGE_NODE_OPERATOR_ROLE(), voting);
 
-        // SimpleDVT
-        perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
-        perms[1] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-        perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
-        for (i = 0; i < 3; ++i) {
-            _createPermissionForVoting(acl, _state.sdvt, perms[i], voting);
-        }
-        acl.createPermission(_state.stakingRouter, _state.sdvt,_state.sdvt.STAKING_ROUTER_ROLE(), this);
-        acl.grantPermission(_state.agent, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE());
+        if (deployState.sdvt != address(0)) {
+            // SimpleDVT
+            perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
+            perms[1] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
+            perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
+            for (i = 0; i < 3; ++i) {
+                _createPermissionForVoting(acl, _state.sdvt, perms[i], voting);
+            }
+            acl.createPermission(_state.stakingRouter, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE(), this);
+            acl.grantPermission(_state.agent, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE());
 
-        _transferPermissionFromTemplate(acl, _state.sdvt, voting, _state.sdvt.STAKING_ROUTER_ROLE());
+            _transferPermissionFromTemplate(acl, _state.sdvt, voting, _state.sdvt.STAKING_ROUTER_ROLE());
+        }
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();
@@ -668,38 +649,20 @@ contract LidoTemplate is IsContract {
         _createPermissionForTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
     }
 
-    function _createPermissionForVoting(
-        ACL _acl,
-        address _app,
-        bytes32 perm,
-        address _voting
-    ) internal {
+    function _createPermissionForVoting(ACL _acl, address _app, bytes32 perm, address _voting) internal {
         _acl.createPermission(_voting, _app, perm, _voting);
     }
 
-    function _createAgentPermissions(
-        ACL _acl,
-        Agent _agent,
-        address _voting
-    ) internal {
+    function _createAgentPermissions(ACL _acl, Agent _agent, address _voting) internal {
         _createPermissionForVoting(_acl, _agent, _agent.EXECUTE_ROLE(), _voting);
         _createPermissionForVoting(_acl, _agent, _agent.RUN_SCRIPT_ROLE(), _voting);
     }
 
-    function _createVaultPermissions(
-        ACL _acl,
-        Vault _vault,
-        address _finance,
-        address _voting
-    ) internal {
+    function _createVaultPermissions(ACL _acl, Vault _vault, address _finance, address _voting) internal {
         _acl.createPermission(_finance, _vault, _vault.TRANSFER_ROLE(), _voting);
     }
 
-    function _createFinancePermissions(
-        ACL _acl,
-        Finance _finance,
-        address _voting
-    ) internal {
+    function _createFinancePermissions(ACL _acl, Finance _finance, address _voting) internal {
         _createPermissionForVoting(_acl, _finance, _finance.EXECUTE_PAYMENTS_ROLE(), _voting);
         _createPermissionForVoting(_acl, _finance, _finance.MANAGE_PAYMENTS_ROLE(), _voting);
         _createPermissionForVoting(_acl, _finance, _finance.CREATE_PAYMENTS_ROLE(), _voting);
@@ -711,39 +674,23 @@ contract LidoTemplate is IsContract {
         _createPermissionForVoting(_acl, registry, registry.REGISTRY_ADD_EXECUTOR_ROLE(), _voting);
     }
 
-    function _createVotingPermissions(
-        ACL _acl,
-        Voting _voting,
-        address _tokenManager
-    ) internal {
+    function _createVotingPermissions(ACL _acl, Voting _voting, address _tokenManager) internal {
         _createPermissionForVoting(_acl, _voting, _voting.MODIFY_QUORUM_ROLE(), _voting);
         _createPermissionForVoting(_acl, _voting, _voting.MODIFY_SUPPORT_ROLE(), _voting);
         _acl.createPermission(_tokenManager, _voting, _voting.CREATE_VOTES_ROLE(), _voting);
     }
 
-    function _configureTokenManagerPermissions(
-        ACL _acl,
-        TokenManager _tokenManager,
-        address _voting
-    ) internal {
+    function _configureTokenManagerPermissions(ACL _acl, TokenManager _tokenManager, address _voting) internal {
         _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ISSUE_ROLE());
         _removePermissionFromTemplate(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE());
         _createPermissionForVoting(_acl, _tokenManager, _tokenManager.ASSIGN_ROLE(), _voting);
     }
 
-    function _createPermissionForTemplate(
-        ACL _acl,
-        address _app,
-        bytes32 _permission
-    ) private {
+    function _createPermissionForTemplate(ACL _acl, address _app, bytes32 _permission) private {
         _acl.createPermission(address(this), _app, _permission, address(this));
     }
 
-    function _removePermissionFromTemplate(
-        ACL _acl,
-        address _app,
-        bytes32 _permission
-    ) private {
+    function _removePermissionFromTemplate(ACL _acl, address _app, bytes32 _permission) private {
         _acl.revokePermission(address(this), _app, _permission);
         _acl.removePermissionManager(_app, _permission);
     }
@@ -754,12 +701,7 @@ contract LidoTemplate is IsContract {
         _transferPermissionFromTemplate(_acl, _acl, _voting, _acl.CREATE_PERMISSIONS_ROLE(), _voting);
     }
 
-    function _transferPermissionFromTemplate(
-        ACL _acl,
-        address _app,
-        address _to,
-        bytes32 _permission
-    ) private {
+    function _transferPermissionFromTemplate(ACL _acl, address _app, address _to, bytes32 _permission) private {
         _transferPermissionFromTemplate(_acl, _app, _to, _permission, _to);
     }
 

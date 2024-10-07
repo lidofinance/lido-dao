@@ -65,7 +65,7 @@ async function deploySimpleDvt(deployer: string) {
   const receipt = await makeTx(
     template,
     "createSimpleDVTApp",
-    [[1, 0, 0], proxyAddress, norImplAddress, state[Sk.stakingRouter].proxy.address, NULL_CONTENT_URI],
+    [[1, 0, 0], proxyAddress, norImplAddress, NULL_CONTENT_URI],
     {
       from: deployer,
     },
