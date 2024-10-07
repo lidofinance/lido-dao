@@ -300,7 +300,7 @@
     "address": "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5"
   },
   "dummyEmptyContract": {
-    "contract": "contracts/0.8.9/utils/DummyEmptyContract.sol",
+    "contract": "contracts/0.8.9/test_helpers/DummyEmptyContract.sol",
     "address": "0xF30a674935479cc6f2254BA65d7534Eab8bD6ba2",
     "constructorArgs": []
   },
@@ -373,6 +373,7 @@
       "0x7637d44c9f2e9cA584a8B5D2EA493012A5cdaEB6"
     ]
   },
+  "initialDeployTotalGasUsed": "93822319027187012352012355612355612355610342610347112361112359910143001235561950934066901010464461610104644669101046446691060844875210608248680106082486801061274870010094944627101001446332871228712287122871228712",
   "ldo": {
     "address": "0xd06dF83b8ad6D89C86a187fba4Eae918d497BdCB",
     "contract": "@aragon/minime/contracts/MiniMeToken.sol",
