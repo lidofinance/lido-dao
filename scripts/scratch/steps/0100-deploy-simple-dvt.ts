@@ -9,9 +9,6 @@ import { readNetworkState, Sk } from "lib/state-file";
 
 const SIMPLE_DVT_APP_NAME = "simple-dvt";
 
-const SIMPLE_DVT_MODULE_TYPE = "curated-onchain-v1";
-const SIMPLE_DVT_MODULE_PENALTY_DELAY = 86400; // 1 day
-
 const NULL_CONTENT_URI =
   "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
@@ -86,10 +83,11 @@ async function deploySimpleDvt(deployer: string) {
     state[Sk.appSimpleDvt].proxy.address,
   );
 
+  const { stuckPenaltyDelay, stakingModuleTypeId } = state.simpleDvt.deployParameters;
   const simpleDvtInitOptions = [
     lidoLocatorAddress,
-    "0x" + Buffer.from(SIMPLE_DVT_MODULE_TYPE).toString("hex").padEnd(64, "0"),
-    SIMPLE_DVT_MODULE_PENALTY_DELAY,
+    "0x" + Buffer.from(stakingModuleTypeId).toString("hex").padEnd(64, "0"),
+    stuckPenaltyDelay,
   ];
 
   await makeTx(proxy, "initialize", simpleDvtInitOptions, { from: deployer });
@@ -104,7 +102,13 @@ async function deploySimpleDvt(deployer: string) {
   });
 }
 
-async function validateSimpleDvt(deployer: string) {
+export async function main() {
+  const deployer = (await ethers.provider.getSigner()).address;
+
+  await deployEmptyAppProxy(deployer, SIMPLE_DVT_APP_NAME);
+
+  await deploySimpleDvt(deployer);
+
   const state = readNetworkState({ deployer });
 
   const proxyAddress = state[Sk.appSimpleDvt].proxy.address;
@@ -124,14 +128,4 @@ async function validateSimpleDvt(deployer: string) {
   expect(await app.kernel()).to.equal(kernelAddress);
   expect(await app.hasInitialized()).to.be.true;
   expect(await app.getLocator()).to.equal(state[Sk.lidoLocator].proxy.address);
-}
-
-export async function main() {
-  const deployer = (await ethers.provider.getSigner()).address;
-
-  await deployEmptyAppProxy(deployer, SIMPLE_DVT_APP_NAME);
-
-  await deploySimpleDvt(deployer);
-
-  await validateSimpleDvt(deployer);
 }

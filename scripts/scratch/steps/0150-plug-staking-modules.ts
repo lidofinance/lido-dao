@@ -5,10 +5,15 @@ import { makeTx } from "lib/deploy";
 import { streccak } from "lib/keccak";
 import { readNetworkState, Sk } from "lib/state-file";
 
+const STAKING_MODULE_MANAGE_ROLE = streccak("STAKING_MODULE_MANAGE_ROLE");
+
 const NOR_STAKING_MODULE_TARGET_SHARE_BP = 10000; // 100%
 const NOR_STAKING_MODULE_MODULE_FEE_BP = 500; // 5%
 const NOR_STAKING_MODULE_TREASURY_FEE_BP = 500; // 5%
-const STAKING_MODULE_MANAGE_ROLE = streccak("STAKING_MODULE_MANAGE_ROLE");
+
+const SDVT_STAKING_MODULE_TARGET_SHARE_BP = 50; // 0.5%
+const SDVT_STAKING_MODULE_MODULE_FEE_BP = 800; // 8%
+const SDVT_STAKING_MODULE_TREASURY_FEE_BP = 200; // 2%
 
 export async function main() {
   const deployer = (await ethers.provider.getSigner()).address;
@@ -20,6 +25,7 @@ export async function main() {
     "NodeOperatorsRegistry",
     state[Sk.appNodeOperatorsRegistry].proxy.address,
   );
+  const simpleDvt = await loadContract("NodeOperatorsRegistry", state[Sk.appSimpleDvt].proxy.address);
 
   // Grant STAKING_MODULE_MANAGE_ROLE to deployer
   await makeTx(stakingRouter, "grantRole", [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer });
@@ -34,6 +40,19 @@ export async function main() {
       NOR_STAKING_MODULE_TARGET_SHARE_BP,
       NOR_STAKING_MODULE_MODULE_FEE_BP,
       NOR_STAKING_MODULE_TREASURY_FEE_BP,
+    ],
+    { from: deployer },
+  );
+
+  await makeTx(
+    stakingRouter,
+    "addStakingModule",
+    [
+      state.simpleDvt.deployParameters.stakingModuleTypeId,
+      simpleDvt.address,
+      SDVT_STAKING_MODULE_TARGET_SHARE_BP,
+      SDVT_STAKING_MODULE_MODULE_FEE_BP,
+      SDVT_STAKING_MODULE_TREASURY_FEE_BP,
     ],
     { from: deployer },
   );
