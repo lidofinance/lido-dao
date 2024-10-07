@@ -353,9 +353,8 @@ const simulateReport = async (
     "El Rewards Vault Balance": formatEther(elRewardsVaultBalance),
   });
 
-  // NOTE: To enable negative rebase sanity checker, the static call below should be
+  // NOTE: To enable negative rebase sanity checker, the static call below
   //    replaced with advanced eth_call with stateDiff.
-
   // const [postTotalPooledEther1, postTotalShares1, withdrawals1, elRewards1] = await lido
   //   .connect(accountingOracleAccount)
   //   .handleOracleReport.staticCall(
