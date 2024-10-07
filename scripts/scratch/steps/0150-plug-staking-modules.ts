@@ -21,11 +21,6 @@ export async function main() {
 
   // Get contract instances
   const stakingRouter = await loadContract("StakingRouter", state.stakingRouter.proxy.address);
-  const nodeOperatorsRegistry = await loadContract(
-    "NodeOperatorsRegistry",
-    state[Sk.appNodeOperatorsRegistry].proxy.address,
-  );
-  const simpleDvt = await loadContract("NodeOperatorsRegistry", state[Sk.appSimpleDvt].proxy.address);
 
   // Grant STAKING_MODULE_MANAGE_ROLE to deployer
   await makeTx(stakingRouter, "grantRole", [STAKING_MODULE_MANAGE_ROLE, deployer], { from: deployer });
@@ -36,7 +31,7 @@ export async function main() {
     "addStakingModule",
     [
       state.nodeOperatorsRegistry.deployParameters.stakingModuleTypeId,
-      nodeOperatorsRegistry.address,
+      state[Sk.appNodeOperatorsRegistry].proxy.address,
       NOR_STAKING_MODULE_TARGET_SHARE_BP,
       NOR_STAKING_MODULE_MODULE_FEE_BP,
       NOR_STAKING_MODULE_TREASURY_FEE_BP,
@@ -49,7 +44,7 @@ export async function main() {
     "addStakingModule",
     [
       state.simpleDvt.deployParameters.stakingModuleTypeId,
-      simpleDvt.address,
+      state[Sk.appSimpleDvt].proxy.address,
       SDVT_STAKING_MODULE_TARGET_SHARE_BP,
       SDVT_STAKING_MODULE_MODULE_FEE_BP,
       SDVT_STAKING_MODULE_TREASURY_FEE_BP,

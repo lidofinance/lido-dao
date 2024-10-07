@@ -55,11 +55,7 @@ async function deployEmptyAppProxy(deployer: string, appName: string) {
 async function deploySimpleDvt(deployer: string) {
   const state = readNetworkState({ deployer });
 
-  if (state[Sk.appSimpleDvt]?.implementation) {
-    log(`Simple DVT app already deployed at ${state[Sk.appSimpleDvt].implementation.address}`);
-    return;
-  }
-
+  const proxyAddress = state[Sk.appSimpleDvt].proxy.address;
   const lidoLocatorAddress = state[Sk.lidoLocator].proxy.address;
   const norImplAddress = state[Sk.appNodeOperatorsRegistry].implementation.address;
 
@@ -69,7 +65,7 @@ async function deploySimpleDvt(deployer: string) {
   const receipt = await makeTx(
     template,
     "createSimpleDVTApp",
-    [[1, 0, 0], norImplAddress, state[Sk.stakingRouter].proxy.address, NULL_CONTENT_URI],
+    [[1, 0, 0], proxyAddress, norImplAddress, state[Sk.stakingRouter].proxy.address, NULL_CONTENT_URI],
     {
       from: deployer,
     },

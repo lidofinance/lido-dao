@@ -106,6 +106,7 @@ contract LidoTemplate is IsContract {
         Lido lido;
         LegacyOracle oracle;
         NodeOperatorsRegistry operators;
+        NodeOperatorsRegistry sdvt;
         address stakingRouter;
     }
 
@@ -360,6 +361,7 @@ contract LidoTemplate is IsContract {
 
     function createSimpleDVTApp(
         uint16[3] _initialSemanticVersion,
+        address _proxy,
         address _impl,
         address _stakingRouter,
         bytes _contentURI
@@ -378,20 +380,7 @@ contract LidoTemplate is IsContract {
 
         bytes32 appId = _getAppId(SIMPLE_DVT_APP_NAME, deployState.lidoRegistryEnsNode);
         dao.setApp(dao.APP_BASES_NAMESPACE(), appId, _impl);
-
-        bytes32 stakingRouterRole = deployState.operators.STAKING_ROUTER_ROLE();
-        address app = address(apmRepos.simpleDVT);
-
-        // grant perm for staking router
-        // https://github.com/lidofinance/lido-dao/blob/291ea9e191f62692f0a17d6af77b66de0abe0a53/scripts/simpledvt/02-clone-nor.js#L220
-        acl.createPermission(_stakingRouter, app,stakingRouterRole,this);
-        acl.grantPermission(deployState.agent, app, stakingRouterRole);
-        _transferPermissionFromTemplate(acl, app, deployState.voting, stakingRouterRole);
-
-        // grant perm for agent to manage signing keys and set node operator limit
-        // https://github.com/lidofinance/lido-dao/blob/291ea9e191f62692f0a17d6af77b66de0abe0a53/scripts/simpledvt/02-clone-nor.js#L228
-        acl.createPermission(deployState.agent, app, deployState.operators.MANAGE_SIGNING_KEYS(), deployState.voting);
-        acl.createPermission(deployState.agent, app, deployState.operators.SET_NODE_OPERATOR_LIMIT_ROLE(), deployState.voting);
+        deployState.sdvt = NodeOperatorsRegistry(_proxy);
     }
 
     function issueTokens(
@@ -650,6 +639,18 @@ contract LidoTemplate is IsContract {
         }
         acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
         acl.createPermission(_state.agent, _state.operators, _state.operators.MANAGE_NODE_OPERATOR_ROLE(), voting);
+
+        // SimpleDVT
+        perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
+        perms[1] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
+        perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
+        for (i = 0; i < 3; ++i) {
+            _createPermissionForVoting(acl, _state.sdvt, perms[i], voting);
+        }
+        acl.createPermission(_state.stakingRouter, _state.sdvt,_state.sdvt.STAKING_ROUTER_ROLE(), this);
+        acl.grantPermission(_state.agent, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE());
+
+        _transferPermissionFromTemplate(acl, _state.sdvt, voting, _state.sdvt.STAKING_ROUTER_ROLE());
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();

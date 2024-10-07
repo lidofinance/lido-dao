@@ -9,17 +9,13 @@ declare namespace NodeJS {
 
     /* RPC URL for Hardhat Network forking, required for running tests on mainnet fork with tracing */
     HARDHAT_FORKING_URL?: string;
-    /* Chain ID for Hardhat Network forking, required for running tests on different networks */
-    HARDHAT_CHAIN_ID?: string;
 
     /**
      * Flags for changing the behavior of the integration tests
      */
 
     /* if "on" the integration tests will deploy the contracts to the empty Hardhat Network node using scratch deploy */
-    INTEGRATION_WITH_SCRATCH_DEPLOY?: "on" | "off"; // default: "off"
-    /* if "on" the integration tests will enable assertions and checks for the simple DVT module */
-    INTEGRATION_WITH_SIMPLE_DVT_MODULE?: "on" | "off"; // default: "on"
+    INTEGRATION_ON_SCRATCH?: "on" | "off"; // default: "off"
 
     /**
      * Network configuration for the protocol discovery.
