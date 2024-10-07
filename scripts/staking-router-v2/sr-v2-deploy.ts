@@ -49,6 +49,26 @@ const SECONDS_PER_SLOT = 12;
 const GENESIS_TIME = 1606824023;
 
 /* Oracle report sanity checker */
+
+// Defines the maximum number of validators that may be reported as "exited"
+// per day, depending on the consensus layer churn limit.
+//
+// CURRENT_ACTIVE_VALIDATORS_NUMBER = ~1100000 // https://beaconcha.in/
+// CURRENT_EXIT_CHURN_LIMIT = 16 // https://www.validatorqueue.com/
+// EPOCHS_PER_DAY = 225 // (24 * 60 * 60) sec / 12 sec per slot / 32 slots per epoch
+//
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/deneb/beacon-chain.md#validator-cycle
+// MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT = 8
+//
+// MAX_VALIDATORS_PER_DAY = EPOCHS_PER_DAY * MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT = 1800 // 225 * 8
+// MAX_VALIDATORS_AFTER_TWO_YEARS = MAX_VALIDATORS_PER_DAY * 365 * 2 + CURRENT_VALIDATORS_NUMBER // 1100000 + (1800 * 365 * 2) = ~2500000
+//
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#validator-cycle
+// CHURN_LIMIT_QUOTIENT = 65536
+//
+// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#get_validator_churn_limit
+// MAX_EXIT_CHURN_LIMIT_AFTER_TWO_YEARS = MAX_VALIDATORS_AFTER_TWO_YEARS / CHURN_LIMIT_QUOTIENT // 2500000 / 65536 = ~38
+// EXITED_VALIDATORS_PER_DAY_LIMIT = MAX_EXIT_CHURN_LIMIT_AFTER_TWO_YEARS * EPOCHS_PER_DAY // 38 * 225 = 8550 = ~9000
 const EXITED_VALIDATORS_PER_DAY_LIMIT = 9000;
 
 // Defines the maximum number of validators that can be reported as "appeared"
@@ -138,6 +158,15 @@ const GUARDIANS = [
 // Must match the current value https://etherscan.io/address/0xC77F8768774E1c9244BEed705C4354f2113CFc09#readContract#F8
 const QUORUM = 4;
 
+// stETH on Optimism is going to change the locator implementation
+// on October 11th after SRv2 deployment but before SRv2 voting
+//
+// We're taking the proposed implementation of the upcoming upgrade
+// to make sure that these changes make it into our deployment
+//
+// Must match the proposed locator impl in the docs: https://docs.lido.fi/deployed-contracts/
+const INTERMEDIATE_LOCATOR_IMPL = "0x39aFE23cE59e8Ef196b81F0DCb165E9aD38b9463";
+
 async function main() {
   const deployer = ethers.getAddress(getEnvVariable("DEPLOYER"));
   const chainId = (await ethers.provider.getNetwork()).chainId;
@@ -158,29 +187,29 @@ async function main() {
   const SC_ADMIN = APP_AGENT_ADDRESS;
   const LOCATOR = state[Sk.lidoLocator].proxy.address;
 
-  const locatorContract = await loadContract<LidoLocator>(LidoLocator__factory, LOCATOR);
+  const locatorImplContract = await loadContract<LidoLocator>(LidoLocator__factory, INTERMEDIATE_LOCATOR_IMPL);
   // fetch contract addresses that will not changed
-  const ACCOUNTING_ORACLE_PROXY = await locatorContract.accountingOracle();
-  const EL_REWARDS_VAULT = await locatorContract.elRewardsVault();
-  const LEGACY_ORACLE = await locatorContract.legacyOracle();
-  const LIDO = await locatorContract.lido();
-  const POST_TOKEN_REABSE_RECEIVER = await locatorContract.postTokenRebaseReceiver();
-  const BURNER = await locatorContract.burner();
-  const STAKING_ROUTER = await locatorContract.stakingRouter();
-  const TREASURY_ADDRESS = await locatorContract.treasury();
-  const VEBO = await locatorContract.validatorsExitBusOracle();
-  const WQ = await locatorContract.withdrawalQueue();
-  const WITHDRAWAL_VAULT = await locatorContract.withdrawalVault();
-  const ORACLE_DAEMON_CONFIG = await locatorContract.oracleDaemonConfig();
+  const ACCOUNTING_ORACLE_PROXY = await locatorImplContract.accountingOracle();
+  const EL_REWARDS_VAULT = await locatorImplContract.elRewardsVault();
+  const LEGACY_ORACLE = await locatorImplContract.legacyOracle();
+  const LIDO = await locatorImplContract.lido();
+  const POST_TOKEN_REBASE_RECEIVER = await locatorImplContract.postTokenRebaseReceiver();
+  const BURNER = await locatorImplContract.burner();
+  const STAKING_ROUTER = await locatorImplContract.stakingRouter();
+  const TREASURY_ADDRESS = await locatorImplContract.treasury();
+  const VEBO = await locatorImplContract.validatorsExitBusOracle();
+  const WQ = await locatorImplContract.withdrawalQueue();
+  const WITHDRAWAL_VAULT = await locatorImplContract.withdrawalVault();
+  const ORACLE_DAEMON_CONFIG = await locatorImplContract.oracleDaemonConfig();
 
   log.lineWithArguments(
-    `Fetched addresses from locator ${LOCATOR}, result: `,
+    `Fetched addresses from locator impl ${INTERMEDIATE_LOCATOR_IMPL}, result: `,
     getLocatorAddressesToString(
       ACCOUNTING_ORACLE_PROXY,
       EL_REWARDS_VAULT,
       LEGACY_ORACLE,
       LIDO,
-      POST_TOKEN_REABSE_RECEIVER,
+      POST_TOKEN_REBASE_RECEIVER,
       BURNER,
       STAKING_ROUTER,
       TREASURY_ADDRESS,
@@ -276,7 +305,7 @@ async function main() {
       LEGACY_ORACLE,
       LIDO,
       oracleReportSanityCheckerAddress,
-      POST_TOKEN_REABSE_RECEIVER,
+      POST_TOKEN_REBASE_RECEIVER,
       BURNER,
       STAKING_ROUTER,
       TREASURY_ADDRESS,
@@ -366,7 +395,7 @@ function getLocatorAddressesToString(
   EL_REWARDS_VAULT: string,
   LEGACY_ORACLE: string,
   LIDO: string,
-  POST_TOKEN_REABSE_RECEIVER: string,
+  POST_TOKEN_REBASE_RECEIVER: string,
   BURNER: string,
   STAKING_ROUTER: string,
   TREASURY_ADDRESS: string,
@@ -380,7 +409,7 @@ function getLocatorAddressesToString(
     `EL_REWARDS_VAULT: ${EL_REWARDS_VAULT}`,
     `LEGACY_ORACLE: ${LEGACY_ORACLE}`,
     `LIDO: ${LIDO}`,
-    `POST_TOKEN_REABSE_RECEIVER: ${POST_TOKEN_REABSE_RECEIVER}`,
+    `POST_TOKEN_REBASE_RECEIVER: ${POST_TOKEN_REBASE_RECEIVER}`,
     `BURNER: ${BURNER}`,
     `STAKING_ROUTER: ${STAKING_ROUTER}`,
     `TREASURY_ADDRESS: ${TREASURY_ADDRESS}`,
