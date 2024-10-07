@@ -125,7 +125,7 @@ To do Holešky deployment, the following parameters must be set up via env varia
 - `DEPLOYER`. The deployer address. The deployer must own its private key. To ensure proper operation, it should have an
   adequate amount of ether. The total deployment gas cost is approximately 120,000,000 gas, and this cost can vary based
   on whether specific components of the environment, such as the DepositContract, are deployed or not.
-- `RPC_URL`. Address of of the Ethereum RPC node to use. E.g. for Infura it is
+- `RPC_URL`. Address of the Ethereum RPC node to use. E.g. for Infura it is
   `https://holesky.infura.io/v3/<yourProjectId>`
 - `GAS_PRIORITY_FEE`. Gas priority fee. By default set to `2`
 - `GAS_MAX_FEE`. Gas max fee. By default set to `100`
