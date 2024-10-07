@@ -370,7 +370,7 @@ describe("HashConsensus:happyPath", function () {
     expect(memberInfo.canReport).to.be.true;
   });
 
-  it('consensus is not reached', async () => {
+  it("consensus is not reached", async () => {
     const consensusState = await consensus.getConsensusState();
     expect(consensusState.consensusReport).to.equal(ZERO_HASH);
     expect(consensusState.isReportProcessing).to.be.false;
