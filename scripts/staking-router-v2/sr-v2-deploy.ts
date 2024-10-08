@@ -115,11 +115,12 @@ const REQUEST_TIMESTAMP_MARGIN = 7680;
 const MAX_POSITIVE_TOKEN_REBASE = 750000;
 
 // Must match the value in LIP-23 https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-23.md
+// and the proposed number on the research forum https://research.lido.fi/t/lip-25-staking-router-v2-0/7773
 const INITIAL_SLASHING_AMOUNT_P_WEI = 1000;
 const INACTIVITY_PENALTIES_AMOUNT_P_WEI = 101;
 
-// Must match the proposed number https://hackmd.io/@lido/lip-21#TVL-attack
-const CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT = 74;
+// Must match the proposed number on the research forum https://research.lido.fi/t/lip-25-staking-router-v2-0/7773
+const CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT = 50;
 
 const LIMITS = [
   EXITED_VALIDATORS_PER_DAY_LIMIT,
