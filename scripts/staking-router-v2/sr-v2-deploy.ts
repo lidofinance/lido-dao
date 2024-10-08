@@ -115,11 +115,11 @@ const REQUEST_TIMESTAMP_MARGIN = 7680;
 const MAX_POSITIVE_TOKEN_REBASE = 750000;
 
 // Must match the value in LIP-23 https://github.com/lidofinance/lido-improvement-proposals/blob/develop/LIPS/lip-23.md
-// and the proposed number on the research forum https://research.lido.fi/t/lip-25-staking-router-v2-0/7773
+// and the proposed number on the research forum https://research.lido.fi/t/staking-router-community-staking-module-upgrade-announcement/8612
 const INITIAL_SLASHING_AMOUNT_P_WEI = 1000;
 const INACTIVITY_PENALTIES_AMOUNT_P_WEI = 101;
 
-// Must match the proposed number on the research forum https://research.lido.fi/t/lip-25-staking-router-v2-0/7773
+// Must match the proposed number on the research forum https://research.lido.fi/t/staking-router-community-staking-module-upgrade-announcement/8612
 const CL_BALANCE_ORACLES_ERROR_UPPER_BP_LIMIT = 50;
 
 const LIMITS = [
