@@ -23,9 +23,7 @@ import "./tasks";
 const RPC_URL: string = process.env.RPC_URL || "";
 const ACCOUNTS_PATH = "./accounts.json";
 
-const HARDHAT_CHAIN_ID_DEFAULT = 31337;
 const HARDHAT_FORKING_URL = process.env.HARDHAT_FORKING_URL || "";
-const HARDHAT_CHAIN_ID = process.env.HARDHAT_CHAIN_ID || HARDHAT_CHAIN_ID_DEFAULT;
 
 const INTEGRATION_WITH_SCRATCH_DEPLOY = process.env.INTEGRATION_WITH_SCRATCH_DEPLOY || "off";
 
@@ -55,7 +53,6 @@ const config: HardhatUserConfig = {
   networks: {
     "local": {
       url: process.env.LOCAL_RPC_URL || RPC_URL,
-      chainId: HARDHAT_CHAIN_ID_DEFAULT,
     },
     "mainnet-fork": {
       url: process.env.MAINNET_RPC_URL || RPC_URL,
@@ -74,7 +71,6 @@ const config: HardhatUserConfig = {
         count: 30,
         accountsBalance: "100000000000000000000000",
       },
-      chainId: parseInt(HARDHAT_CHAIN_ID.toString()),
       forking: getHardhatForkingConfig(),
     },
     "sepolia": {

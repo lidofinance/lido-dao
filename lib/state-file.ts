@@ -17,6 +17,7 @@ export const TemplateAppNames = {
   LIDO: "lido",
   ORACLE: "oracle",
   NODE_OPERATORS_REGISTRY: "node-operators-registry",
+  SIMPLE_DVT: "simple-dvt",
   // Aragon apps
   ARAGON_AGENT: "aragon-agent",
   ARAGON_FINANCE: "aragon-finance",
@@ -59,8 +60,8 @@ export enum Sk {
   miniMeTokenFactory = "miniMeTokenFactory",
   lidoTemplateCreateStdAppReposTx = "lidoTemplateCreateStdAppReposTx",
   nodeOperatorsRegistry = "nodeOperatorsRegistry",
+  simpleDvt = "simpleDvt",
   createAppReposTx = "createAppReposTx",
-  createSimpleDVTAppTx = "createSimpleDVTAppTx",
   lidoTemplateNewDaoTx = "lidoTemplateNewDaoTx",
   callsScript = "callsScript",
   vestingParams = "vestingParams",
