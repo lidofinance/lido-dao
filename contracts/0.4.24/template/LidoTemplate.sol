@@ -50,6 +50,9 @@ contract LidoTemplate is IsContract {
     string private constant ERROR_DAO_ALREADY_DEPLOYED = "TMPL_DAO_ALREADY_DEPLOYED";
     string private constant ERROR_DAO_NOT_DEPLOYED = "TMPL_DAO_NOT_DEPLOYED";
     string private constant ERROR_ALREADY_FINALIZED = "TMPL_ALREADY_FINALIZED";
+    string private constant ERROR_NODE_OPERATORS_REGISTRY_NOT_DEPLOYED = "TMPL_NODE_OPERATORS_REGISTRY_NOT_DEPLOYED";
+    string private constant ERROR_ZERO_PROXY_ADDRESS = "TMPL_ZERO_PROXY_ADDRESS";
+    string private constant ERROR_ZERO_IMPL_ADDRESS = "TMPL_ZERO_IMPL_ADDRESS";
 
     // Aragon app IDs
     bytes32 private constant ARAGON_AGENT_APP_ID = 0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a; // agent.aragonpm.eth
@@ -127,6 +130,7 @@ contract LidoTemplate is IsContract {
 
     event TmplAPMDeployed(address apm);
     event TmplReposCreated();
+    event TmplSDVTCreated(bytes32 appId, address appProxy, address impl);
     event TmplAppInstalled(address appProxy, bytes32 appId, bytes initializeData);
     event TmplDAOAndTokenDeployed(address dao, address token);
     event TmplTokensIssued(uint256 totalAmount);
@@ -361,6 +365,12 @@ contract LidoTemplate is IsContract {
         address _impl,
         bytes _contentURI
     ) external onlyOwner {
+        require(deployState.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
+        require(deployState.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
+        require(deployState.operators != address(0), ERROR_NODE_OPERATORS_REGISTRY_NOT_DEPLOYED);
+        require(_proxy != address(0), ERROR_ZERO_PROXY_ADDRESS);
+        require(_impl != address(0), ERROR_ZERO_IMPL_ADDRESS);
+
         APMRegistry lidoRegistry = deployState.lidoRegistry;
         Kernel dao = deployState.dao;
 
@@ -375,6 +385,8 @@ contract LidoTemplate is IsContract {
         bytes32 appId = _getAppId(SIMPLE_DVT_APP_NAME, deployState.lidoRegistryEnsNode);
         dao.setApp(dao.APP_BASES_NAMESPACE(), appId, _impl);
         deployState.sdvt = NodeOperatorsRegistry(_proxy);
+
+        emit TmplSDVTCreated(appId, _proxy, _impl);
     }
 
     function issueTokens(
