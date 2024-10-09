@@ -9,12 +9,12 @@ import { makeTx } from "lib/deploy";
 import { findEvents, findEventsWithInterfaces } from "lib/event";
 import { cy, log, yl } from "lib/log";
 import {
-  AppNames,
   DeploymentState,
   persistNetworkState,
   readNetworkState,
   setValueInState,
   Sk,
+  TemplateAppNames,
   updateObjectInState,
 } from "lib/state-file";
 
@@ -111,7 +111,7 @@ async function saveStateFromNewDAOTx(newDAOReceipt: ContractTransactionReceipt) 
   const appInstalledEvents = findEvents(newDAOReceipt, "TmplAppInstalled");
   const lidoApmEnsName = state[Sk.lidoApmEnsName];
 
-  const VALID_APP_NAMES = Object.entries(AppNames).map((e) => e[1]);
+  const VALID_APP_NAMES = Object.entries(TemplateAppNames).map((e) => e[1]);
   const appIdNameEntries = VALID_APP_NAMES.map((name) => [ethers.namehash(`${name}.${lidoApmEnsName}`), name]);
   const appNameByAppId = Object.fromEntries(appIdNameEntries);
   const expectedAppIds = appIdNameEntries.map((e) => e[0]);
