@@ -50,9 +50,6 @@ contract LidoTemplate is IsContract {
     string private constant ERROR_DAO_ALREADY_DEPLOYED = "TMPL_DAO_ALREADY_DEPLOYED";
     string private constant ERROR_DAO_NOT_DEPLOYED = "TMPL_DAO_NOT_DEPLOYED";
     string private constant ERROR_ALREADY_FINALIZED = "TMPL_ALREADY_FINALIZED";
-    string private constant ERROR_NODE_OPERATORS_REGISTRY_NOT_DEPLOYED = "TMPL_NODE_OPERATORS_REGISTRY_NOT_DEPLOYED";
-    string private constant ERROR_ZERO_PROXY_ADDRESS = "TMPL_ZERO_PROXY_ADDRESS";
-    string private constant ERROR_ZERO_IMPL_ADDRESS = "TMPL_ZERO_IMPL_ADDRESS";
 
     // Aragon app IDs
     bytes32 private constant ARAGON_AGENT_APP_ID = 0x9ac98dc5f995bf0211ed589ef022719d1487e5cb2bab505676f0d084c07cf89a; // agent.aragonpm.eth
@@ -130,7 +127,6 @@ contract LidoTemplate is IsContract {
 
     event TmplAPMDeployed(address apm);
     event TmplReposCreated();
-    event TmplSDVTCreated(bytes32 appId, address appProxy, address impl);
     event TmplAppInstalled(address appProxy, bytes32 appId, bytes initializeData);
     event TmplDAOAndTokenDeployed(address dao, address token);
     event TmplTokensIssued(uint256 totalAmount);
@@ -299,6 +295,14 @@ contract LidoTemplate is IsContract {
             _oracleContentURI
         );
 
+        apmRepos.simpleDVT = lidoRegistry.newRepoWithVersion(
+            SIMPLE_DVT_APP_NAME,
+            this,
+            _initialSemanticVersion,
+            _nodeOperatorsRegistryImplAddress,
+            _nodeOperatorsRegistryContentURI
+        );
+
         emit TmplReposCreated();
     }
 
@@ -347,6 +351,14 @@ contract LidoTemplate is IsContract {
             )
         );
 
+        state.sdvt = NodeOperatorsRegistry(
+            _installNonDefaultApp(
+                state.dao,
+                _getAppId(SIMPLE_DVT_APP_NAME, state.lidoRegistryEnsNode),
+                noInit
+            )
+        );
+
         state.oracle = LegacyOracle(
             _installNonDefaultApp(state.dao, _getAppId(ORACLE_APP_NAME, state.lidoRegistryEnsNode), noInit)
         );
@@ -357,36 +369,6 @@ contract LidoTemplate is IsContract {
         emit TmplDAOAndTokenDeployed(address(state.dao), address(state.token));
 
         deployState = state;
-    }
-
-    function createSimpleDVTApp(
-        uint16[3] _initialSemanticVersion,
-        address _proxy,
-        address _impl,
-        bytes _contentURI
-    ) external onlyOwner {
-        require(deployState.lidoRegistry != address(0), ERROR_REGISTRY_NOT_DEPLOYED);
-        require(deployState.dao != address(0), ERROR_DAO_NOT_DEPLOYED);
-        require(deployState.operators != address(0), ERROR_NODE_OPERATORS_REGISTRY_NOT_DEPLOYED);
-        require(_proxy != address(0), ERROR_ZERO_PROXY_ADDRESS);
-        require(_impl != address(0), ERROR_ZERO_IMPL_ADDRESS);
-
-        APMRegistry lidoRegistry = deployState.lidoRegistry;
-        Kernel dao = deployState.dao;
-
-        apmRepos.simpleDVT = lidoRegistry.newRepoWithVersion(
-            SIMPLE_DVT_APP_NAME,
-            this,
-            _initialSemanticVersion,
-            _impl,
-            _contentURI
-        );
-
-        bytes32 appId = _getAppId(SIMPLE_DVT_APP_NAME, deployState.lidoRegistryEnsNode);
-        dao.setApp(dao.APP_BASES_NAMESPACE(), appId, _impl);
-        deployState.sdvt = NodeOperatorsRegistry(_proxy);
-
-        emit TmplSDVTCreated(appId, _proxy, _impl);
     }
 
     function issueTokens(
@@ -631,19 +613,17 @@ contract LidoTemplate is IsContract {
         acl.createPermission(_state.stakingRouter, _state.operators, _state.operators.STAKING_ROUTER_ROLE(), voting);
         acl.createPermission(_state.agent, _state.operators, _state.operators.MANAGE_NODE_OPERATOR_ROLE(), voting);
 
-        if (deployState.sdvt != address(0)) {
-            // SimpleDVT
-            perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
-            perms[1] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
-            perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
-            for (i = 0; i < 3; ++i) {
-                _createPermissionForVoting(acl, _state.sdvt, perms[i], voting);
-            }
-            acl.createPermission(_state.stakingRouter, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE(), this);
-            acl.grantPermission(_state.agent, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE());
-
-            _transferPermissionFromTemplate(acl, _state.sdvt, voting, _state.sdvt.STAKING_ROUTER_ROLE());
+        // SimpleDVT
+        perms[0] = _state.operators.MANAGE_SIGNING_KEYS();
+        perms[1] = _state.operators.SET_NODE_OPERATOR_LIMIT_ROLE();
+        perms[2] = _state.operators.MANAGE_NODE_OPERATOR_ROLE();
+        for (i = 0; i < 3; ++i) {
+            _createPermissionForVoting(acl, _state.sdvt, perms[i], voting);
         }
+        acl.createPermission(_state.stakingRouter, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE(), this);
+        acl.grantPermission(_state.agent, _state.sdvt, _state.sdvt.STAKING_ROUTER_ROLE());
+
+        _transferPermissionFromTemplate(acl, _state.sdvt, voting, _state.sdvt.STAKING_ROUTER_ROLE());
 
         // Lido
         perms[0] = _state.lido.PAUSE_ROLE();

@@ -14,6 +14,8 @@ export async function main() {
   const legacyOracleAddress = state[Sk.appOracle].proxy.address;
   const nodeOperatorsRegistryAddress = state[Sk.appNodeOperatorsRegistry].proxy.address;
   const nodeOperatorsRegistryParams = state[Sk.nodeOperatorsRegistry].deployParameters;
+  const simpleDvtRegistryAddress = state[Sk.appSimpleDvt].proxy.address;
+  const simpleDvtRegistryParams = state[Sk.simpleDvt].deployParameters;
   const validatorsExitBusOracleParams = state[Sk.validatorsExitBusOracle].deployParameters;
   const accountingOracleParams = state[Sk.accountingOracle].deployParameters;
   const stakingRouterAddress = state[Sk.stakingRouter].proxy.address;
@@ -37,15 +39,30 @@ export async function main() {
   // Initialize NodeOperatorsRegistry
 
   // https://github.com/ethereum/solidity-examples/blob/master/docs/bytes/Bytes.md#description
-  const stakingModuleTypeId =
-    "0x" +
-    ethers.AbiCoder.defaultAbiCoder().encode(["string"], [nodeOperatorsRegistryParams.stakingModuleTypeId]).slice(-64);
+  const encodeStakingModuleTypeId = (stakingModuleTypeId: string): string =>
+    "0x" + ethers.AbiCoder.defaultAbiCoder().encode(["string"], [stakingModuleTypeId]).slice(-64);
 
   const nodeOperatorsRegistry = await loadContract("NodeOperatorsRegistry", nodeOperatorsRegistryAddress);
   await makeTx(
     nodeOperatorsRegistry,
     "initialize",
-    [lidoLocatorAddress, stakingModuleTypeId, nodeOperatorsRegistryParams.stuckPenaltyDelay],
+    [
+      lidoLocatorAddress,
+      encodeStakingModuleTypeId(nodeOperatorsRegistryParams.stakingModuleTypeId),
+      nodeOperatorsRegistryParams.stuckPenaltyDelay,
+    ],
+    { from: deployer },
+  );
+
+  const simpleDvtRegistry = await loadContract("NodeOperatorsRegistry", simpleDvtRegistryAddress);
+  await makeTx(
+    simpleDvtRegistry,
+    "initialize",
+    [
+      lidoLocatorAddress,
+      encodeStakingModuleTypeId(simpleDvtRegistryParams.stakingModuleTypeId),
+      simpleDvtRegistryParams.stuckPenaltyDelay,
+    ],
     { from: deployer },
   );
 
