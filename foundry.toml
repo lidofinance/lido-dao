@@ -18,4 +18,15 @@ cache = true
 cache_path  = 'foundry/cache'
 
 # Only run tests in contracts matching the specified glob pattern
-match_path = '**/test/**/*.test.sol'
+match_path = '**/test/**/*.t.sol'
+
+# https://book.getfoundry.sh/reference/config/testing#fuzz
+# fuzz = { runs = 256 }
+# https://book.getfoundry.sh/reference/config/testing#invariant
+# invariant = { runs = 256, depth = 15 }
+
+# Fails the invariant fuzzing if a revert occurs
+# fail_on_revert = true
+
+# Style of uint/int256 types
+fmt = { int_types = 'long' }
