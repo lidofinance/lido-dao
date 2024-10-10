@@ -18,6 +18,8 @@ import { HardhatUserConfig, subtask } from "hardhat/config";
 
 import { mochaRootHooks } from "test/hooks";
 
+import "./tasks";
+
 const RPC_URL: string = process.env.RPC_URL || "";
 const MAINNET_FORKING_URL = process.env.MAINNET_FORKING_URL || "";
 const INTEGRATION_SCRATCH_DEPLOY = process.env.INTEGRATION_SCRATCH_DEPLOY || "off";
@@ -74,6 +76,9 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
       accounts: loadAccounts("sepolia"),
     },
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
   },
   solidity: {
     compilers: [
