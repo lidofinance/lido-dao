@@ -1584,10 +1584,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:3.4.0":
-  version: 3.4.0
-  resolution: "@openzeppelin/contracts@npm:3.4.0"
-  checksum: 10c0/685a951d4a159a37c8ed359a9f94455bb8cf5dc42122bb00fc3f571bf2889bbda40fcaa6237620786794583ca5ec7697d809c9e07651893d3618413b3589fee8
+"@openzeppelin/contracts@npm:4.9.6":
+  version: 4.9.6
+  resolution: "@openzeppelin/contracts@npm:4.9.6"
+  checksum: 10c0/f834b000778f634a260ed5507827cc67c0922557a1f57e1d76cf7ace061fea171aaf16640ba2e54fd7ed2cc629a9d706bc671a9692d2bb9a9469ea6154de6e8c
   languageName: node
   linkType: hard
 
@@ -8004,7 +8004,7 @@ __metadata:
     "@nomicfoundation/hardhat-toolbox": "npm:^5.0.0"
     "@nomicfoundation/hardhat-verify": "npm:^2.0.11"
     "@nomicfoundation/ignition-core": "npm:^0.15.5"
-    "@openzeppelin/contracts": "npm:3.4.0"
+    "@openzeppelin/contracts": "npm:4.9.6"
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1"
     "@typechain/ethers-v6": "npm:^0.5.1"
     "@typechain/hardhat": "npm:^9.1.0"
