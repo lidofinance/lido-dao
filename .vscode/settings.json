@@ -1,0 +1,8 @@
+{
+  "files.trimTrailingWhitespace": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+  "solidity.defaultCompiler": "remote",
+  "cSpell.words": ["IETHRegistrarController", "sealables", "streccak", "TmplAppInstalled", "TmplDAOAndTokenDeployed"]
+}

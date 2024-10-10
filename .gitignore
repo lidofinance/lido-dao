@@ -1,55 +1,29 @@
-.idea
-.vscode
-**/build/
-**/node_modules/
-**/lib/abi/*.json
-**/artifacts/
-**/artifacts-userdoc/
-.cache
-**/cache/
-dist/
-tmp/
-venv
-out
+.idea/
+.yarn/
 
-/coverage/
-/coverage.json
-.coverage_*/
+node_modules/
+coverage/
 
-aragon-apps/
-aragon-client/
-cli/vendor
+coverage.json
 
-**/data/
-*.log
+typechain/
+typechain-types/
 
-# Yarn stuff
-.yarn/*
-
-.pnp.*
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Geth chaindata
-.chaindata/
-
-# Sensitive data
-/accounts.json
-# e2e temp data
-/deployed-e2e.json
-
-/deployed-local.json
-
-# OS relative
-.DS_Store
+# Hardhat files
+cache/
+artifacts/
 
 # foundry artifacts
-foundry/cache
-foundry/out
+foundry/cache/
+foundry/out/
 
-logs
-**/verificator_diffs/
+# Extracted ABI files
+lib/abi/*.json
+
+.env
+accounts.json
+deployed-local.json
+deployed-hardhat.json
+
+# MacOS
+.DS_Store

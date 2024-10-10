@@ -228,16 +228,12 @@
     "implementation": {
       "contract": "@aragon/os/contracts/kernel/Kernel.sol",
       "address": "0x1c2807B207f140a1DE0b39E5546eDEf67Af2568c",
-      "constructorArgs": [
-        true
-      ]
+      "constructorArgs": [true]
     },
     "proxy": {
       "address": "0x6155bD199ECcc79Ff4e8B392f6cBD9c9874E8916",
       "contract": "@aragon/os/contracts/kernel/KernelProxy.sol",
-      "constructorArgs": [
-        "0x1c2807B207f140a1DE0b39E5546eDEf67Af2568c"
-      ]
+      "constructorArgs": ["0x1c2807B207f140a1DE0b39E5546eDEf67Af2568c"]
     }
   },
   "aragonEnsLabelName": "aragonpm",
@@ -304,16 +300,14 @@
     "address": "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5"
   },
   "dummyEmptyContract": {
-    "contract": "contracts/0.8.9/test_helpers/DummyEmptyContract.sol",
+    "contract": "contracts/0.8.9/utils/DummyEmptyContract.sol",
     "address": "0xF30a674935479cc6f2254BA65d7534Eab8bD6ba2",
     "constructorArgs": []
   },
   "eip712StETH": {
     "contract": "contracts/0.8.9/EIP712StETH.sol",
     "address": "0x9726CA9AEFF4BC8FB8C084BdAbdB71608248E3f8",
-    "constructorArgs": [
-      "0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af"
-    ]
+    "constructorArgs": ["0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af"]
   },
   "ens": {
     "address": "0x794f1895d73853E9561B1ADb47DABC8e6C3602DE"
@@ -336,10 +330,7 @@
   "executionLayerRewardsVault": {
     "contract": "contracts/0.8.9/LidoExecutionLayerRewardsVault.sol",
     "address": "0x94B1B8e2680882f8652882e7F196169dE3d9a3B2",
-    "constructorArgs": [
-      "0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af",
-      "0x32A0E5828B62AAb932362a4816ae03b860b65e83"
-    ]
+    "constructorArgs": ["0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af", "0x32A0E5828B62AAb932362a4816ae03b860b65e83"]
   },
   "gateSeal": {
     "factoryAddress": "0x0000000000000000000000000000000000000000",
@@ -382,7 +373,6 @@
       "0x7637d44c9f2e9cA584a8B5D2EA493012A5cdaEB6"
     ]
   },
-  "initialDeployTotalGasUsed": "93822319027187012352012355612355612355610342610347112361112359910143001235561950934066901010464461610104644669101046446691060844875210608248680106082486801061274870010094944627101001446332871228712287122871228712",
   "ldo": {
     "address": "0xd06dF83b8ad6D89C86a187fba4Eae918d497BdCB",
     "contract": "@aragon/minime/contracts/MiniMeToken.sol",
@@ -484,10 +474,7 @@
     },
     "contract": "contracts/0.8.9/OracleDaemonConfig.sol",
     "address": "0x7bC76076b0f3879b4A750450C0Ccf02c6Ca11220",
-    "constructorArgs": [
-      "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5",
-      []
-    ]
+    "constructorArgs": ["0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5", []]
   },
   "oracleReportSanityChecker": {
     "deployParameters": {
@@ -506,45 +493,20 @@
     "constructorArgs": [
       "0x8f6254332f69557A72b0DA2D5F0Bc07d4CA991E7",
       "0x6885E36BFcb68CB383DfE90023a462C03BCB2AE5",
-      [
-        1500,
-        500,
-        1000,
-        250,
-        2000,
-        100,
-        100,
-        128,
-        5000000
-      ],
-      [
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-        []
-      ]
+      [1500, 500, 1000, 250, 2000, 100, 100, 128, 5000000],
+      [[], [], [], [], [], [], [], [], [], []]
     ]
   },
   "sepoliaDepositAdapter": {
     "implementation": {
       "contract": "contracts/0.8.9/SepoliaDepositAdapter.sol",
       "address": "0x5c5C4556F0017FF57c331185E1C61d91acEf966e",
-      "constructorArgs": [
-        "0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"
-      ]
+      "constructorArgs": ["0x7f02C3E3c98b133055B8B348B2Ac625669Ed295D"]
     },
     "proxy": {
       "address": "0x80b5DC88C98E528bF9cb4B7F0f076aC41da24651",
       "contract": "contracts/0.8.9/proxy/OssifiableProxy.sol",
-      "constructorArgs": [
-        "0x5c5C4556F0017FF57c331185E1C61d91acEf966e"
-      ]
+      "constructorArgs": ["0x5c5C4556F0017FF57c331185E1C61d91acEf966e"]
     }
   },
   "stakingRouter": {
@@ -560,9 +522,7 @@
     "implementation": {
       "contract": "contracts/0.8.9/StakingRouter.sol",
       "address": "0x46cF57508B0565decC0419B833C2dAFa50B132e0",
-      "constructorArgs": [
-        "0x80b5DC88C98E528bF9cb4B7F0f076aC41da24651"
-      ]
+      "constructorArgs": ["0x80b5DC88C98E528bF9cb4B7F0f076aC41da24651"]
     }
   },
   "validatorsExitBusOracle": {
@@ -581,11 +541,7 @@
     "implementation": {
       "contract": "contracts/0.8.9/oracle/ValidatorsExitBusOracle.sol",
       "address": "0xC40801b88C835a58e54eEE6679D301ba31a4C72b",
-      "constructorArgs": [
-        12,
-        1655733600,
-        "0x8f6254332f69557A72b0DA2D5F0Bc07d4CA991E7"
-      ]
+      "constructorArgs": [12, 1655733600, "0x8f6254332f69557A72b0DA2D5F0Bc07d4CA991E7"]
     }
   },
   "vestingParams": {
@@ -619,37 +575,25 @@
     "implementation": {
       "contract": "contracts/0.8.9/WithdrawalQueueERC721.sol",
       "address": "0x0220A1cF6C3a548BE75aEabCdA509CaB08CDe063",
-      "constructorArgs": [
-        "0xB82381A3fBD3FaFA77B3a7bE693342618240067b",
-        "Lido: stETH Withdrawal NFT",
-        "unstETH"
-      ]
+      "constructorArgs": ["0xB82381A3fBD3FaFA77B3a7bE693342618240067b", "Lido: stETH Withdrawal NFT", "unstETH"]
     }
   },
   "withdrawalVault": {
     "implementation": {
       "contract": "contracts/0.8.9/WithdrawalVault.sol",
       "address": "0xee386d787Db24AbEe4dcc591F35405E323b70Dad",
-      "constructorArgs": [
-        "0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af",
-        "0x32A0E5828B62AAb932362a4816ae03b860b65e83"
-      ]
+      "constructorArgs": ["0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af", "0x32A0E5828B62AAb932362a4816ae03b860b65e83"]
     },
     "proxy": {
       "contract": "contracts/0.8.4/WithdrawalsManagerProxy.sol",
       "address": "0xDe7318Afa67eaD6d6bbC8224dfCe5ed6e4b86d76",
-      "constructorArgs": [
-        "0x39A0EbdEE54cB319f4F42141daaBDb6ba25D341A",
-        "0xee386d787Db24AbEe4dcc591F35405E323b70Dad"
-      ]
+      "constructorArgs": ["0x39A0EbdEE54cB319f4F42141daaBDb6ba25D341A", "0xee386d787Db24AbEe4dcc591F35405E323b70Dad"]
     },
     "address": "0xDe7318Afa67eaD6d6bbC8224dfCe5ed6e4b86d76"
   },
   "wstETH": {
     "contract": "contracts/0.6.12/WstETH.sol",
     "address": "0xB82381A3fBD3FaFA77B3a7bE693342618240067b",
-    "constructorArgs": [
-      "0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af"
-    ]
+    "constructorArgs": ["0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af"]
   }
 }

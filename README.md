@@ -1,121 +1,69 @@
-![Lido on Ethereum Logo](./assets/img/lido.png)
+## Disclaimer!
 
-<div style="display: flex;" align="center">
-  <img alt="GitHub license" src="https://img.shields.io/github/license/lidofinance/lido-dao?color=orange">
-  <img alt="NodeJS" src="https://img.shields.io/badge/Node_JS-18-blue">
-  <img alt="Solidity" src="https://img.shields.io/badge/solidity-multiver-blue">
-  <img alt="Hardhat" src="https://img.shields.io/badge/hardhat-^2.12-blue">
-  <img alt="Aragon OS" src="https://img.shields.io/badge/Aragon_OS-4.4.0-blue">
-  <img alt="GitHub tests" src="https://img.shields.io/github/actions/workflow/status/lidofinance/lido-dao/linters.yml?label=tests">
-  <img alt="GitHub code analysis" src="https://img.shields.io/github/actions/workflow/status/lidofinance/lido-dao/analyse.yml?label=code analysis">
-  <img alt="GitHub Bytecode" src="https://img.shields.io/github/actions/workflow/status/lidofinance/lido-dao/assert-bytecode.yml?label=assert bytecode">
+This is the core repository of the Lido on Ethereum protocol. The entire codebase, excluding contracts, has undergone significant refactoring and tooling modernization. For historical context or legacy information, refer to the [last legacy commit](https://github.com/lidofinance/lido-dao/tree/de9e895879126b482effedd8fa1f2af3f7dc2dd4).
+
+---
+
+<div>
+    <img alt="Lido" src="https://img.shields.io/badge/v2-version?label=lido&labelColor=rgb(91%2C%20162%2C%20252)&color=white"/>
+    <img alt="GitHub license" src="https://img.shields.io/github/license/lidofinance/lido-dao?labelColor=orange&color=white"/>
+    <img alt="Solidity" src="https://img.shields.io/badge/multiver-s?style=flat&label=solidity&labelColor=rgb(86%2C%2085%2C%20212)&color=white"/>
+    <img alt="Aragon OS" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.dependencies%5B'%40aragon%2Fos'%5D&style=flat&label=aragon%2Fos&labelColor=rgb(70%2C%20100%2C%20246)&color=white"/>
+    <img alt="Node.js" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.engines.node&style=flat&label=node.js&labelColor=rgb(62%2C%20109%2C%2026)&color=white"/>
+    <img alt="TypeScript" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.typescript&style=flat&label=typescript&labelColor=rgb(78%2C%20119%2C%20194)&color=white" />
+    <img alt="Hardhat" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.hardhat&style=flat&label=hardhat&labelColor=rgb(251%2C%20240%2C%2056)&color=white" />
+    <img alt="Ethers" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Flidofinance%2Fcore%2Fmaster%2Fpackage.json&query=%24.devDependencies.ethers&style=flat&label=ethers&labelColor=rgb(51%2C%2077%2C%20121)&color=white" />
+    <br/>
+    <img alt="GitHub tests" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/tests.yml?label=tests">
+    <img alt="GitHub linters" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/linters.yml?label=linters">
+    <img alt="GitHub code analysis" src="https://img.shields.io/github/actions/workflow/status/lidofinance/core/analyse.yml?label=code analysis">
 </div>
-<br/>
 
-The **Lido on Ethereum Liquid Staking Protocol** allows their users to earn staking rewards on the Beacon chain without locking ether or maintaining staking infrastructure.
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <img alt="Lido on Ethereum Logo" src="./docs/assets/lido.png" />
+</div>
 
-Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets.
+**Lido on Ethereum** is a liquid-staking protocol allowing anyone to earn staking rewards without locking ether or maintaining infrastructure.
 
-Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity, and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
+Users can deposit ether to the Lido smart contract and receive stETH tokens in return. The smart contract then stakes tokens with the DAO-picked node operators. Users' deposited funds are pooled by the DAO, and node operators never have direct access to the users' assets. Unlike staked ether, the stETH token is free from the limitations associated with a lack of liquidity, and can be transferred at any time. The stETH token balance corresponds to the amount of ether that the holder could request to withdraw.
 
 **NB:** It's advised to read [Documentation](https://docs.lido.fi/) before getting started with this repo.
 
-## Lido DAO
+---
 
-The [Lido DAO](https://docs.lido.fi/lido-dao) is a Decentralized Autonomous Organization that manages the liquid staking protocol by deciding on key parameters (e.g., setting fees, assigning node operators and oracles, performing upgrades, etc.) through the voting power of governance token (LDO) holders.
+### Key features
 
-The Lido DAO charges service fees that support infrastructure maintenance, research, development, protocol upgrades, and potential loss coverage.
+- No minimum deposit amount,
+- Instant rewards within 24 hours of deposit,
+- stETH, an LST with the deepest liquidity in DeFi,
+- In-protocol automated withdrawals,
+- Governed by Lido DAO.
 
-The Lido DAO was built using the [Aragon DAO]((https://aragon.org/dao)) framework.
+---
 
-## Protocol levers
+### Learn more
 
-A full list of protocol levers that are controllable by the Aragon DAO can be found [here](https://docs.lido.fi/guides/protocol-levers/).
+- [Lido DAO governance](https://docs.lido.fi/lido-dao)
+- [Technical documentation](https://docs.lido.fi/contracts/lido)
+- [Lido addresses](https://docs.lido.fi/deployed-contracts/)
+- [Protocol levers](https://docs.lido.fi/guides/protocol-levers/)
+- [Audits](https://github.com/lidofinance/audits)
 
-## Contracts
+## Bug Bounty
 
-For the contracts description see <https://docs.lido.fi/> contracts section.
+At the moment, the [Lido bug bounty program](https://immunefi.com/bounty/lido/) covers only the contracts in the [Lido DAO repository](https://github.com/lidofinance/lido-dao). Once the work on this repository is finished, the bug bounty program will be updated.
 
-## Deployments
+## Contributing
 
-For the protocol contracts addresses see <https://docs.lido.fi/deployed-contracts/>
+Please refer to the [Lido Contribution Guide](/CONTRIBUTING.md).
 
-## Development
+## Code of Conduct
 
-### Requirements
+Please refer to the [Lido Contributor Code of Conduct](/CODE_OF_CONDUCT.md).
 
-* shell - bash or zsh
-* find
-* sed
-* jq
-* curl
-* cut
-* node.js v18
-* (optional) Lerna
-* (optional) Foundry
+## License
 
-### Installing Aragon & other deps
-
-Installation is local and doesn't require root privileges.
-
-If you have `yarn` installed globally:
-
-```bash
-yarn
-```
-
-otherwise:
-
-```bash
-npx yarn
-```
-
-### Build & test
-
-Run unit tests:
-
-```bash
-yarn test
-```
-
-Run unit tests and report gas used by each Solidity function:
-
-```bash
-yarn test:gas
-```
-
-Generate unit test coverage report:
-
-```bash
-yarn test:coverage
-```
-
-Test coverage is reported to `coverage.json` and `coverage/index.html` files located
-inside each app's folder.
-
-> Keep in mind that the code uses `assert`s to check invariants that should always be kept
-unless the code is buggy (in contrast to `require` statements which check pre-conditions),
-so full branch coverage will never be reported until
-[solidity-coverage#219] is implemented.
-
-[solidity-coverage#219]: https://github.com/sc-forks/solidity-coverage/issues/269
-
-Run fuzzing tests with foundry:
-
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-forge test
-```
-
-## Deploying
-
-To deploy the smart contracts and run the protocol instance either locally or on a new testnet,
-please proceed to the following [scratch deploy documentation](/docs/scratch-deploy.md)
-
-# License
-
-2023 Lido <info@lido.fi>
+2024 Lido <info@lido.fi>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -123,7 +71,7 @@ the Free Software Foundation, version 3 of the License, or any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the [GNU General Public License](LICENSE)
