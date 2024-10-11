@@ -5,7 +5,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { SecondOpinionOracleMock } from "typechain-types";
 
-import { ether, impersonate, ONE_GWEI } from "lib";
+import { ether, impersonate, log, ONE_GWEI } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
 import { finalizeWithdrawalQueue, norEnsureOperators, report, sdvtEnsureOperators } from "lib/protocol/helpers";
 
@@ -15,9 +15,13 @@ const AMOUNT = ether("100");
 const MAX_DEPOSIT = 150n;
 const CURATED_MODULE_ID = 1n;
 const INITIAL_REPORTED_BALANCE = ether("32") * 3n; // 32 ETH * 3 validators
-const DIFF_AMOUNT = ether("10");
 
 const ZERO_HASH = new Uint8Array(32).fill(0);
+
+// Diff amount is 10% of total supply
+function getDiffAmount(totalSupply: bigint): bigint {
+  return (totalSupply / 10n / ONE_GWEI) * ONE_GWEI;
+}
 
 describe("Second opinion", () => {
   let ctx: ProtocolContext;
@@ -29,6 +33,7 @@ describe("Second opinion", () => {
   let originalState: string;
 
   let secondOpinion: SecondOpinionOracleMock;
+  let totalSupply: bigint;
 
   before(async () => {
     ctx = await getProtocolContext();
@@ -69,11 +74,17 @@ describe("Second opinion", () => {
       .connect(agentSigner)
       .grantRole(await oracleReportSanityChecker.SECOND_OPINION_MANAGER_ROLE(), agentSigner.address);
 
-    await report(ctx, {
-      clDiff: INITIAL_REPORTED_BALANCE,
-      clAppearedValidators: 3n,
-      excludeVaultsBalances: true,
-    });
+    let { beaconBalance } = await lido.getBeaconStat();
+    // Report initial balances if TVL is zero
+    if (beaconBalance === 0n) {
+      await report(ctx, {
+        clDiff: INITIAL_REPORTED_BALANCE,
+        clAppearedValidators: 3n,
+        excludeVaultsBalances: true,
+      });
+      beaconBalance = (await lido.getBeaconStat()).beaconBalance;
+    }
+    totalSupply = beaconBalance;
 
     await oracleReportSanityChecker.connect(agentSigner).setSecondOpinionOracleAndCLBalanceUpperMargin(soAddress, 74n);
   });
@@ -86,26 +97,99 @@ describe("Second opinion", () => {
 
   after(async () => await Snapshot.restore(snapshot)); // Rollback to the initial state pre deployment
 
-  it("Should account correctly with no CL rebase", async () => {
-    const { hashConsensus, accountingOracle, oracleReportSanityChecker } = ctx.contracts;
+  it("Should fail report without second opinion ready", async () => {
+    const { oracleReportSanityChecker } = ctx.contracts;
 
-    // Report without second opinion is failing
-    await expect(report(ctx, { clDiff: -DIFF_AMOUNT, excludeVaultsBalances: true })).to.be.revertedWithCustomError(
+    const reportedDiff = getDiffAmount(totalSupply);
+
+    await expect(report(ctx, { clDiff: -reportedDiff, excludeVaultsBalances: true })).to.be.revertedWithCustomError(
       oracleReportSanityChecker,
       "NegativeRebaseFailedSecondOpinionReportIsNotReady",
     );
+  });
+
+  it("Should correctly report negative rebase with second opinion", async () => {
+    const { hashConsensus, accountingOracle } = ctx.contracts;
+
+    const reportedDiff = getDiffAmount(totalSupply);
 
     // Provide a second opinion
     const curFrame = await hashConsensus.getCurrentFrame();
-    const expectedBalance = (INITIAL_REPORTED_BALANCE - DIFF_AMOUNT) / ONE_GWEI;
+    const expectedBalance = (totalSupply - reportedDiff) / ONE_GWEI;
     await secondOpinion.addPlainReport(curFrame.reportProcessingDeadlineSlot, expectedBalance, 0n);
 
     const lastProcessingRefSlotBefore = await accountingOracle.getLastProcessingRefSlot();
-    await report(ctx, { clDiff: -DIFF_AMOUNT, excludeVaultsBalances: true });
+    await report(ctx, { clDiff: -reportedDiff, excludeVaultsBalances: true });
     const lastProcessingRefSlotAfter = await accountingOracle.getLastProcessingRefSlot();
     expect(lastProcessingRefSlotBefore).to.be.lessThan(
       lastProcessingRefSlotAfter,
       "LastProcessingRefSlot should be updated",
+    );
+  });
+
+  it("Should fail report with smaller second opinion cl balance", async () => {
+    const { hashConsensus, oracleReportSanityChecker } = ctx.contracts;
+
+    const reportedDiff = getDiffAmount(totalSupply);
+
+    const curFrame = await hashConsensus.getCurrentFrame();
+    const expectedBalance = (totalSupply - reportedDiff) / ONE_GWEI - 1n;
+    await secondOpinion.addPlainReport(curFrame.reportProcessingDeadlineSlot, expectedBalance, 0n);
+
+    await expect(report(ctx, { clDiff: -reportedDiff, excludeVaultsBalances: true })).to.be.revertedWithCustomError(
+      oracleReportSanityChecker,
+      "NegativeRebaseFailedCLBalanceMismatch",
+    );
+  });
+
+  it("Should tolerate report with slightly bigger second opinion cl balance", async () => {
+    const { hashConsensus, accountingOracle } = ctx.contracts;
+
+    const reportedDiff = getDiffAmount(totalSupply);
+
+    const curFrame = await hashConsensus.getCurrentFrame();
+    const expectedBalance = (totalSupply - reportedDiff) / ONE_GWEI;
+    // Less than 0.5% diff in balances
+    const correction = (expectedBalance * 4n) / 1000n;
+    await secondOpinion.addPlainReport(curFrame.reportProcessingDeadlineSlot, expectedBalance + correction, 0n);
+    log.debug("Reporting parameters", {
+      totalSupply,
+      reportedDiff,
+      expectedBalance,
+      correction,
+      reportedBalance: totalSupply - reportedDiff,
+    });
+
+    const lastProcessingRefSlotBefore = await accountingOracle.getLastProcessingRefSlot();
+    await report(ctx, { clDiff: -reportedDiff, excludeVaultsBalances: true });
+    const lastProcessingRefSlotAfter = await accountingOracle.getLastProcessingRefSlot();
+    expect(lastProcessingRefSlotBefore).to.be.lessThan(
+      lastProcessingRefSlotAfter,
+      "LastProcessingRefSlot should be updated",
+    );
+  });
+
+  it("Should fail report with significantly bigger second opinion cl balance", async () => {
+    const { hashConsensus, oracleReportSanityChecker } = ctx.contracts;
+
+    const reportedDiff = getDiffAmount(totalSupply);
+
+    const curFrame = await hashConsensus.getCurrentFrame();
+    const expectedBalance = (totalSupply - reportedDiff) / ONE_GWEI;
+    // More than 0.5% diff in balances
+    const correction = (expectedBalance * 9n) / 1000n;
+    await secondOpinion.addPlainReport(curFrame.reportProcessingDeadlineSlot, expectedBalance + correction, 0n);
+    log.debug("Reporting parameters", {
+      totalSupply,
+      reportedDiff,
+      expectedBalance,
+      correction,
+      "expected + correction": expectedBalance + correction,
+    });
+
+    await expect(report(ctx, { clDiff: -reportedDiff, excludeVaultsBalances: true })).to.be.revertedWithCustomError(
+      oracleReportSanityChecker,
+      "NegativeRebaseFailedCLBalanceMismatch",
     );
   });
 });
