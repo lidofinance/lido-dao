@@ -3,13 +3,7 @@ import { ethers } from "hardhat";
 
 import { LidoLocator } from "typechain-types";
 
-import {
-  addContractHelperFields,
-  DeployedContract,
-  getContractAt,
-  getContractPath,
-  LoadedContract,
-} from "lib/contract";
+import { addContractHelperFields, DeployedContract, getContractPath, loadContract, LoadedContract } from "lib/contract";
 import { ConvertibleToString, cy, gr, log, yl } from "lib/log";
 import { incrementGasUsed, Sk, updateObjectInState } from "lib/state-file";
 
@@ -224,7 +218,7 @@ export async function updateProxyImplementation(
 
   const implementation = await deployContract(artifactName, constructorArgs, proxyOwner, withStateFile);
 
-  const proxy = await getContractAt(PROXY_CONTRACT_NAME, proxyAddress);
+  const proxy = await loadContract(PROXY_CONTRACT_NAME, proxyAddress);
   await makeTx(proxy, "proxy__upgradeTo", [implementation.address], { from: proxyOwner });
 
   if (withStateFile) {
