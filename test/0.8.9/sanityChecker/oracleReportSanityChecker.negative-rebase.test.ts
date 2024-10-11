@@ -37,7 +37,7 @@ describe("OracleReportSanityChecker.sol:negative-rebase", () => {
     maxPositiveTokenRebase: 5_000_000n, // 0.05%
     initialSlashingAmountPWei: 1000n, // 1 ETH = 1000 PWei
     inactivityPenaltiesAmountPWei: 101n, // 0.101 ETH = 101 PWei
-    clBalanceOraclesErrorUpperBPLimit: 74n, // 0.74%
+    clBalanceOraclesErrorUpperBPLimit: 50n, // 0.5%
   };
 
   let originalState: string;
