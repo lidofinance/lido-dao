@@ -60,7 +60,7 @@ export async function main() {
   const proxyLocator = await ethers.getContractAt("OssifiableProxy", locatorAddress);
   const proxyAdmin = await proxyLocator.proxy__getAdmin();
 
-  const proxyAdminSigner = await impersonate(proxyAdmin, ether("1"));
+  const proxyAdminSigner = await impersonate(proxyAdmin, ether("100"));
 
   await updateLidoLocatorImplementation(
     locatorAddress,
