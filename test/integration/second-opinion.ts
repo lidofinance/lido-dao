@@ -42,9 +42,7 @@ describe("Second opinion", () => {
     await finalizeWithdrawalQueue(ctx, stEthHolder, ethHolder);
 
     await norEnsureOperators(ctx, 3n, 5n);
-    if (ctx.flags.withSimpleDvtModule) {
-      await sdvtEnsureOperators(ctx, 3n, 5n);
-    }
+    await sdvtEnsureOperators(ctx, 3n, 5n);
 
     const { chainId } = await ethers.provider.getNetwork();
     // Sepolia-specific initialization
