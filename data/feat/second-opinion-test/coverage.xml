@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd">
-<coverage lines-valid="2929"  lines-covered="2811"  line-rate="0.9597"  branches-valid="1300"  branches-covered="1221"  branch-rate="0.9392"  timestamp="1728662662510" complexity="0" version="0.1">
+<coverage lines-valid="2929"  lines-covered="2811"  line-rate="0.9597"  branches-valid="1300"  branches-covered="1221"  branch-rate="0.9392"  timestamp="1728672518668" complexity="0" version="0.1">
 <sources>
 	<source>/home/runner/work/lido-dao/lido-dao</source>
 </sources>
@@ -4777,8 +4777,8 @@
 			<method name="_updateLimits"  hits="82"  signature="()V" >
 				<lines><line number="825"  hits="82" /></lines>
 			</method>
-			<method name="_checkLimitValue"  hits="175"  signature="()V" >
-				<lines><line number="874"  hits="175" /></lines>
+			<method name="_checkLimitValue"  hits="181"  signature="()V" >
+				<lines><line number="874"  hits="181" /></lines>
 			</method>
 			<method name="pack"  hits="71"  signature="()V" >
 				<lines><line number="918"  hits="71" /></lines>
@@ -4986,10 +4986,10 @@
 			<line number="864"  hits="9"  branch="false" />
 			<line number="865"  hits="8"  branch="false" />
 			<line number="867"  hits="71"  branch="true"  condition-coverage="100% (2/2)" />
-			<line number="868"  hits="8"  branch="false" />
-			<line number="869"  hits="8"  branch="false" />
+			<line number="868"  hits="14"  branch="false" />
+			<line number="869"  hits="14"  branch="false" />
 			<line number="871"  hits="71"  branch="false" />
-			<line number="875"  hits="175"  branch="true"  condition-coverage="100% (4/4)" />
+			<line number="875"  hits="181"  branch="true"  condition-coverage="100% (4/4)" />
 			<line number="876"  hits="11"  branch="false" />
 			<line number="919"  hits="71"  branch="false" />
 			<line number="920"  hits="71"  branch="false" />
