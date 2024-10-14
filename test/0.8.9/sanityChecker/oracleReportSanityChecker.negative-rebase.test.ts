@@ -43,7 +43,7 @@ describe("OracleReportSanityChecker.sol:negative-rebase", () => {
   let originalState: string;
 
   const deploySecondOpinionOracle = async () => {
-    const secondOpinionOracle = await ethers.deployContract("SecondOpinionOracleMock");
+    const secondOpinionOracle = await ethers.deployContract("SecondOpinionOracle__Mock");
 
     const clOraclesRole = await checker.SECOND_OPINION_MANAGER_ROLE();
     await checker.grantRole(clOraclesRole, deployer.address);

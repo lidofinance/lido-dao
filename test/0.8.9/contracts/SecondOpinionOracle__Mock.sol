@@ -10,7 +10,7 @@ interface ISecondOpinionOracle {
         returns (bool success, uint256 clBalanceGwei, uint256 withdrawalVaultBalanceWei, uint256 numValidators, uint256 exitedValidators);
 }
 
-contract SecondOpinionOracleMock is ISecondOpinionOracle {
+contract SecondOpinionOracle__Mock is ISecondOpinionOracle {
 
     struct Report {
         bool success;

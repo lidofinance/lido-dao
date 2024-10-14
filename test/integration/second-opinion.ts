@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-import { SecondOpinionOracleMock } from "typechain-types";
+import { SecondOpinionOracle__Mock } from "typechain-types";
 
 import { ether, impersonate, log, ONE_GWEI } from "lib";
 import { getProtocolContext, ProtocolContext } from "lib/protocol";
@@ -32,7 +32,7 @@ describe("Second opinion", () => {
   let snapshot: string;
   let originalState: string;
 
-  let secondOpinion: SecondOpinionOracleMock;
+  let secondOpinion: SecondOpinionOracle__Mock;
   let totalSupply: bigint;
 
   before(async () => {
@@ -66,7 +66,7 @@ describe("Second opinion", () => {
     const dsmSigner = await impersonate(depositSecurityModule.address, AMOUNT);
     await lido.connect(dsmSigner).deposit(MAX_DEPOSIT, CURATED_MODULE_ID, ZERO_HASH);
 
-    secondOpinion = await ethers.deployContract("SecondOpinionOracleMock", []);
+    secondOpinion = await ethers.deployContract("SecondOpinionOracle__Mock", []);
     const soAddress = await secondOpinion.getAddress();
 
     const agentSigner = await ctx.getSigner("agent", AMOUNT);
