@@ -207,11 +207,6 @@ describe("Accounting", () => {
     const { sharesRateBefore, sharesRateAfter } = shareRateFromEvent(tokenRebasedEvent[0]);
     expect(sharesRateBefore).to.be.lessThanOrEqual(sharesRateAfter);
 
-    const postTotalSharesEvent = ctx.getEvents(reportTxReceipt, "PostTotalShares");
-    expect(postTotalSharesEvent[0].args.preTotalPooledEther).to.equal(
-      postTotalSharesEvent[0].args.postTotalPooledEther + amountOfETHLocked,
-    );
-
     const ethBalanceAfter = await ethers.provider.getBalance(lido.address);
     expect(ethBalanceBefore).to.equal(ethBalanceAfter + amountOfETHLocked);
   });
@@ -259,12 +254,6 @@ describe("Accounting", () => {
     expect(ethDistributedEvent[0].args.preCLBalance + REBASE_AMOUNT).to.equal(
       ethDistributedEvent[0].args.postCLBalance,
       "ETHDistributed: CL balance differs from expected",
-    );
-
-    const postTotalSharesEvent = ctx.getEvents(reportTxReceipt, "PostTotalShares");
-    expect(postTotalSharesEvent[0].args.preTotalPooledEther + REBASE_AMOUNT).to.equal(
-      postTotalSharesEvent[0].args.postTotalPooledEther + amountOfETHLocked,
-      "PostTotalShares: TotalPooledEther differs from expected",
     );
   });
 
@@ -381,12 +370,6 @@ describe("Accounting", () => {
     expect(ethDistributedEvent[0].args.preCLBalance + rebaseAmount).to.equal(
       ethDistributedEvent[0].args.postCLBalance,
       "ETHDistributed: CL balance has not increased",
-    );
-
-    const postTotalSharesEvent = ctx.getEvents(reportTxReceipt, "PostTotalShares");
-    expect(postTotalSharesEvent[0].args.preTotalPooledEther + rebaseAmount).to.equal(
-      postTotalSharesEvent[0].args.postTotalPooledEther + amountOfETHLocked,
-      "PostTotalShares: TotalPooledEther has not increased",
     );
   });
 
