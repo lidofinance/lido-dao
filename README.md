@@ -51,7 +51,7 @@ Users can deposit ether to the Lido smart contract and receive stETH tokens in r
 
 ## Bug Bounty
 
-Please refer to the [Lido Bug Bounry](/bugbounty.md).
+At the moment, the [Lido bug bounty program](https://immunefi.com/bounty/lido/) covers only the contracts in the [Lido DAO repository](https://github.com/lidofinance/lido-dao). Once the work on this repository is finished, the bug bounty program will be updated.
 
 ## Contributing
 
