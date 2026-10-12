@@ -12,7 +12,7 @@ import {
 } from "test/common/lib/clGIndices";
 import { Snapshot } from "test/suite";
 
-const LARGEST_PROGRESSIVE_LIST_INDEX = ((4n ** 84n - 1n) * 4n) / 3n;
+const LARGEST_PROGRESSIVE_LIST_INDEX = (4n ** 85n - 4n) / 3n;
 
 const randomBigInt = (bytes: number): bigint => BigInt(ethers.hexlify(randomBytes(bytes)));
 

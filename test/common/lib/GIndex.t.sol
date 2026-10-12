@@ -39,7 +39,7 @@ contract Library {
 }
 
 contract GIndexTest is Test {
-    uint256 internal constant LARGEST_PROGRESSIVE_LIST_INDEX = ((4 ** 84 - 1) * 4) / 3;
+    uint256 internal constant LARGEST_PROGRESSIVE_LIST_INDEX = (4 ** 85 - 4) / 3;
 
     GIndex internal ZERO = toGIndex(0);
     GIndex internal ROOT = toGIndex(1);
