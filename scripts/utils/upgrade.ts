@@ -544,3 +544,72 @@ export async function checkArtifactDeployedAndLog(artifactName: Sk): Promise<boo
   }
   return isDeployed;
 }
+
+// ITimelock.ProposalStatus.Executed (see contracts/upgrade/interfaces/ITimelock.sol)
+const PROPOSAL_STATUS_EXECUTED = 3n;
+
+type OmnibusVoteScript = {
+  getVotingVoteItems(): Promise<unknown>;
+  getVoteItems(): Promise<unknown>;
+};
+
+/**
+ * Executes the items of an omnibus vote script directly on a fork: the Aragon items from the Voting app
+ * and the Dual Governance items from the proposer's executor.
+ * A non-zero `proposalId` targets the DG proposal only and skips the Aragon items; items of a vote or
+ * proposal already enacted on-chain are skipped as well.
+ */
+export async function mockEnactOmnibus(
+  state: DeploymentState,
+  voteScript: OmnibusVoteScript,
+  { voteId, proposalId }: { voteId: bigint; proposalId: bigint },
+) {
+  if (proposalId) {
+    log.warning("Proposal id is set, skipping non-DG vote items:", proposalId);
+  } else if (voteId && (await isVoteEnacted(state, voteId))) {
+    log.warning("Vote already enacted, skipping non-DG vote items:", voteId);
+  } else {
+    const voteItems = (await voteScript.getVotingVoteItems()) as VoteItem[];
+    const voting = await impersonate(getAddress(Sk.appVoting, state), ether("100"));
+    await execVoteItems(voteItems, voting);
+  }
+
+  if (proposalId && (await isProposalEnacted(state, proposalId))) {
+    log.warning("Proposal already enacted, skipping DG items:", proposalId);
+    return;
+  }
+
+  const dg = await loadContract<IDualGovernance>("IDualGovernance", getAddress(Sk.dgDualGovernance, state));
+  const proposers = await dg.getProposers();
+  if (!proposers.length) throw new Error("No proposer found in DualGovernance.");
+
+  const voteItemsDG = (await voteScript.getVoteItems()) as VoteItem[];
+  const executor = await impersonate(proposers[0].executor, ether("100"));
+  await execVoteItems(voteItemsDG, executor);
+}
+
+async function isVoteEnacted(state: DeploymentState, voteId: bigint): Promise<boolean> {
+  const voting = await loadContract<Voting>("Voting", getAddress(Sk.appVoting, state));
+  const { executed } = await voting.getVote(voteId);
+  return executed;
+}
+
+async function isProposalEnacted(state: DeploymentState, proposalId: bigint): Promise<boolean> {
+  const timelock = await loadContract<ITimelock>("ITimelock", getAddress(Sk.dgEmergencyProtectedTimelock, state));
+  const { status } = await timelock.getProposalDetails(proposalId);
+  return status === PROPOSAL_STATUS_EXECUTED;
+}
+
+async function execVoteItems(voteItems: VoteItem[], executor: HardhatEthersSigner) {
+  for (const item of voteItems) {
+    log(`Execute vote item: ${or(item.description)}`);
+    // The node's gas estimate can fall short for the nested DG item
+    const tx = await executor.sendTransaction({
+      to: item.call.to,
+      data: ethers.hexlify(item.call.data),
+      value: 0n,
+      gasLimit: FUSAKA_TX_GAS_LIMIT,
+    });
+    await tx.wait();
+  }
+}

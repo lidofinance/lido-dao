@@ -413,6 +413,7 @@ export const UpgradeParametersSchema = z.object({
   curatedModule: CuratedModuleConfigSchema,
 
   upgradeVoteScript: UpgradeVoteScriptSchema,
+  srPhase2UpgradeVoteScript: UpgradeVoteScriptSchema,
 
   // old and optional
   vaultHub: VaultHubSchema.optional(),

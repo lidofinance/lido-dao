@@ -20,6 +20,8 @@ import {
   Sk,
 } from "lib";
 
+import { FUSAKA_TX_GAS_LIMIT } from "test/suite";
+
 const PROPOSAL_ID = BigInt(process.env.PROPOSAL_ID || "0");
 const VOTE_ID = BigInt(process.env.VOTE_ID || "0");
 
@@ -107,6 +109,8 @@ async function execVoteItems(voteItems: VoteItem[], executor: HardhatEthersSigne
       to: item.call.to,
       data: ethers.hexlify(item.call.data),
       value: 0n,
+      // The node's gas estimate can fall short for the nested DG item
+      gasLimit: FUSAKA_TX_GAS_LIMIT,
     });
     await tx.wait();
   }

@@ -136,6 +136,9 @@ export enum Sk {
   upgradeTemplate = "upgradeTemplate",
   upgradeVoteScript = "upgradeVoteScript",
   upgradeTemporaryAdmin = "upgradeTemporaryAdmin",
+  srPhase2UpgradeConfig = "srPhase2UpgradeConfig",
+  srPhase2UpgradeTemplate = "srPhase2UpgradeTemplate",
+  srPhase2UpgradeVoteScript = "srPhase2UpgradeVoteScript",
   // Staking modules
   sm_CSM = "sm:CSM",
   sm_CM = "sm:CM",
@@ -221,6 +224,8 @@ export function getAddress(contractKey: Sk, state: DeploymentState): string {
     case Sk.upgradeTemporaryAdmin:
     case Sk.upgradeTemplate:
     case Sk.upgradeVoteScript:
+    case Sk.srPhase2UpgradeTemplate:
+    case Sk.srPhase2UpgradeVoteScript:
     case Sk.gateSealFactory:
       return state[contractKey].address;
     default:
