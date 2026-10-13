@@ -21,7 +21,6 @@ The Dockerfile fetches optional, commit-pinned references for the offline review
 
 - `/opt/lido/execution-delegation-framework`: ERC-1271 guardian contracts called by DSM. The pin matches core's `EDF_REPO_REF`.
 - `/opt/lido/staking-modules`: release `v3.0`, containing CSM v3 and Curated Module v2. It provides context for the router's module calls.
-- `/opt/lido/dual-governance/contracts/Escrow.sol`: a consumer of core share conversions and withdrawal methods. A core defect can change veto weight or block rage quit.
 - `/opt/lido/lido-improvement-proposals/LIPS/`: design intent, especially LIP-12 (post-Merge rewards and fees), LIP-23 (negative rebases), LIP-28 (Dual Governance), LIP-30 (triggerable withdrawals), LIP-34 (pausing), LIP-35 (accounting, top-ups and consolidations), and LIP-37 (EDF/DSM).
 - `/opt/lido/deployed-contracts.md`: the address registry snapshot. Its commit is recorded in the Dockerfile.
 
@@ -101,7 +100,7 @@ These are properties to test, subject to the accepted behavior in section 6. Exi
 - **Identity versus credentials:** all type-2 modules share Lido's `0x02` credentials. A credentials proof does not prove module/operator ownership. Exit format 2 binds a registered pubkey, not deposit status or validator index. Deposits/top-ups use the router's stored credentials; consolidation derives them from the locator's withdrawal vault.
 - **Cross-version accounting:** stVault contracts predate the `v4.0.0` change to internal-ETH accounting used by their conversions. Bad debt passes through VaultHub, RefSlotCache, Accounting and Lido. Other sensitive boundaries are report simulation versus application, packed arithmetic, and extra-data chunk parsing, ordering and deadlines.
 - **Callbacks and zero-value paths:** refunds, claims, ERC-721 callbacks, PDG/vault calls, module hooks and rebase observers may re-enter other entry points. Zero-key deposits and all-zero top-ups still call modules and change state. State ordering and ETH conservation must hold across these calls.
-- **Downstream consumers:** core conversions and withdrawals affect Dual Governance Escrow. Core views also feed honest off-chain services: the oracle uses `calculateFinalizationBatches` to construct report data. Impact depends on the resulting report or transaction and its later on-chain checks.
+- **Downstream consumers:** core conversions and withdrawals affect Dual Governance Escrow. Escrow's support ratio is `(getPooledEthByShares(unfinalizedShares) + finalizedETH) / (stETH.totalSupply() + finalizedETH)`, where `unfinalizedShares` combines locked stETH shares and unfinalized unstETH shares. Core views also feed honest off-chain services: the oracle uses `calculateFinalizationBatches` to construct report data. Impact depends on the resulting report or transaction and its later on-chain checks.
 - **Finalization arithmetic:** batch-level ETH locking in `WithdrawalQueueBase.prefinalize` must cover per-request claims. Checkpoint boundaries, rate caps and tiny requests are sensitive to rounding.
 - **Cached dependencies:** locator updates do not change immutable gateway or consolidation-stack addresses. An old address can matter if it retains authority or can still receive assets.
 

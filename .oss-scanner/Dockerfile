@@ -34,7 +34,7 @@ RUN (git submodule update --init --recursive \
     && forge build) || echo "WARNING: forge-std fetch, Foundry install or forge build failed; Hardhat remains available"
 
 # Reference material for the offline review, outside scan scope. Each fetch is optional.
-# EDF follows core's EDF_REPO_REF. Other pins: LIPs snapshot; Dual Governance v1.0.2; staking-modules v3.0.
+# EDF follows core's EDF_REPO_REF. Other pins: LIPs snapshot; staking-modules v3.0.
 # Update contract pins for relevant production upgrades, and docs/LIPs for relevant registry or specification changes.
 # The registry snapshot is from 2026-10-12; its core addresses and v4.1.0 label were reviewed on 2026-10-13.
 RUN mkdir -p /opt/lido \
@@ -42,7 +42,6 @@ RUN mkdir -p /opt/lido \
     && for reference in \
          lido-improvement-proposals:b3f58400a576d01a5a160de69fa823283b38bc3f \
          "execution-delegation-framework:$edf_ref" \
-         dual-governance:ba9dfc9213ec888993937a699e2a587a0082720f \
          staking-modules:4d3de6658499e1c1774951780a97d7ae25ca18b8; do \
          repo="${reference%%:*}"; ref="${reference#*:}"; \
          (test -n "$ref" \
