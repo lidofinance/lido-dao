@@ -175,20 +175,34 @@ contract UpgradeTemplate is IUpgradeTemplate {
             revert InvalidFlag("new-verifier-no-report-role", newVerifierAddr);
         }
 
-        // The new gateway is deployed with the Agent as its admin and no other role granted yet.
+        // The new gateway is deployed with the Agent as its admin and every operational role already
+        // granted, so each role must have exactly the expected holders.
         IAccessControlEnumerable gateway = IAccessControlEnumerable(newGatewayAddr);
         if (!gateway.hasRole(DEFAULT_ADMIN_ROLE, agent)) {
             revert InvalidFlag("new-gateway-admin", agent);
         }
-        _assertUint("new-gateway-pause-members", gateway.getRoleMemberCount(PAUSE_ROLE), 0);
-        _assertUint("new-gateway-resume-members", gateway.getRoleMemberCount(RESUME_ROLE), 0);
-        _assertUint("new-gateway-add-request-members", gateway.getRoleMemberCount(ADD_CONSOLIDATION_REQUEST_ROLE), 0);
+        _assertUint("new-gateway-admin-members", gateway.getRoleMemberCount(DEFAULT_ADMIN_ROLE), 1);
+        if (!gateway.hasRole(PAUSE_ROLE, circuitBreaker)) {
+            revert InvalidFlag("new-gateway-pause-cb", circuitBreaker);
+        }
+        if (!gateway.hasRole(PAUSE_ROLE, resealManager)) {
+            revert InvalidFlag("new-gateway-pause-reseal", resealManager);
+        }
+        _assertUint("new-gateway-pause-members", gateway.getRoleMemberCount(PAUSE_ROLE), 2);
+        if (!gateway.hasRole(RESUME_ROLE, resealManager)) {
+            revert InvalidFlag("new-gateway-resume-reseal", resealManager);
+        }
+        _assertUint("new-gateway-resume-members", gateway.getRoleMemberCount(RESUME_ROLE), 1);
+        if (!gateway.hasRole(ADD_CONSOLIDATION_REQUEST_ROLE, consolidationBus)) {
+            revert InvalidFlag("new-gateway-add-request-bus", consolidationBus);
+        }
+        _assertUint("new-gateway-add-request-members", gateway.getRoleMemberCount(ADD_CONSOLIDATION_REQUEST_ROLE), 1);
 
         _assertAddress(
             "new-gateway-pauser", ICircuitBreaker(circuitBreaker).getPauser(newGatewayAddr), address(0)
         );
 
-        // The grants below are replayed onto the new gateway from the config, so the config has to
+        // The new gateway's holders above are checked against the config, so the config has to
         // agree with the gateway that is actually in use today — otherwise a stale parameters file
         // would wire the replacement to addresses that no longer control anything, and the
         // post-checks, which read the same config, would happily confirm it.
@@ -206,7 +220,7 @@ contract UpgradeTemplate is IUpgradeTemplate {
             revert InvalidFlag("old-gateway-add-request-bus", consolidationBus);
         }
         // Member counts too: an extra holder on the live gateway would be silently dropped by a
-        // vote that only replays the four grants above.
+        // deployment that only grants these four roles.
         _assertUint("old-gateway-pause-members", oldGateway.getRoleMemberCount(PAUSE_ROLE), 2);
         _assertUint("old-gateway-resume-members", oldGateway.getRoleMemberCount(RESUME_ROLE), 1);
         _assertUint("old-gateway-add-request-members", oldGateway.getRoleMemberCount(ADD_CONSOLIDATION_REQUEST_ROLE), 1);
