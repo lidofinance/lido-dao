@@ -187,6 +187,16 @@ describe("TriggerableWithdrawalsGateway.sol: rate limit", () => {
       expect(await currentLimit()).to.equal(5n * PER_FRAME);
     });
 
+    it("restores without overflow at the uint64 bounds", async () => {
+      const U64_MAX = 2n ** 64n - 1n;
+      // The exhausted quota is carried over, so the limit starts empty
+      await gateway.connect(limitManager).setWithdrawalLimit(U64_MAX, U64_MAX, FRAME);
+      await advanceChainTime(2n * FRAME);
+
+      // The quota restored in two frames exceeds uint64 before the cap is applied
+      expect(await currentLimit()).to.equal(U64_MAX);
+    });
+
     it("caps the restored limit by the max withdrawal limit", async () => {
       await advanceChainTime((MAX / PER_FRAME + 10n) * FRAME);
 
