@@ -77,6 +77,11 @@ export {
 } from "./topup";
 export type { TopUpValidatorState, TopUpWitnessBundle } from "./topup";
 export { calcNodeOperatorRewards } from "./staking-module";
+export {
+  drainWithdrawalRequestsQueue,
+  ensureRoleFromAgent,
+  setTriggerableWithdrawalsGatewayLimit,
+} from "./triggerable-withdrawals";
 
 export * from "./vaults";
 export * from "./operatorGrid";
