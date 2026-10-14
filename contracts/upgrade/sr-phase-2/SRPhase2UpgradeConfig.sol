@@ -40,9 +40,9 @@ contract SRPhase2UpgradeConfig {
 
     address public immutable VALIDATOR_EXIT_DELAY_VERIFIER;
 
-    uint256 public immutable EXIT_BALANCE_LIMIT_MAX_ETH;
-    uint256 public immutable EXIT_BALANCE_LIMIT_PER_FRAME_ETH;
-    uint256 public immutable EXIT_BALANCE_LIMIT_FRAME_DURATION_IN_SEC;
+    uint256 public immutable MAX_WITHDRAWAL_LIMIT_GWEI;
+    uint256 public immutable WITHDRAWAL_LIMIT_PER_FRAME_GWEI;
+    uint256 public immutable WITHDRAWAL_LIMIT_FRAME_DURATION_IN_SEC;
 
     constructor(SRPhase2UpgradeParameters memory params) {
         if (params.chainId == 0) revert InvalidChainId(params.chainId);
@@ -75,11 +75,11 @@ contract SRPhase2UpgradeConfig {
 
         VALIDATOR_EXIT_DELAY_VERIFIER = _nonZero(params.validatorExitDelayVerifier, "validatorExitDelayVerifier");
 
-        EXIT_BALANCE_LIMIT_MAX_ETH = _nonZeroValue(params.exitBalanceLimitMaxEth, "exitBalanceLimitMaxEth");
-        EXIT_BALANCE_LIMIT_PER_FRAME_ETH =
-            _nonZeroValue(params.exitBalanceLimitPerFrameEth, "exitBalanceLimitPerFrameEth");
-        EXIT_BALANCE_LIMIT_FRAME_DURATION_IN_SEC =
-            _nonZeroValue(params.exitBalanceLimitFrameDurationInSec, "exitBalanceLimitFrameDurationInSec");
+        MAX_WITHDRAWAL_LIMIT_GWEI = _nonZeroValue(params.maxWithdrawalLimitGwei, "maxWithdrawalLimitGwei");
+        WITHDRAWAL_LIMIT_PER_FRAME_GWEI =
+            _nonZeroValue(params.withdrawalLimitPerFrameGwei, "withdrawalLimitPerFrameGwei");
+        WITHDRAWAL_LIMIT_FRAME_DURATION_IN_SEC =
+            _nonZeroValue(params.withdrawalLimitFrameDurationInSec, "withdrawalLimitFrameDurationInSec");
 
         // A parameters file that repeats an address on both sides would make the vote a no-op
         // and the template's pre/post checks contradictory, so reject it here.

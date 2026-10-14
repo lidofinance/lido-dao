@@ -185,10 +185,10 @@ contract SRPhase2UpgradeTemplate is IUpgradeTemplate {
         _assertAddress("new-gateway-pauser", ICircuitBreaker(config.CIRCUIT_BREAKER()).getPauser(newGateway), address(0));
 
         // slither-disable-next-line unused-return
-        (uint256 maxEth, uint256 perFrameEth, uint256 frameDuration, , ) = gateway.getExitRequestLimitFullInfo();
-        _assertUint("new-gateway-max-limit", maxEth, config.EXIT_BALANCE_LIMIT_MAX_ETH());
-        _assertUint("new-gateway-per-frame", perFrameEth, config.EXIT_BALANCE_LIMIT_PER_FRAME_ETH());
-        _assertUint("new-gateway-frame-duration", frameDuration, config.EXIT_BALANCE_LIMIT_FRAME_DURATION_IN_SEC());
+        (uint256 maxGwei, uint256 perFrameGwei, uint256 frameDuration, , ) = gateway.getWithdrawalLimitFullInfo();
+        _assertUint("new-gateway-max-limit", maxGwei, config.MAX_WITHDRAWAL_LIMIT_GWEI());
+        _assertUint("new-gateway-per-frame", perFrameGwei, config.WITHDRAWAL_LIMIT_PER_FRAME_GWEI());
+        _assertUint("new-gateway-frame-duration", frameDuration, config.WITHDRAWAL_LIMIT_FRAME_DURATION_IN_SEC());
 
         // --- Bus: initialized behind a proxy owned by the Agent, empty, no publisher yet ---
         _assertAddress("bus-proxy-admin", IOssifiableProxy(bus).proxy__getAdmin(), agent);

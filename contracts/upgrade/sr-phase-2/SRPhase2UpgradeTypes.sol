@@ -35,10 +35,10 @@ struct SRPhase2UpgradeParameters {
     address triggerableWithdrawalsBus;
     // removed from the protocol
     address validatorExitDelayVerifier;
-    // exit balance limit the new gateway is deployed with
-    uint256 exitBalanceLimitMaxEth;
-    uint256 exitBalanceLimitPerFrameEth;
-    uint256 exitBalanceLimitFrameDurationInSec;
+    // withdrawal limit the new gateway is deployed with
+    uint256 maxWithdrawalLimitGwei;
+    uint256 withdrawalLimitPerFrameGwei;
+    uint256 withdrawalLimitFrameDurationInSec;
 }
 
 /// @dev `WithdrawalVault` sits behind `WithdrawalsManagerProxy`, not an `OssifiableProxy`.
@@ -63,15 +63,15 @@ interface ITriggerableWithdrawalsGateway {
 
     function isPaused() external view returns (bool);
 
-    function getExitRequestLimitFullInfo()
+    function getWithdrawalLimitFullInfo()
         external
         view
         returns (
-            uint256 maxExitBalanceEth,
-            uint256 balancePerFrameEth,
+            uint256 maxWithdrawalLimitGwei,
+            uint256 withdrawalLimitPerFrameGwei,
             uint256 frameDurationInSec,
-            uint256 prevExitBalanceEth,
-            uint256 currentExitBalanceEth
+            uint256 prevWithdrawalLimitGwei,
+            uint256 currentWithdrawalLimitGwei
         );
 }
 

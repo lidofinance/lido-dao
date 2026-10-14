@@ -35,13 +35,13 @@ export const ensureRoleFromAgent = async (
 };
 
 /**
- * Sets the gateway exit balance limit with a long frame, so nothing is restored during a test and the
- * consumed balance can be checked exactly.
+ * Sets the gateway withdrawal limit, in gwei, with a long frame, so nothing is restored during a test and the
+ * consumed quota can be checked exactly.
  */
-export const setTriggerableWithdrawalsGatewayLimit = async (ctx: ProtocolContext, maxExitBalanceEth: bigint) => {
+export const setTriggerableWithdrawalsGatewayLimit = async (ctx: ProtocolContext, maxWithdrawalLimitGwei: bigint) => {
   const gateway = ctx.contracts.triggerableWithdrawalsGateway;
   const agent = await ctx.getSigner("agent");
 
   await ensureRoleFromAgent(ctx, gateway, await gateway.TW_EXIT_LIMIT_MANAGER_ROLE(), agent);
-  await (await gateway.connect(agent).setExitRequestLimit(maxExitBalanceEth, 1n, 365n * 24n * 3600n)).wait();
+  await (await gateway.connect(agent).setWithdrawalLimit(maxWithdrawalLimitGwei, 1n, 365n * 24n * 3600n)).wait();
 };

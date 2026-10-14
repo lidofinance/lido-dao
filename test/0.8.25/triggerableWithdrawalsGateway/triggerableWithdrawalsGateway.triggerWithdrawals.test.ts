@@ -9,13 +9,13 @@ import { DEFAULT_TWG_LIMIT, deployTriggerableWithdrawalsGateway } from "test/dep
 import { Snapshot } from "test/suite";
 
 import {
+  FULL_WITHDRAWAL_WEIGHT_GWEI,
   fullWithdrawal,
+  GWEI_PER_ETH,
   MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI,
   partialWithdrawal,
   WithdrawalIntent,
 } from "../triggerable-withdrawals-helpers";
-
-const GWEI_PER_ETH = 10n ** 9n;
 
 describe("TriggerableWithdrawalsGateway.sol: triggerWithdrawals", () => {
   let gateway: TriggerableWithdrawalsGateway;
@@ -39,7 +39,7 @@ describe("TriggerableWithdrawalsGateway.sol: triggerWithdrawals", () => {
 
   afterEach(async () => await Snapshot.restore(originalState));
 
-  const currentLimit = async () => (await gateway.getExitRequestLimitFullInfo()).currentExitBalanceEth;
+  const currentLimit = async () => (await gateway.getWithdrawalLimitFullInfo()).currentWithdrawalLimitGwei;
 
   context("validation", () => {
     it("reverts if caller has no ADD_WITHDRAWAL_REQUEST_ROLE", async () => {
@@ -104,7 +104,7 @@ describe("TriggerableWithdrawalsGateway.sol: triggerWithdrawals", () => {
 
       await expect(gateway.connect(requester).triggerWithdrawals(intents, requester.address, { value: 2n }))
         .to.emit(gateway, "WithdrawalsTriggered")
-        .withArgs(requester.address, 2, 2048n + 5n);
+        .withArgs(requester.address, 2, FULL_WITHDRAWAL_WEIGHT_GWEI + 5n * GWEI_PER_ETH);
     });
 
     it("does not notify the StakingRouter", async () => {
@@ -119,37 +119,40 @@ describe("TriggerableWithdrawalsGateway.sol: triggerWithdrawals", () => {
   });
 
   context("weights", () => {
-    const cases: { name: string; intents: WithdrawalIntent[]; weightEth: bigint }[] = [
-      { name: "full withdrawal", intents: [fullWithdrawal(0)], weightEth: 2048n },
-      { name: "1 gwei partial withdrawal", intents: [partialWithdrawal(0, 1n)], weightEth: 1n },
-      { name: "1 ETH partial withdrawal", intents: [partialWithdrawal(0, GWEI_PER_ETH)], weightEth: 1n },
-      { name: "1 ETH + 1 gwei partial withdrawal", intents: [partialWithdrawal(0, GWEI_PER_ETH + 1n)], weightEth: 2n },
+    const cases: { name: string; intents: WithdrawalIntent[]; weightGwei: bigint }[] = [
+      { name: "full withdrawal", intents: [fullWithdrawal(0)], weightGwei: FULL_WITHDRAWAL_WEIGHT_GWEI },
+      { name: "1 gwei partial withdrawal", intents: [partialWithdrawal(0, 1n)], weightGwei: 1n },
+      {
+        name: "1 ETH + 1 gwei partial withdrawal",
+        intents: [partialWithdrawal(0, GWEI_PER_ETH + 1n)],
+        weightGwei: GWEI_PER_ETH + 1n,
+      },
       {
         name: "max partial withdrawal",
         intents: [partialWithdrawal(0, MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI)],
-        weightEth: 2048n,
+        weightGwei: FULL_WITHDRAWAL_WEIGHT_GWEI,
       },
       {
-        name: "mixed batch, rounded per intent",
+        name: "mixed batch",
         intents: [
           partialWithdrawal(0, GWEI_PER_ETH / 2n),
-          partialWithdrawal(1, GWEI_PER_ETH / 2n),
+          partialWithdrawal(1, 1n),
           fullWithdrawal(2),
           partialWithdrawal(3, 31n * GWEI_PER_ETH + 1n),
         ],
-        weightEth: 1n + 1n + 2048n + 32n,
+        weightGwei: GWEI_PER_ETH / 2n + 1n + FULL_WITHDRAWAL_WEIGHT_GWEI + 31n * GWEI_PER_ETH + 1n,
       },
     ];
 
-    for (const { name, intents, weightEth } of cases) {
-      it(`consumes ${weightEth} ETH of the limit for ${name}`, async () => {
+    for (const { name, intents, weightGwei } of cases) {
+      it(`consumes ${weightGwei} gwei of the limit for ${name}`, async () => {
         await expect(
           gateway.connect(requester).triggerWithdrawals(intents, requester.address, { value: BigInt(intents.length) }),
         )
           .to.emit(gateway, "WithdrawalsTriggered")
-          .withArgs(requester.address, intents.length, weightEth);
+          .withArgs(requester.address, intents.length, weightGwei);
 
-        expect(await currentLimit()).to.equal(DEFAULT_TWG_LIMIT.maxExitBalanceEth - weightEth);
+        expect(await currentLimit()).to.equal(DEFAULT_TWG_LIMIT.maxWithdrawalLimitGwei - weightGwei);
       });
     }
   });

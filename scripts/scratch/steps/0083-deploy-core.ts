@@ -337,8 +337,8 @@ export async function main() {
     [
       admin,
       locator.address,
-      triggerableWithdrawalsGatewayParams.maxExitBalanceEth,
-      triggerableWithdrawalsGatewayParams.balancePerFrameEth,
+      triggerableWithdrawalsGatewayParams.maxWithdrawalLimitGwei,
+      triggerableWithdrawalsGatewayParams.withdrawalLimitPerFrameGwei,
       triggerableWithdrawalsGatewayParams.frameDurationInSec,
     ],
   );

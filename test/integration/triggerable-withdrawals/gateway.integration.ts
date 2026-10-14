@@ -18,11 +18,11 @@ import { encodeEIP7002Payload } from "test/0.8.9/withdrawalVault/eip7002Mock";
 import { Snapshot } from "test/suite";
 
 const GWEI_PER_ETH = 10n ** 9n;
-const FULL_WITHDRAWAL_WEIGHT_ETH = 2048n;
+const FULL_WITHDRAWAL_WEIGHT_GWEI = 2048n * GWEI_PER_ETH;
 
 /**
  * Modules withdrawals flow of LIP-38 on the deployed protocol: a role holder (a staking module ejector)
- * calls TriggerableWithdrawalsGateway directly and shares its exit balance limit with the bus.
+ * calls TriggerableWithdrawalsGateway directly and shares its withdrawal limit with the bus.
  */
 describe("Integration: TriggerableWithdrawalsGateway module path", () => {
   let ctx: ProtocolContext;
@@ -59,7 +59,7 @@ describe("Integration: TriggerableWithdrawalsGateway module path", () => {
 
   after(async () => await Snapshot.restore(globalSnapshot));
 
-  const currentLimit = async () => (await gateway.getExitRequestLimitFullInfo()).currentExitBalanceEth;
+  const currentLimit = async () => (await gateway.getWithdrawalLimitFullInfo()).currentWithdrawalLimitGwei;
 
   it("rejects callers without ADD_WITHDRAWAL_REQUEST_ROLE", async () => {
     const fee = await withdrawalVault.getWithdrawalRequestFee();
@@ -74,13 +74,13 @@ describe("Integration: TriggerableWithdrawalsGateway module path", () => {
   });
 
   it("submits full and partial withdrawals and consumes their weight", async () => {
-    await setTriggerableWithdrawalsGatewayLimit(ctx, 10_000n);
+    await setTriggerableWithdrawalsGatewayLimit(ctx, 10_000n * GWEI_PER_ETH);
 
     const intents = [
       { amount: 0n, pubkey: randomValidatorPubkey() },
       { amount: 5n * GWEI_PER_ETH, pubkey: randomValidatorPubkey() },
     ];
-    const weightEth = FULL_WITHDRAWAL_WEIGHT_ETH + 5n;
+    const weightGwei = FULL_WITHDRAWAL_WEIGHT_GWEI + 5n * GWEI_PER_ETH;
     const limitBefore = await currentLimit();
     const fee = await withdrawalVault.getWithdrawalRequestFee();
 
@@ -88,35 +88,35 @@ describe("Integration: TriggerableWithdrawalsGateway module path", () => {
       value: fee * BigInt(intents.length),
     });
 
-    await expect(tx).to.emit(gateway, "WithdrawalsTriggered").withArgs(requester.address, intents.length, weightEth);
+    await expect(tx).to.emit(gateway, "WithdrawalsTriggered").withArgs(requester.address, intents.length, weightGwei);
     for (const intent of intents) {
       await expect(tx)
         .to.emit(withdrawalVault, "WithdrawalRequestAdded")
         .withArgs(encodeEIP7002Payload(intent.pubkey, intent.amount));
     }
 
-    expect(await currentLimit()).to.equal(limitBefore - weightEth);
+    expect(await currentLimit()).to.equal(limitBefore - weightGwei);
 
     const requests = await readWithdrawalRequests();
     expect(requests.map(({ pubkey, amount }) => ({ pubkey, amount }))).to.deep.equal(intents);
   });
 
-  it("shares the exit balance limit with the bus", async () => {
-    await setTriggerableWithdrawalsGatewayLimit(ctx, 3_000n);
+  it("shares the withdrawal limit with the bus", async () => {
+    await setTriggerableWithdrawalsGatewayLimit(ctx, 3_000n * GWEI_PER_ETH);
     const fee = await withdrawalVault.getWithdrawalRequestFee();
 
     await gateway
       .connect(requester)
       .triggerWithdrawals([{ amount: 0n, pubkey: randomValidatorPubkey() }], requester.address, { value: fee });
     const remaining = await currentLimit();
-    expect(remaining).to.equal(3_000n - FULL_WITHDRAWAL_WEIGHT_ETH);
+    expect(remaining).to.equal(3_000n * GWEI_PER_ETH - FULL_WITHDRAWAL_WEIGHT_GWEI);
 
     const oracle = await impersonate(await ctx.contracts.validatorsExitBusOracle.getAddress(), ether("10"));
     await bus.connect(oracle).addWithdrawalIntents([{ amount: 0n, pubkey: randomValidatorPubkey() }]);
 
     await expect(bus.connect(executor).processWithdrawalIntents(1, executor.address, { value: fee }))
-      .to.be.revertedWithCustomError(gateway, "ExitRequestsLimitExceeded")
-      .withArgs(FULL_WITHDRAWAL_WEIGHT_ETH, remaining);
+      .to.be.revertedWithCustomError(gateway, "WithdrawalLimitExceeded")
+      .withArgs(FULL_WITHDRAWAL_WEIGHT_GWEI, remaining);
   });
 
   it("stops both paths while paused", async () => {

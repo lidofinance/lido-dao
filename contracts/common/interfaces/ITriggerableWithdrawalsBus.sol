@@ -9,7 +9,7 @@ import {WithdrawalIntent} from "contracts/common/interfaces/WithdrawalIntent.sol
 
 /**
  * @title ITriggerableWithdrawalsBus
- * @notice FIFO queue of withdrawal intents appended by the TriggerableWithdrawalsOracle
+ * @notice FIFO queue of withdrawal intents appended by the ValidatorsExitBusOracle
  *         and executed permissionlessly through the TriggerableWithdrawalsGateway
  */
 interface ITriggerableWithdrawalsBus {

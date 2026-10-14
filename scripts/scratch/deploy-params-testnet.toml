@@ -154,11 +154,11 @@ name = "Lido: stETH Withdrawal NFT"   # NFT collection name
 symbol = "unstETH"                    # NFT collection symbol
 # baseUri is set to null for testnet deployment
 
-# Triggerable withdrawals gateway, the exit balance limit is in ETH
+# Triggerable withdrawals gateway, the withdrawal limit is in gwei
 [triggerableWithdrawalsGateway]
-maxExitBalanceEth = 358400            # Maximum exit balance, at least 2048 (weight of a full withdrawal)
-balancePerFrameEth = 32               # Exit balance restored per frame
-frameDurationInSec = 48               # Duration of each frame in seconds
+maxWithdrawalLimitGwei = 358_400_000_000_000  # Maximum quota (358,400 ETH), at least 2048 ETH (weight of a full withdrawal)
+withdrawalLimitPerFrameGwei = 32_000_000_000  # Quota restored per frame (32 ETH)
+frameDurationInSec = 48                       # Duration of each frame in seconds
 
 [consolidationGateway]
 maxConsolidationRequestsLimit = 2900  # Maximum number of consolidations requests that can be processed

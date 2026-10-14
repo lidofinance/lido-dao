@@ -9,6 +9,10 @@ import { streccak } from "lib";
 
 import { DEFAULT_TWG_LIMIT, deployLidoLocator, deployTriggerableWithdrawalsGateway } from "test/deploy";
 
+import { FULL_WITHDRAWAL_WEIGHT_GWEI } from "../triggerable-withdrawals-helpers";
+
+const MIN_MAX_LIMIT = FULL_WITHDRAWAL_WEIGHT_GWEI;
+
 describe("TriggerableWithdrawalsGateway.sol: deployment", () => {
   let admin: HardhatEthersSigner;
   let locator: LidoLocator;
@@ -38,75 +42,85 @@ describe("TriggerableWithdrawalsGateway.sol: deployment", () => {
     expect(await gateway.RESUME_ROLE()).to.equal(streccak("RESUME_ROLE"));
     expect(await gateway.ADD_WITHDRAWAL_REQUEST_ROLE()).to.equal(streccak("ADD_WITHDRAWAL_REQUEST_ROLE"));
     expect(await gateway.TW_EXIT_LIMIT_MANAGER_ROLE()).to.equal(streccak("TW_EXIT_LIMIT_MANAGER_ROLE"));
-    expect(await gateway.EXIT_BALANCE_LIMIT_POSITION()).to.equal(
-      streccak("lido.TriggerableWithdrawalsGateway.exitBalanceLimitEth"),
+    expect(await gateway.WITHDRAWAL_LIMIT_POSITION()).to.equal(
+      streccak("lido.TriggerableWithdrawalsGateway.withdrawalLimitGwei"),
     );
   });
 
-  it("starts with a fully available exit balance limit", async () => {
+  it("starts with a fully available withdrawal limit", async () => {
     const { gateway } = await deployTriggerableWithdrawalsGateway(admin);
 
-    const info = await gateway.getExitRequestLimitFullInfo();
-    expect(info.maxExitBalanceEth).to.equal(DEFAULT_TWG_LIMIT.maxExitBalanceEth);
-    expect(info.balancePerFrameEth).to.equal(DEFAULT_TWG_LIMIT.balancePerFrameEth);
+    const info = await gateway.getWithdrawalLimitFullInfo();
+    expect(info.maxWithdrawalLimitGwei).to.equal(DEFAULT_TWG_LIMIT.maxWithdrawalLimitGwei);
+    expect(info.withdrawalLimitPerFrameGwei).to.equal(DEFAULT_TWG_LIMIT.withdrawalLimitPerFrameGwei);
     expect(info.frameDurationInSec).to.equal(DEFAULT_TWG_LIMIT.frameDurationInSec);
-    expect(info.prevExitBalanceEth).to.equal(DEFAULT_TWG_LIMIT.maxExitBalanceEth);
-    expect(info.currentExitBalanceEth).to.equal(DEFAULT_TWG_LIMIT.maxExitBalanceEth);
+    expect(info.prevWithdrawalLimitGwei).to.equal(DEFAULT_TWG_LIMIT.maxWithdrawalLimitGwei);
+    expect(info.currentWithdrawalLimitGwei).to.equal(DEFAULT_TWG_LIMIT.maxWithdrawalLimitGwei);
   });
 
-  it("emits ExitBalanceLimitSet on deployment", async () => {
-    const gateway = await deploy([admin.address, await locator.getAddress(), 2048, 1, 12]);
+  it("emits WithdrawalLimitSet on deployment", async () => {
+    const gateway = await deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT, 1, 12]);
 
-    await expect(gateway.deploymentTransaction()).to.emit(gateway, "ExitBalanceLimitSet").withArgs(2048, 1, 12);
+    await expect(gateway.deploymentTransaction()).to.emit(gateway, "WithdrawalLimitSet").withArgs(MIN_MAX_LIMIT, 1, 12);
   });
 
-  it("accepts the max exit balance equal to the full withdrawal weight", async () => {
-    const gateway = await deploy([admin.address, await locator.getAddress(), 2048, 2048, 12]);
+  it("accepts the max withdrawal limit equal to the full withdrawal weight", async () => {
+    const gateway = await deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT, MIN_MAX_LIMIT, 12]);
 
-    expect((await gateway.getExitRequestLimitFullInfo()).maxExitBalanceEth).to.equal(2048);
+    expect((await gateway.getWithdrawalLimitFullInfo()).maxWithdrawalLimitGwei).to.equal(MIN_MAX_LIMIT);
+  });
+
+  it("accepts the max withdrawal limit of uint64", async () => {
+    const gateway = await deploy([admin.address, await locator.getAddress(), 2n ** 64n - 1n, 1, 12]);
+
+    expect((await gateway.getWithdrawalLimitFullInfo()).currentWithdrawalLimitGwei).to.equal(2n ** 64n - 1n);
   });
 
   context("reverts", () => {
     it("if admin is zero address", async () => {
-      await expect(deploy([ethers.ZeroAddress, await locator.getAddress(), 2048, 1, 12]))
+      await expect(deploy([ethers.ZeroAddress, await locator.getAddress(), MIN_MAX_LIMIT, 1, 12]))
         .to.be.revertedWithCustomError(await factory(), "ZeroArgument")
         .withArgs("admin");
     });
 
     it("if lidoLocator is zero address", async () => {
-      await expect(deploy([admin.address, ethers.ZeroAddress, 2048, 1, 12]))
+      await expect(deploy([admin.address, ethers.ZeroAddress, MIN_MAX_LIMIT, 1, 12]))
         .to.be.revertedWithCustomError(await factory(), "ZeroArgument")
         .withArgs("lidoLocator");
     });
 
-    it("if max exit balance is below the full withdrawal weight", async () => {
-      await expect(deploy([admin.address, await locator.getAddress(), 2047, 1, 12]))
-        .to.be.revertedWithCustomError(await factory(), "TooSmallMaxExitBalance")
-        .withArgs(2047);
+    it("if the max withdrawal limit is below the full withdrawal weight", async () => {
+      await expect(deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT - 1n, 1, 12]))
+        .to.be.revertedWithCustomError(await factory(), "TooSmallMaxWithdrawalLimit")
+        .withArgs(MIN_MAX_LIMIT - 1n);
     });
 
-    it("if balance per frame is zero", async () => {
-      await expect(deploy([admin.address, await locator.getAddress(), 2048, 0, 12]))
+    it("if the limit per frame is zero", async () => {
+      await expect(deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT, 0, 12]))
         .to.be.revertedWithCustomError(await factory(), "ZeroArgument")
-        .withArgs("balancePerFrameEth");
+        .withArgs("withdrawalLimitPerFrameGwei");
     });
 
-    it("if balance per frame exceeds the max exit balance", async () => {
-      await expect(deploy([admin.address, await locator.getAddress(), 2048, 2049, 12])).to.be.revertedWithCustomError(
-        await factory(),
-        "TooLargeItemsPerFrame",
-      );
+    it("if the limit per frame exceeds the max withdrawal limit", async () => {
+      await expect(
+        deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT, MIN_MAX_LIMIT + 1n, 12]),
+      ).to.be.revertedWithCustomError(await factory(), "TooLargeLimitPerFrame");
     });
 
     it("if frame duration is zero", async () => {
-      await expect(deploy([admin.address, await locator.getAddress(), 2048, 1, 0])).to.be.revertedWithCustomError(
-        await factory(),
-        "ZeroFrameDuration",
-      );
+      await expect(
+        deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT, 1, 0]),
+      ).to.be.revertedWithCustomError(await factory(), "ZeroFrameDuration");
     });
 
-    it("if max exit balance exceeds uint32", async () => {
-      await expect(deploy([admin.address, await locator.getAddress(), 2n ** 32n, 1, 12])).to.be.revertedWithCustomError(
+    it("if frame duration exceeds uint32", async () => {
+      await expect(
+        deploy([admin.address, await locator.getAddress(), MIN_MAX_LIMIT, 1, 2n ** 32n]),
+      ).to.be.revertedWithCustomError(await factory(), "TooLargeFrameDuration");
+    });
+
+    it("if the max withdrawal limit exceeds uint64", async () => {
+      await expect(deploy([admin.address, await locator.getAddress(), 2n ** 64n, 1, 12])).to.be.revertedWithCustomError(
         await factory(),
         "TooLargeMaxLimit",
       );

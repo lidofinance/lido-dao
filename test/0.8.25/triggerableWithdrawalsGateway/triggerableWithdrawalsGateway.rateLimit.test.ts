@@ -10,11 +10,19 @@ import { advanceChainTime } from "lib";
 import { DEFAULT_TWG_LIMIT, deployTriggerableWithdrawalsGateway } from "test/deploy";
 import { Snapshot } from "test/suite";
 
-import { fullWithdrawal, partialWithdrawal } from "../triggerable-withdrawals-helpers";
+import {
+  FULL_WITHDRAWAL_WEIGHT_GWEI,
+  fullWithdrawal,
+  GWEI_PER_ETH,
+  MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI,
+  partialWithdrawal,
+} from "../triggerable-withdrawals-helpers";
 
-const GWEI_PER_ETH = 10n ** 9n;
-
-const { maxExitBalanceEth: MAX, balancePerFrameEth: PER_FRAME, frameDurationInSec: FRAME } = DEFAULT_TWG_LIMIT;
+const {
+  maxWithdrawalLimitGwei: MAX,
+  withdrawalLimitPerFrameGwei: PER_FRAME,
+  frameDurationInSec: FRAME,
+} = DEFAULT_TWG_LIMIT;
 
 describe("TriggerableWithdrawalsGateway.sol: rate limit", () => {
   let gateway: TriggerableWithdrawalsGateway;
@@ -37,94 +45,97 @@ describe("TriggerableWithdrawalsGateway.sol: rate limit", () => {
   beforeEach(async () => {
     originalState = await Snapshot.take();
     // Re-setting the full limit starts a new frame now: frames are long compared to the few seconds
-    // between transactions in a test, so the restored balance below is exact in frames
-    await gateway.connect(limitManager).setExitRequestLimit(MAX, PER_FRAME, FRAME);
+    // between transactions in a test, so the restored quota below is exact in frames
+    await gateway.connect(limitManager).setWithdrawalLimit(MAX, PER_FRAME, FRAME);
   });
 
   afterEach(async () => await Snapshot.restore(originalState));
 
-  const currentLimit = async () => (await gateway.getExitRequestLimitFullInfo()).currentExitBalanceEth;
+  const currentLimit = async () => (await gateway.getWithdrawalLimitFullInfo()).currentWithdrawalLimitGwei;
 
-  /** Consumes exactly `weightEth` of the limit with partial withdrawals of whole ETH. */
-  const consume = async (weightEth: bigint) => {
+  /** Consumes exactly `weightGwei` of the limit with partial withdrawals. */
+  const consume = async (weightGwei: bigint) => {
     const intents = [];
-    for (let left = weightEth, i = 0; left > 0n; ++i) {
-      const chunk = left > 2048n ? 2048n : left;
-      intents.push(partialWithdrawal(i, chunk * GWEI_PER_ETH));
+    for (let left = weightGwei, i = 0; left > 0n; ++i) {
+      const chunk = left > MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI ? MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI : left;
+      intents.push(partialWithdrawal(i, chunk));
       left -= chunk;
     }
     await gateway.connect(requester).triggerWithdrawals(intents, requester.address, { value: BigInt(intents.length) });
   };
 
-  context("setExitRequestLimit", () => {
+  context("setWithdrawalLimit", () => {
+    const NEW_MAX = 4096n * GWEI_PER_ETH;
+    const NEW_PER_FRAME = 64n * GWEI_PER_ETH;
+
     it("reverts if caller has no TW_EXIT_LIMIT_MANAGER_ROLE", async () => {
-      await expect(gateway.connect(stranger).setExitRequestLimit(4096, 64, 12))
+      await expect(gateway.connect(stranger).setWithdrawalLimit(NEW_MAX, NEW_PER_FRAME, 12))
         .to.be.revertedWithCustomError(gateway, "AccessControlUnauthorizedAccount")
         .withArgs(stranger.address, await gateway.TW_EXIT_LIMIT_MANAGER_ROLE());
     });
 
-    it("sets the limit and emits ExitBalanceLimitSet", async () => {
-      await expect(gateway.connect(limitManager).setExitRequestLimit(4096, 64, 12))
-        .to.emit(gateway, "ExitBalanceLimitSet")
-        .withArgs(4096, 64, 12);
+    it("sets the limit and emits WithdrawalLimitSet", async () => {
+      await expect(gateway.connect(limitManager).setWithdrawalLimit(NEW_MAX, NEW_PER_FRAME, 12))
+        .to.emit(gateway, "WithdrawalLimitSet")
+        .withArgs(NEW_MAX, NEW_PER_FRAME, 12);
 
-      const info = await gateway.getExitRequestLimitFullInfo();
-      expect(info.maxExitBalanceEth).to.equal(4096);
-      expect(info.balancePerFrameEth).to.equal(64);
+      const info = await gateway.getWithdrawalLimitFullInfo();
+      expect(info.maxWithdrawalLimitGwei).to.equal(NEW_MAX);
+      expect(info.withdrawalLimitPerFrameGwei).to.equal(NEW_PER_FRAME);
       expect(info.frameDurationInSec).to.equal(12);
-      expect(info.currentExitBalanceEth).to.equal(4096);
+      expect(info.currentWithdrawalLimitGwei).to.equal(NEW_MAX);
     });
 
-    it("reverts if max exit balance is below the full withdrawal weight", async () => {
-      await expect(gateway.connect(limitManager).setExitRequestLimit(2047, 1, 12))
-        .to.be.revertedWithCustomError(gateway, "TooSmallMaxExitBalance")
-        .withArgs(2047);
+    it("reverts if the max withdrawal limit is below the full withdrawal weight", async () => {
+      await expect(gateway.connect(limitManager).setWithdrawalLimit(FULL_WITHDRAWAL_WEIGHT_GWEI - 1n, 1, 12))
+        .to.be.revertedWithCustomError(gateway, "TooSmallMaxWithdrawalLimit")
+        .withArgs(FULL_WITHDRAWAL_WEIGHT_GWEI - 1n);
     });
 
-    it("reverts if balance per frame is zero", async () => {
-      await expect(gateway.connect(limitManager).setExitRequestLimit(2048, 0, 12))
+    it("reverts if the limit per frame is zero", async () => {
+      await expect(gateway.connect(limitManager).setWithdrawalLimit(FULL_WITHDRAWAL_WEIGHT_GWEI, 0, 12))
         .to.be.revertedWithCustomError(gateway, "ZeroArgument")
-        .withArgs("balancePerFrameEth");
+        .withArgs("withdrawalLimitPerFrameGwei");
     });
 
-    it("reverts if balance per frame exceeds the max exit balance", async () => {
-      await expect(gateway.connect(limitManager).setExitRequestLimit(2048, 2049, 12)).to.be.revertedWithCustomError(
-        gateway,
-        "TooLargeItemsPerFrame",
-      );
+    it("reverts if the limit per frame exceeds the max withdrawal limit", async () => {
+      await expect(
+        gateway
+          .connect(limitManager)
+          .setWithdrawalLimit(FULL_WITHDRAWAL_WEIGHT_GWEI, FULL_WITHDRAWAL_WEIGHT_GWEI + 1n, 12),
+      ).to.be.revertedWithCustomError(gateway, "TooLargeLimitPerFrame");
     });
 
     it("reverts if frame duration is zero", async () => {
-      await expect(gateway.connect(limitManager).setExitRequestLimit(2048, 1, 0)).to.be.revertedWithCustomError(
-        gateway,
-        "ZeroFrameDuration",
-      );
+      await expect(
+        gateway.connect(limitManager).setWithdrawalLimit(FULL_WITHDRAWAL_WEIGHT_GWEI, 1, 0),
+      ).to.be.revertedWithCustomError(gateway, "ZeroFrameDuration");
     });
 
-    it("keeps the balance restored since the last request", async () => {
+    it("keeps the quota restored since the last request", async () => {
       await consume(MAX);
       await advanceChainTime(3n * FRAME);
       expect(await currentLimit()).to.equal(3n * PER_FRAME);
 
-      await gateway.connect(limitManager).setExitRequestLimit(MAX, PER_FRAME, FRAME);
+      await gateway.connect(limitManager).setWithdrawalLimit(MAX, PER_FRAME, FRAME);
 
       expect(await currentLimit()).to.equal(3n * PER_FRAME);
     });
 
-    it("caps the current limit by a lower max exit balance", async () => {
-      await consume(1000n);
+    it("caps the current limit by a lower max withdrawal limit", async () => {
+      await consume(1000n * GWEI_PER_ETH);
 
-      await gateway.connect(limitManager).setExitRequestLimit(4096, PER_FRAME, FRAME);
+      await gateway.connect(limitManager).setWithdrawalLimit(NEW_MAX, PER_FRAME, FRAME);
 
-      expect(await currentLimit()).to.equal(4096);
+      expect(await currentLimit()).to.equal(NEW_MAX);
     });
 
-    it("does not increase the current limit when the max exit balance grows", async () => {
-      await consume(1000n);
+    it("does not increase the current limit when the max withdrawal limit grows", async () => {
+      await consume(1000n * GWEI_PER_ETH);
 
-      await gateway.connect(limitManager).setExitRequestLimit(MAX * 2n, PER_FRAME, FRAME);
+      await gateway.connect(limitManager).setWithdrawalLimit(MAX * 2n, PER_FRAME, FRAME);
 
-      expect(await currentLimit()).to.equal(MAX - 1000n);
+      expect(await currentLimit()).to.equal(MAX - 1000n * GWEI_PER_ETH);
     });
   });
 
@@ -135,20 +146,27 @@ describe("TriggerableWithdrawalsGateway.sol: rate limit", () => {
       expect(await currentLimit()).to.equal(0);
     });
 
+    it("counts partial withdrawals to the gwei", async () => {
+      await consume(1n);
+
+      expect(await currentLimit()).to.equal(MAX - 1n);
+    });
+
     it("reverts the whole batch if it exceeds the remaining limit", async () => {
-      await consume(MAX - 2047n);
+      const remaining = FULL_WITHDRAWAL_WEIGHT_GWEI - 1n;
+      await consume(MAX - remaining);
 
       await expect(
         gateway
           .connect(requester)
-          .triggerWithdrawals([partialWithdrawal(0, GWEI_PER_ETH), fullWithdrawal(1)], requester.address, {
+          .triggerWithdrawals([partialWithdrawal(0, 1n), fullWithdrawal(1)], requester.address, {
             value: 2n,
           }),
       )
-        .to.be.revertedWithCustomError(gateway, "ExitRequestsLimitExceeded")
-        .withArgs(2049, 2047);
+        .to.be.revertedWithCustomError(gateway, "WithdrawalLimitExceeded")
+        .withArgs(FULL_WITHDRAWAL_WEIGHT_GWEI + 1n, remaining);
 
-      expect(await currentLimit()).to.equal(2047);
+      expect(await currentLimit()).to.equal(remaining);
     });
   });
 
@@ -163,25 +181,25 @@ describe("TriggerableWithdrawalsGateway.sol: rate limit", () => {
       expect(await currentLimit()).to.equal(0);
     });
 
-    it("restores the balance per frame for each passed frame", async () => {
+    it("restores the limit per frame for each passed frame", async () => {
       await advanceChainTime(5n * FRAME);
 
       expect(await currentLimit()).to.equal(5n * PER_FRAME);
     });
 
-    it("caps the restored limit by the max exit balance", async () => {
+    it("caps the restored limit by the max withdrawal limit", async () => {
       await advanceChainTime((MAX / PER_FRAME + 10n) * FRAME);
 
       expect(await currentLimit()).to.equal(MAX);
     });
 
-    it("lets a full withdrawal through once enough balance is restored", async () => {
-      const framesForFullWithdrawal = 2048n / PER_FRAME;
+    it("lets a full withdrawal through once enough quota is restored", async () => {
+      const framesForFullWithdrawal = FULL_WITHDRAWAL_WEIGHT_GWEI / PER_FRAME;
       await advanceChainTime((framesForFullWithdrawal - 1n) * FRAME);
 
       await expect(
         gateway.connect(requester).triggerWithdrawals([fullWithdrawal(0)], requester.address, { value: 1n }),
-      ).to.be.revertedWithCustomError(gateway, "ExitRequestsLimitExceeded");
+      ).to.be.revertedWithCustomError(gateway, "WithdrawalLimitExceeded");
 
       await advanceChainTime(FRAME);
 

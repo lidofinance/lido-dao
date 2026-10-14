@@ -73,15 +73,15 @@ const WithdrawalVaultSchema = z.object({
   consolidationRequestContract: EthereumAddressSchema,
 });
 
-// Triggerable withdrawals gateway schema, the exit balance limit is in ETH
+// Triggerable withdrawals gateway schema, the withdrawal limit is in gwei
 const TriggerableWithdrawalsGatewaySchema = z
   .object({
-    maxExitBalanceEth: PositiveIntSchema.min(2048), // at least the weight of a full withdrawal
-    balancePerFrameEth: PositiveIntSchema,
+    maxWithdrawalLimitGwei: PositiveIntSchema.min(2048 * 1e9), // at least the weight of a full withdrawal
+    withdrawalLimitPerFrameGwei: PositiveIntSchema,
     frameDurationInSec: PositiveIntSchema,
   })
-  .refine((value) => value.balancePerFrameEth <= value.maxExitBalanceEth, {
-    message: "balancePerFrameEth must not exceed maxExitBalanceEth",
+  .refine((value) => value.withdrawalLimitPerFrameGwei <= value.maxWithdrawalLimitGwei, {
+    message: "withdrawalLimitPerFrameGwei must not exceed maxWithdrawalLimitGwei",
   });
 
 // Consolidation gateway schema

@@ -15,7 +15,7 @@ import { encodeEIP7002Payload } from "test/0.8.9/withdrawalVault/eip7002Mock";
 import { Snapshot } from "test/suite";
 
 const GWEI_PER_ETH = 10n ** 9n;
-const FULL_WITHDRAWAL_WEIGHT_ETH = 2048n;
+const FULL_WITHDRAWAL_WEIGHT_GWEI = 2048n * GWEI_PER_ETH;
 
 /**
  * Oracle withdrawals flow of LIP-38 on the deployed protocol:
@@ -104,10 +104,10 @@ describe("Integration: TriggerableWithdrawalsBus flow", () => {
     });
 
     await expect(tx).to.emit(bus, "WithdrawalIntentsProcessed").withArgs(anyValue, intents.length);
-    // 2048 ETH for the full withdrawal, partial ones rounded up to whole ETH: 2 + 33
+    // 2048 ETH for the full withdrawal, partial ones weigh their amounts
     await expect(tx)
       .to.emit(gateway, "WithdrawalsTriggered")
-      .withArgs(await bus.getAddress(), intents.length, FULL_WITHDRAWAL_WEIGHT_ETH + 2n + 33n);
+      .withArgs(await bus.getAddress(), intents.length, FULL_WITHDRAWAL_WEIGHT_GWEI + 34n * GWEI_PER_ETH + 1n);
     for (const intent of intents) {
       await expect(tx)
         .to.emit(withdrawalVault, "WithdrawalRequestAdded")
@@ -126,7 +126,7 @@ describe("Integration: TriggerableWithdrawalsBus flow", () => {
   });
 
   it("keeps the head of the queue until the gateway limit allows it", async () => {
-    await setTriggerableWithdrawalsGatewayLimit(ctx, FULL_WITHDRAWAL_WEIGHT_ETH);
+    await setTriggerableWithdrawalsGatewayLimit(ctx, FULL_WITHDRAWAL_WEIGHT_GWEI);
 
     const intents = [fullWithdrawal(), fullWithdrawal()];
     const queuedBefore = await bus.unprocessedIntentsCount();
@@ -136,13 +136,13 @@ describe("Integration: TriggerableWithdrawalsBus flow", () => {
     const fee = await withdrawalVault.getWithdrawalRequestFee();
 
     await expect(bus.connect(executor).processWithdrawalIntents(2, executor.address, { value: fee * 2n }))
-      .to.be.revertedWithCustomError(gateway, "ExitRequestsLimitExceeded")
-      .withArgs(2n * FULL_WITHDRAWAL_WEIGHT_ETH, FULL_WITHDRAWAL_WEIGHT_ETH);
+      .to.be.revertedWithCustomError(gateway, "WithdrawalLimitExceeded")
+      .withArgs(2n * FULL_WITHDRAWAL_WEIGHT_GWEI, FULL_WITHDRAWAL_WEIGHT_GWEI);
     expect(await bus.unprocessedIntentsCount()).to.equal(2);
 
     await expect(bus.connect(executor).processWithdrawalIntents(1, executor.address, { value: fee }))
       .to.emit(gateway, "WithdrawalsTriggered")
-      .withArgs(await bus.getAddress(), 1, FULL_WITHDRAWAL_WEIGHT_ETH);
+      .withArgs(await bus.getAddress(), 1, FULL_WITHDRAWAL_WEIGHT_GWEI);
 
     expect(await bus.unprocessedIntentsCount()).to.equal(1);
     expect((await bus.getWithdrawalIntents(0, 1))[0].pubkey).to.equal(intents[1].pubkey);

@@ -67,8 +67,8 @@ export async function main() {
   const gatewayConstructorArgs: ConstructorArgs<TriggerableWithdrawalsGateway__factory> = [
     agentAddress,
     locatorAddress,
-    parameters.triggerableWithdrawalsGateway.maxExitBalanceEth,
-    parameters.triggerableWithdrawalsGateway.balancePerFrameEth,
+    parameters.triggerableWithdrawalsGateway.maxWithdrawalLimitGwei,
+    parameters.triggerableWithdrawalsGateway.withdrawalLimitPerFrameGwei,
     parameters.triggerableWithdrawalsGateway.frameDurationInSec,
   ];
   const busConstructorArgs: ConstructorArgs<TriggerableWithdrawalsBus__factory> = [locatorAddress];

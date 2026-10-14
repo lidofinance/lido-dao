@@ -4,8 +4,14 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 import { deployLidoLocator } from "./locator";
 
-/** Default exit balance limit of the gateway in tests: max in ETH, restored ETH per frame, frame duration in seconds. */
-export const DEFAULT_TWG_LIMIT = { maxExitBalanceEth: 10_000n, balancePerFrameEth: 32n, frameDurationInSec: 1_000n };
+const GWEI_PER_ETH = 10n ** 9n;
+
+/** Default withdrawal limit of the gateway in tests: 10,000 ETH max, 32 ETH restored per frame of 1,000 seconds. */
+export const DEFAULT_TWG_LIMIT = {
+  maxWithdrawalLimitGwei: 10_000n * GWEI_PER_ETH,
+  withdrawalLimitPerFrameGwei: 32n * GWEI_PER_ETH,
+  frameDurationInSec: 1_000n,
+};
 
 /** Deploys TriggerableWithdrawalsGateway with a WithdrawalVault mock registered in a dummy locator. */
 export async function deployTriggerableWithdrawalsGateway(admin: HardhatEthersSigner, limit = DEFAULT_TWG_LIMIT) {
@@ -15,8 +21,8 @@ export async function deployTriggerableWithdrawalsGateway(admin: HardhatEthersSi
   const gateway = await ethers.deployContract("TriggerableWithdrawalsGateway", [
     admin.address,
     await locator.getAddress(),
-    limit.maxExitBalanceEth,
-    limit.balancePerFrameEth,
+    limit.maxWithdrawalLimitGwei,
+    limit.withdrawalLimitPerFrameGwei,
     limit.frameDurationInSec,
   ]);
 

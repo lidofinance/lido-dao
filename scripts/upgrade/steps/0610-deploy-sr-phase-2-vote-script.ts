@@ -86,9 +86,9 @@ export async function main() {
 
     validatorExitDelayVerifier: await liveLocator.validatorExitDelayVerifier(),
 
-    exitBalanceLimitMaxEth: parameters.triggerableWithdrawalsGateway.maxExitBalanceEth,
-    exitBalanceLimitPerFrameEth: parameters.triggerableWithdrawalsGateway.balancePerFrameEth,
-    exitBalanceLimitFrameDurationInSec: parameters.triggerableWithdrawalsGateway.frameDurationInSec,
+    maxWithdrawalLimitGwei: parameters.triggerableWithdrawalsGateway.maxWithdrawalLimitGwei,
+    withdrawalLimitPerFrameGwei: parameters.triggerableWithdrawalsGateway.withdrawalLimitPerFrameGwei,
+    withdrawalLimitFrameDurationInSec: parameters.triggerableWithdrawalsGateway.frameDurationInSec,
   };
 
   const templateConstructorArgs: ConstructorArgs<SRPhase2UpgradeTemplate__factory> = [

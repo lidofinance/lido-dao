@@ -5,11 +5,14 @@ import { ethers } from "hardhat";
 
 import { ONE_GWEI } from "lib";
 
-/** Weight of a full withdrawal request against the gateway limit, in ETH. */
-export const FULL_WITHDRAWAL_WEIGHT_ETH = 2048n;
+/** Number of gwei in 1 ETH. */
+export const GWEI_PER_ETH = ethers.WeiPerEther / ONE_GWEI;
+
+/** Weight of a full withdrawal request against the gateway limit, in gwei (2048 ETH). */
+export const FULL_WITHDRAWAL_WEIGHT_GWEI = 2048n * GWEI_PER_ETH;
 
 /** Max amount of a single partial withdrawal request, in gwei. */
-export const MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI = (FULL_WITHDRAWAL_WEIGHT_ETH * ethers.WeiPerEther) / ONE_GWEI;
+export const MAX_PARTIAL_WITHDRAWAL_AMOUNT_GWEI = FULL_WITHDRAWAL_WEIGHT_GWEI;
 
 export type WithdrawalIntent = { amount: bigint; pubkey: string };
 
