@@ -18,7 +18,8 @@ import { DeploymentState, Sk, updateObjectInState } from "lib/state-file";
 import { prepareExternalProject, RPC_GAS_ARGS } from "./external-project";
 
 const STAKING_MODULES_REPO = "https://github.com/lidofinance/community-staking-module.git";
-const STAKING_MODULES_REPO_REF = "e37fa1b783f34792f6db75684e74eb2be6c4b70f";
+// CSM `gloas` branch (PR 880): the Verifier proves against both the pre-Gloas and the Gloas state layouts.
+const STAKING_MODULES_REPO_REF = "77bff501c3f270bc91734675a118e7ececee6a87";
 
 type ExternalDeployArtifact = Record<string, unknown> & {
   CSModule?: string;
@@ -345,6 +346,9 @@ export async function deployStakingModules(state: DeploymentState): Promise<void
   );
   const capellaSlot = Number(await validatorExitDelayVerifier.CAPELLA_SLOT());
   const capellaEpoch = Math.floor(capellaSlot / slotsPerEpoch);
+  // An unscheduled fork is uint64 max: keep it in bigint and round down, so that the module's
+  // epoch * slotsPerEpoch stays within uint64 and still lies in the far future.
+  const gloasEpoch = (await validatorExitDelayVerifier.GLOAS_SLOT()) / BigInt(slotsPerEpoch);
   const hashConsensus = await loadContract<HashConsensus>(
     "HashConsensus",
     getAddress(Sk.hashConsensusForAccountingOracle, state),
@@ -369,6 +373,7 @@ export async function deployStakingModules(state: DeploymentState): Promise<void
     DEVNET_GENESIS_TIME: genesisTime.toString(),
     DEVNET_CAPELLA_EPOCH: capellaEpoch.toString(),
     DEVNET_ELECTRA_EPOCH: capellaEpoch.toString(),
+    DEVNET_GLOAS_EPOCH: gloasEpoch.toString(),
     CSM_EPOCHS_PER_FRAME: epochsPerFrame.toString(),
     CSM_LOCATOR_ADDRESS: state[Sk.lidoLocator].proxy.address,
     CSM_ARAGON_AGENT_ADDRESS: state[Sk.appAgent].proxy.address,
