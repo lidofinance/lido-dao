@@ -6,26 +6,26 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { stripVTControlCharacters } from "node:util";
 
-import { Panda } from "lib/panda";
+import { Chronix } from "lib/chronix";
 import { DeploymentState } from "lib/state-file";
 
-// Public Hardhat development key; the network is created locally by Panda.start().
+// Public Hardhat development key; the network is created locally by Chronix.start().
 export const PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 export const DEPLOYER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-export async function deployScratch(panda: Panda) {
-  const status = await panda.status();
+export async function deployScratch(chronix: Chronix) {
+  const status = await chronix.status();
   assert.equal(BigInt(status.el.number), 0n);
   const [{ data: genesis }, { data: spec }] = await Promise.all([
-    panda.beacon<{ data: Record<string, string> }>("/eth/v1/beacon/genesis"),
-    panda.beacon<{ data: Record<string, string> }>("/eth/v1/config/spec"),
+    chronix.beacon<{ data: Record<string, string> }>("/eth/v1/beacon/genesis"),
+    chronix.beacon<{ data: Record<string, string> }>("/eth/v1/config/spec"),
   ]);
   assert.equal(spec.PRESET_BASE, "mainnet");
   assert.equal(spec.GLOAS_FORK_EPOCH, "0");
-  const file = path.join(panda.directory, "deployment.json");
-  await panda.advanceSlots(1);
+  const file = path.join(chronix.directory, "deployment.json");
+  await chronix.advanceSlots(1);
   for (let attempt = 0; ; attempt++) {
     try {
-      assert.equal(await panda.rpc("eth_getTransactionReceipt", ["0x" + "00".repeat(32)]), null);
+      assert.equal(await chronix.rpc("eth_getTransactionReceipt", ["0x" + "00".repeat(32)]), null);
       break;
     } catch (error) {
       if (attempt >= 100 || !(error instanceof Error) || !error.message.includes("indexing is in progress"))
@@ -33,7 +33,7 @@ export async function deployScratch(panda: Panda) {
       await new Promise((r) => setTimeout(r, 50));
     }
   }
-  await panda.setAutomine(true);
+  await chronix.setAutomine(true);
   const env = {
     ...process.env,
     NETWORK: "local-devnet",
@@ -41,8 +41,8 @@ export async function deployScratch(panda: Panda) {
     MODE: "scratch",
     UPGRADE: "false",
     AUTO_FEE: "false",
-    RPC_URL: panda.url,
-    LOCAL_RPC_URL: panda.url,
+    RPC_URL: chronix.url,
+    LOCAL_RPC_URL: chronix.url,
     LOCAL_DEVNET_CHAIN_ID: "1337",
     LOCAL_DEVNET_PK: PRIVATE_KEY,
     DEPLOYER,
@@ -54,7 +54,7 @@ export async function deployScratch(panda: Panda) {
     GAS_MAX_FEE: "10",
     GAS_LIMIT: "",
     NETWORK_STATE_FILE: file,
-    SCRATCH_DEPLOY_CONFIG: "scripts/scratch/deploy-params-panda.toml",
+    SCRATCH_DEPLOY_CONFIG: "scripts/scratch/deploy-params-chronix.toml",
     STEPS_FILE: "scratch/steps.json",
     AUTO_CONFIRM: "true",
     ALLOW_SKIP_STEPS: "false",
@@ -66,7 +66,7 @@ export async function deployScratch(panda: Panda) {
     FORCE_COLOR: "0",
     FOUNDRY_THREADS: "2",
   } as unknown as NodeJS.ProcessEnv;
-  const log = createWriteStream(path.join(panda.directory, "deploy.log"));
+  const log = createWriteStream(path.join(chronix.directory, "deploy.log"));
   const started = performance.now();
   const child = spawn("yarn", ["deploy:scratch"], { env, stdio: ["ignore", "pipe", "pipe"] });
   child.stderr.pipe(log, { end: false });
@@ -89,13 +89,13 @@ export async function deployScratch(panda: Panda) {
         continue;
       }
       if (event.event === "scratch-vote-wait") {
-        const current = await panda.status();
+        const current = await chronix.status();
         const seconds = event.executableAt - Number(BigInt(current.el.timestamp));
         assert.ok(seconds >= 0 && seconds <= 600);
-        await panda.advanceSlots(Math.ceil(seconds / 12));
+        await chronix.advanceSlots(Math.ceil(seconds / 12));
       }
     }
-    assert.equal(await result, 0, `Scratch deployment failed: ${panda.directory}/deploy.log`);
+    assert.equal(await result, 0, `Scratch deployment failed: ${chronix.directory}/deploy.log`);
     const expected = JSON.parse(await readFile("scripts/scratch/steps.json", "utf8")).steps;
     assert.deepEqual(
       steps.map((step) => step.replace(/\.ts$/, "")),

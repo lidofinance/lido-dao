@@ -1,62 +1,62 @@
-# Core verifiers on Panda
+# Core verifiers on Chronix
 
-One Hardhat/Mocha suite starts **one local Panda network**, performs **one scratch deployment**,
+One Hardhat/Mocha suite starts **one local Chronix network**, performs **one scratch deployment**,
 then checks the four core verifiers in order. The suite stops its own network in `after`, including
 when a test fails.
 
 ```sh
-PANDA_ROOT=/path/to/panda yarn test:integration:panda --bail
+CHRONIX_ROOT=/path/to/chronix yarn test:integration:chronix --bail
 ```
 
-For local startup, the Panda checkout must already have the `gloas:panda` bake and its Docker images; `PANDA_BAKE`
+For local startup, the Chronix checkout must already have the `gloas:chronix` bake and its Docker images; `CHRONIX_BAKE`
 selects another compatible tag. The test starts containers; it does not build clients. Local startup
 requires Deno 2.9.7 on `PATH`. Node, Yarn, Forge and `just` are the same prerequisites as scratch
 deployment. Hardhat uses port 18547 by default;
-`PANDA_PORT` selects another local port.
+`CHRONIX_PORT` selects another local port.
 
-For the published Panda service, start its `linux/amd64` image with RPC, Beacon and validator
-client ports on loopback. `ghcr.io/lidofinance/panda-gloas:latest` follows the latest successful
-stable Panda publication:
+For the published Chronix service, start its `linux/amd64` image with RPC, Beacon and validator
+client ports on loopback. `ghcr.io/lidofinance/chronix-gloas:latest` follows the latest successful
+stable Chronix publication:
 
 ```sh
 docker run --detach --platform linux/amd64 --privileged \
-  --name panda-core --label io.panda.id=core-panda \
+  --name chronix-core --label io.chronix.id=core-chronix \
   --stop-timeout 120 \
   -p 127.0.0.1:18547:8545 -p 127.0.0.1:5052:5052 -p 127.0.0.1:5062:5062 \
-  --pull always ghcr.io/lidofinance/panda-gloas:latest
+  --pull always ghcr.io/lidofinance/chronix-gloas:latest
 ```
 
-Wait for `docker inspect --format '{{.State.Health.Status}}' panda-core` to report `healthy`, then run:
+Wait for `docker inspect --format '{{.State.Health.Status}}' chronix-core` to report `healthy`, then run:
 
 ```sh
-PANDA_URL=http://127.0.0.1:18547 PANDA_BEACON_URL=http://127.0.0.1:5052 \
-  yarn test:integration:panda --bail
+CHRONIX_URL=http://127.0.0.1:18547 CHRONIX_BEACON_URL=http://127.0.0.1:5052 \
+  yarn test:integration:chronix --bail
 ```
 
-Inspect controller/client output with `docker logs panda-core` and
-`docker exec panda-core panda logs cl --tail 200` (`el` and `vc` select the other clients).
+Inspect controller/client output with `docker logs chronix-core` and
+`docker exec chronix-core chronix logs cl --tail 200` (`el` and `vc` select the other clients).
 After the run, stop and remove only this test service:
 
 ```sh
-docker stop panda-core
-docker rm --volumes panda-core
+docker stop chronix-core
+docker rm --volumes chronix-core
 ```
 
 The service must provide fresh Gloas genesis with automine off; the suite performs its own deployment
-and warmup. This mode needs no Panda checkout or Deno on the test runner. The client leaves the service
-running after the suite. The **Integration Tests Panda** workflow runs on every push, like the other
-integration workflows, using `ghcr.io/lidofinance/panda-gloas:latest`. It also supports a manual run
+and warmup. This mode needs no Chronix checkout or Deno on the test runner. The client leaves the service
+running after the suite. The **Integration Tests Chronix** workflow runs on every push, like the other
+integration workflows, using `ghcr.io/lidofinance/chronix-gloas:latest`. It also supports a manual run
 with a published version tag or image digest from the same repository when needed.
-If `latest` is absent, CI uses `ghcr.io/lidofinance/panda-gloas:v0.1.0` instead and records the selected
-image in its summary. Authentication and network failures stop the job rather than selecting a fallback.
-It configures both endpoints explicitly. All Beacon reads and writes use `PANDA_BEACON_URL` when set;
-without it, local startup and older consumers use Panda's Beacon HTTP proxy. An unavailable explicit
+CI records the selected image in its summary. A missing `latest`, authentication and network failures
+stop the job.
+It configures both endpoints explicitly. All Beacon reads and writes use `CHRONIX_BEACON_URL` when set;
+without it, local startup and older consumers use Chronix's Beacon HTTP proxy. An unavailable explicit
 CL endpoint fails the suite instead of falling back to that proxy.
 
 Read [verifiers.integration.ts](verifiers.integration.ts) for the scenarios. Network lifecycle and
-HTTP calls live in `lib/panda/index.ts`; protocol fixture setup, the existing scratch command, and
+HTTP calls live in `lib/chronix/index.ts`; protocol fixture setup, the existing scratch command, and
 SSZ proof construction live in `helpers/`. As in the other core integration tests,
-`getPandaProtocolContext()` returns a ready context with typed `ctx.contracts`, and tests call
+`getChronixProtocolContext()` returns a ready context with typed `ctx.contracts`, and tests call
 the contracts directly with TypeChain and Chai assertions.
 
 Helpers take `ctx` as their first argument. `read…` and `build…` only read data or construct inputs;
@@ -99,9 +99,9 @@ and successful consolidation processing are separate scenarios.
 ## Evidence and time
 
 Each run saves network/deployment logs, deployment addresses, captured CL states and transaction
-receipts under `.local/panda/core-<id>/`. Before deployment, the SDK checks fresh EL and canonical,
+receipts under `.local/chronix/core-<id>/`. Before deployment, the SDK checks fresh EL and canonical,
 non-optimistic CL genesis, matching genesis time and chain ID, and the mainnet/Gloas configuration.
-The native endpoint's head must match Panda's own Beacon head.
+The native endpoint's head must match Chronix's own Beacon head.
 
 Every witness is anchored only after its complete reconstructed state root matches Lighthouse,
 its Gloas bid and payload envelope agree on the captured Beacon root/slot and execution hash/parent,
@@ -112,17 +112,17 @@ parent rule. The final recovery test requires both CL finalized epoch and confir
 to advance.
 
 The exit/history scenarios explicitly call `advanceTo(..., { mode: "fast" })`, using skipped slots
-and real state transitions. The client's omitted mode preserves Panda's honest default. These fast scenarios do **not** certify complete validator
+and real state transitions. The client's omitted mode preserves Chronix's honest default. These fast scenarios do **not** certify complete validator
 duty coverage or absence of missed-duty penalties. Voting and validator activation advance full
 slots. Protocol delays and fork constants are unchanged.
 
-The SSZ schema is pinned to the Lighthouse version in `gloas:panda`:
+The SSZ schema is pinned to the Lighthouse version in `gloas:chronix`:
 `2d281dfa1b407f7c81cd123954a9fd18ee8f02d2`. A different layout must fail root equality rather than
 silently creating a synthetic root.
 
-The SDK defaults to a one-hour request/startup budget, with `PANDA_TIMEOUT_MS` retained as its
+The SDK defaults to a one-hour request/startup budget, with `CHRONIX_TIMEOUT_MS` retained as its
 environment fallback. This verifier suite explicitly uses `timeoutMs: 120_000` and a 20-minute
 Mocha limit per test/hook. The SDK does not forward that argument to the controller. Local startup
-inherits any explicitly configured `PANDA_TIMEOUT_MS`; otherwise the controller keeps its own
+inherits any explicitly configured `CHRONIX_TIMEOUT_MS`; otherwise the controller keeps its own
 default. Connecting to a published service requires no Deno and does not change its configuration
 or stop it on cleanup.

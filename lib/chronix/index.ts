@@ -6,7 +6,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline";
 
-export interface PandaStatus {
+export interface ChronixStatus {
   id: string;
   profile: string;
   bake: string;
@@ -40,8 +40,8 @@ const endpoint = (value: string, name: string): string => {
   return url.origin;
 };
 
-/** Thin Node client: the Panda process owns Docker, EL/CL and protocol time. */
-export class Panda {
+/** Thin Node client: the Chronix process owns Docker, EL/CL and protocol time. */
+export class Chronix {
   private child?: ChildProcess;
   private exited?: Promise<void>;
   private closed = false;
@@ -59,28 +59,28 @@ export class Panda {
   ) {}
 
   static async start({
-    root = process.env.PANDA_ROOT,
-    url = process.env.PANDA_URL,
-    beaconUrl = process.env.PANDA_BEACON_URL,
+    root = process.env.CHRONIX_ROOT,
+    url = process.env.CHRONIX_URL,
+    beaconUrl = process.env.CHRONIX_BEACON_URL,
     profile = "gloas",
-    bake = process.env.PANDA_BAKE,
-    output = ".local/panda",
+    bake = process.env.CHRONIX_BAKE,
+    output = ".local/chronix",
     port = 0,
-    timeoutMs = Number(process.env.PANDA_TIMEOUT_MS ?? 3_600_000),
-  } = {}): Promise<Panda> {
+    timeoutMs = Number(process.env.CHRONIX_TIMEOUT_MS ?? 3_600_000),
+  } = {}): Promise<Chronix> {
     assert.ok(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 2147483647, "Invalid timeoutMs");
     const id = `core-${randomUUID().slice(0, 8)}`;
-    const beaconEndpoint = beaconUrl ? endpoint(beaconUrl, "PANDA_BEACON_URL") : "";
+    const beaconEndpoint = beaconUrl ? endpoint(beaconUrl, "CHRONIX_BEACON_URL") : "";
     if (url) {
-      const controllerEndpoint = endpoint(url, "PANDA_URL");
+      const controllerEndpoint = endpoint(url, "CHRONIX_URL");
       const directory = path.resolve(output, id);
-      const connection = new Panda("", id, directory, profile, bake ?? "", controllerEndpoint, "", timeoutMs);
+      const connection = new Chronix("", id, directory, profile, bake ?? "", controllerEndpoint, "", timeoutMs);
       const status = await connection.status();
       assert.match(status.id, /^[a-z0-9][a-z0-9-]{0,39}$/);
       assert.equal(status.profile, profile);
       if (bake) assert.equal(status.bake, bake);
       assert.match(status.bakeKey, /^[a-f0-9]{64}$/);
-      const panda = new Panda(
+      const chronix = new Chronix(
         "",
         status.id,
         directory,
@@ -90,13 +90,13 @@ export class Panda {
         beaconEndpoint || controllerEndpoint,
         timeoutMs,
       );
-      await panda.assertFreshGenesis(status);
+      await chronix.assertFreshGenesis(status);
       await mkdir(directory, { recursive: true });
-      return panda;
+      return chronix;
     }
-    assert.ok(root, "Set PANDA_ROOT for local startup or PANDA_URL for a running service");
-    bake ??= "panda";
-    const panda = new Panda(
+    assert.ok(root, "Set CHRONIX_ROOT for local startup or CHRONIX_URL for a running service");
+    bake ??= "chronix";
+    const chronix = new Chronix(
       path.resolve(root),
       id,
       path.resolve(output, id),
@@ -106,28 +106,28 @@ export class Panda {
       beaconEndpoint,
       timeoutMs,
     );
-    await mkdir(panda.directory, { recursive: true });
-    const log = createWriteStream(path.join(panda.directory, "network.log"));
+    await mkdir(chronix.directory, { recursive: true });
+    const log = createWriteStream(path.join(chronix.directory, "network.log"));
     const child = spawn("deno", ["task", "up", "--profile", profile, "--bake", bake], {
-      cwd: panda.root,
+      cwd: chronix.root,
       env: {
         ...process.env,
-        PANDA_ID: id,
-        PANDA_PORT: String(port),
+        CHRONIX_ID: id,
+        CHRONIX_PORT: String(port),
       } as unknown as NodeJS.ProcessEnv,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    panda.child = child;
+    chronix.child = child;
     child.stderr.pipe(log, { end: false });
-    panda.exited = new Promise((resolve) =>
+    chronix.exited = new Promise((resolve) =>
       child.once("close", () => {
         log.end();
         resolve();
       }),
     );
     try {
-      panda.url = await new Promise<string>((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(`Panda startup timed out: ${panda.directory}`)), timeoutMs);
+      chronix.url = await new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`Chronix startup timed out: ${chronix.directory}`)), timeoutMs);
         createInterface({ input: child.stdout }).on("line", (line) => {
           log.write(`${line}\n`);
           let event: { event?: string; id?: string; url?: string };
@@ -147,18 +147,18 @@ export class Panda {
         });
         child.once("close", (code) => {
           clearTimeout(timer);
-          reject(new Error(`Panda exited (${code}): ${panda.directory}`));
+          reject(new Error(`Chronix exited (${code}): ${chronix.directory}`));
         });
       });
-      const status = await panda.status();
-      panda.beaconUrl ||= panda.url;
+      const status = await chronix.status();
+      chronix.beaconUrl ||= chronix.url;
       assert.equal(status.id, id);
       assert.equal(status.profile, profile);
       assert.equal(status.bake, bake);
-      await panda.assertFreshGenesis(status);
-      return panda;
+      await chronix.assertFreshGenesis(status);
+      return chronix;
     } catch (error) {
-      await panda.close();
+      await chronix.close();
       throw error;
     }
   }
@@ -171,7 +171,7 @@ export class Panda {
       signal: AbortSignal.timeout(this.timeoutMs),
     });
     const text = await response.text();
-    assert.ok(response.ok, `${method}: Panda HTTP ${response.status}: ${text.slice(0, 4096)}`);
+    assert.ok(response.ok, `${method}: Chronix HTTP ${response.status}: ${text.slice(0, 4096)}`);
     const body = JSON.parse(text) as { result: T; error?: unknown };
     if (body.error) throw new Error(`${method}: ${JSON.stringify(body.error)}`);
     return body.result;
@@ -193,9 +193,9 @@ export class Panda {
     return text ? (JSON.parse(text) as T) : (undefined as T);
   }
 
-  private async assertFreshGenesis(status: PandaStatus): Promise<void> {
-    assert.equal(BigInt(status.el.number), 0n, "Panda must start a fresh chain");
-    assert.equal(status.slot, 0, "Panda must start at genesis");
+  private async assertFreshGenesis(status: ChronixStatus): Promise<void> {
+    assert.equal(BigInt(status.el.number), 0n, "Chronix must start a fresh chain");
+    assert.equal(status.slot, 0, "Chronix must start at genesis");
     assert.equal(status.automine, false, "The suite owns automine setup");
     const head = await this.beacon<BeaconHead>("/eth/v1/beacon/headers/head");
     assert.equal(head.execution_optimistic, false, "CL head must not be optimistic");
@@ -204,7 +204,7 @@ export class Panda {
     assert.match(head.data.root, /^0x[0-9a-f]{64}$/i);
     if (this.beaconUrl !== this.url) {
       const ownHead = await this.beaconRequest<BeaconHead>(this.url, "/eth/v1/beacon/headers/head");
-      assert.equal(head.data.root, ownHead.data.root, "Panda and native CL must report the same Beacon head");
+      assert.equal(head.data.root, ownHead.data.root, "Chronix and native CL must report the same Beacon head");
     }
     const genesis = await this.beacon<BeaconResponse<{ genesis_time: string }>>("/eth/v1/beacon/genesis");
     this.genesisTime = BigInt(genesis.data.genesis_time);
@@ -291,7 +291,7 @@ export class Panda {
     return { epoch: checkpoint.epoch, root: checkpoint.root, executionHash: el.hash, executionNumber: el.number };
   }
 
-  status(): Promise<PandaStatus> {
+  status(): Promise<ChronixStatus> {
     return this.rpc("status", [], true);
   }
   advanceSlots(count: number): Promise<void> {
@@ -330,7 +330,7 @@ export class Panda {
     // The CLI waits for cleanup and scopes every mutation to this exact network id.
     const down = spawn("deno", ["task", "down", "--profile", this.profile, "--bake", this.bake], {
       cwd: this.root,
-      env: { ...process.env, PANDA_ID: this.id } as unknown as NodeJS.ProcessEnv,
+      env: { ...process.env, CHRONIX_ID: this.id } as unknown as NodeJS.ProcessEnv,
       stdio: ["ignore", "ignore", "pipe"],
     });
     let stderr = "";
@@ -340,7 +340,7 @@ export class Panda {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         down.kill("SIGTERM");
-        reject(new Error(`Panda cleanup timed out: ${this.id}`));
+        reject(new Error(`Chronix cleanup timed out: ${this.id}`));
       }, 120_000);
       down.once("error", (error) => {
         clearTimeout(timer);
@@ -349,7 +349,7 @@ export class Panda {
       down.once("close", (code) => {
         clearTimeout(timer);
         if (code === 0) resolve();
-        else reject(new Error(`Panda cleanup failed: ${stderr}`));
+        else reject(new Error(`Chronix cleanup failed: ${stderr}`));
       });
     });
     await this.exited;

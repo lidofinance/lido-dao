@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
 
-import { Panda } from "lib/panda";
+import { Chronix } from "lib/chronix";
 
 import { bailOnFailure } from "test/suite";
 
@@ -19,14 +19,14 @@ import {
   anchorHead,
   buildDeposit,
   buildTopUpInput,
+  ChronixProtocolContext,
   damaged,
   DepositFixture,
   depositValidator,
   exitEligibilityTimestamp,
   ExitRequestBatch,
-  getPandaProtocolContext,
+  getChronixProtocolContext,
   importValidator,
-  PandaProtocolContext,
   readFinalizedCheckpoint,
   readValidator,
   recordTransaction,
@@ -43,37 +43,37 @@ const sszErrors = {
   ]),
 };
 
-const describePanda = network.name === "panda" ? describe : describe.skip;
+const describeChronix = network.name === "chronix" ? describe : describe.skip;
 
-describePanda("Core verifiers on Panda / Gloas", function () {
+describeChronix("Core verifiers on Chronix / Gloas", function () {
   this.timeout(20 * 60_000);
 
-  let panda: Panda;
-  let ctx: PandaProtocolContext;
+  let chronix: Chronix;
+  let ctx: ChronixProtocolContext;
   let initial: AnchoredState;
   let active: AnchoredState;
   let validDeposit: DepositFixture;
   let invalidDeposit: DepositFixture;
   let validatorIndex: number;
 
-  before("start one Panda network and scratch-deploy once for the whole suite", async () => {
+  before("start one Chronix network and scratch-deploy once for the whole suite", async () => {
     await initializeSSZ();
-    panda = await Panda.start({ port: Number(process.env.PANDA_PORT || 18547), timeoutMs: 120_000 });
-    const deployment = await deployScratch(panda);
+    chronix = await Chronix.start({ port: Number(process.env.CHRONIX_PORT || 18547), timeoutMs: 120_000 });
+    const deployment = await deployScratch(chronix);
     console.log(`    Scratch: ${deployment.steps} steps in ${deployment.elapsedSeconds.toFixed(2)}s`);
-    ctx = await getPandaProtocolContext(panda, deployment, await ethers.getSigner(deployment.state.deployer));
+    ctx = await getChronixProtocolContext(chronix, deployment, await ethers.getSigner(deployment.state.deployer));
     initial = await anchorHead(ctx, "initial");
   });
 
-  after("save evidence and stop only this suite's Panda network", async () => {
+  after("save evidence and stop only this suite's Chronix network", async () => {
     try {
       if (ctx) {
         await writeFile(
-          path.join(panda.directory, "verifiers.json"),
+          path.join(chronix.directory, "verifiers.json"),
           JSON.stringify(
             {
-              bake: await panda.status(),
-              endpoints: { rpc: panda.url, beacon: panda.beaconUrl },
+              bake: await chronix.status(),
+              endpoints: { rpc: chronix.url, beacon: chronix.beaconUrl },
               deploymentSeconds: ctx.deployment.elapsedSeconds,
               captures: ctx.evidence.captures,
               transactions: ctx.evidence.receipts,
@@ -84,7 +84,7 @@ describePanda("Core verifiers on Panda / Gloas", function () {
         );
       }
     } finally {
-      await panda?.close();
+      await chronix?.close();
     }
   });
 
@@ -255,7 +255,7 @@ describePanda("Core verifiers on Panda / Gloas", function () {
         topUpGateway.topUp(buildTopUpInput(active, validatorIndex, ctx.modules.compounding)),
       ).to.be.revertedWithCustomError(topUpGateway, "MinBlockDistanceNotMet");
       // With scratch defaults, 75 real 12-second blocks outlive the 300-second root window.
-      await panda.advanceSlots(Number(await topUpGateway.getMinBlockDistance()));
+      await chronix.advanceSlots(Number(await topUpGateway.getMinBlockDistance()));
       expect(await topUpGateway.isBlockDistancePassed()).to.equal(true);
       await expect(
         topUpGateway.topUp(buildTopUpInput(active, validatorIndex, ctx.modules.compounding)),
@@ -380,8 +380,8 @@ describePanda("Core verifiers on Panda / Gloas", function () {
     it("rejects an exit-delay proof after CL accepts a real signed voluntary exit", async () => {
       const { validatorExitDelayVerifier } = ctx.contracts;
       const exitRequest = await submitExitRequests(ctx, active, [validatorIndex], ctx.modules.curated);
-      await panda.exitValidator(validDeposit.pubkey);
-      await panda.advanceSlots(2);
+      await chronix.exitValidator(validDeposit.pubkey);
+      await chronix.advanceSlots(2);
       const exiting = await anchorHead(ctx, "scheduled-exit");
       expect(exiting.state.validators[validatorIndex].exit_epoch).not.to.equal((2n ** 64n - 1n).toString());
       await expect(
@@ -396,7 +396,7 @@ describePanda("Core verifiers on Panda / Gloas", function () {
     it("resumes real finality and accepts a fresh proof after the time jumps", async () => {
       const { predepositGuarantee } = ctx.contracts;
       const before = await readFinalizedCheckpoint(ctx);
-      await panda.advanceSlots(96);
+      await chronix.advanceSlots(96);
       const after = await readFinalizedCheckpoint(ctx);
       expect(BigInt(after.epoch)).to.be.greaterThan(BigInt(before.epoch));
       expect(BigInt(after.executionNumber)).to.be.greaterThan(BigInt(before.executionNumber));

@@ -37,7 +37,7 @@ import {
   WithdrawalVault,
 } from "typechain-types";
 
-import { Panda } from "lib/panda";
+import { Chronix } from "lib/chronix";
 import { getAddress, Sk } from "lib/state-file";
 
 import { deployScratch } from "./deploy";
@@ -89,7 +89,7 @@ const headerInput = (h: BeaconHeader) => ({
 const script = (calls: Call[]): string =>
   concat(["0x00000001", ...calls.flatMap((c) => [c.to, toBeHex(dataLength(c.data), 4), c.data])]);
 
-export interface PandaProtocolContracts {
+export interface ChronixProtocolContracts {
   predepositGuarantee: PredepositGuarantee;
   topUpGateway: TopUpGateway;
   consolidationGateway: ConsolidationGateway;
@@ -140,11 +140,11 @@ export interface ExitRequestBatch {
   validators: BeaconValidator[];
 }
 
-export interface PandaProtocolContext {
-  panda: Panda;
+export interface ChronixProtocolContext {
+  chronix: Chronix;
   deployment: Deployment;
   signer: HardhatEthersSigner;
-  contracts: PandaProtocolContracts;
+  contracts: ChronixProtocolContracts;
   modules: { curated: ModuleFixture; compounding: ModuleFixture };
   genesis: Record<string, string>;
   spec: Record<string, string>;
@@ -165,15 +165,15 @@ export interface PandaProtocolContext {
 }
 
 /** Connect the scratch deployment and enable verifier calls through a real DAO vote. */
-export async function getPandaProtocolContext(
-  panda: Panda,
+export async function getChronixProtocolContext(
+  chronix: Chronix,
   deployment: Deployment,
   signer: HardhatEthersSigner,
-): Promise<PandaProtocolContext> {
+): Promise<ChronixProtocolContext> {
   const address = (key: Sk) => getAddress(key, deployment.state);
-  const genesis = (await panda.beacon<BeaconResponse<Record<string, string>>>("/eth/v1/beacon/genesis")).data;
-  const spec = (await panda.beacon<BeaconResponse<Record<string, string>>>("/eth/v1/config/spec")).data;
-  const contracts: PandaProtocolContracts = {
+  const genesis = (await chronix.beacon<BeaconResponse<Record<string, string>>>("/eth/v1/beacon/genesis")).data;
+  const spec = (await chronix.beacon<BeaconResponse<Record<string, string>>>("/eth/v1/config/spec")).data;
+  const contracts: ChronixProtocolContracts = {
     predepositGuarantee: await ethers.getContractAt("PredepositGuarantee", address(Sk.predepositGuarantee), signer),
     topUpGateway: await ethers.getContractAt("TopUpGateway", address(Sk.topUpGateway), signer),
     consolidationGateway: await ethers.getContractAt("ConsolidationGateway", address(Sk.consolidationGateway), signer),
@@ -204,8 +204,8 @@ export async function getPandaProtocolContext(
     // These are routing inputs for verifier tests, not a claim that the CL key was registered in the module.
     return { moduleId: module.id, operatorId: 0, keyIndex: 0 };
   };
-  const ctx: PandaProtocolContext = {
-    panda,
+  const ctx: ChronixProtocolContext = {
+    chronix,
     deployment,
     signer,
     contracts,
@@ -224,7 +224,7 @@ export async function getPandaProtocolContext(
 
 /** Preserve the typed contract call and save its actual mined receipt. */
 export async function recordTransaction(
-  ctx: PandaProtocolContext,
+  ctx: ChronixProtocolContext,
   pending: Promise<ContractTransactionResponse>,
 ): Promise<ContractTransactionReceipt> {
   const tx = await pending;
@@ -245,7 +245,7 @@ export async function recordTransaction(
   return receipt;
 }
 
-async function executeVote(ctx: PandaProtocolContext, calls: Call[]) {
+async function executeVote(ctx: ChronixProtocolContext, calls: Call[]) {
   const { tokenManager, voting } = ctx.contracts;
   const agent = ctx.deployment.state[Sk.appAgent].proxy.address;
   const abi = new Interface(["function execute(address,uint256,bytes)"]);
@@ -258,7 +258,7 @@ async function executeVote(ctx: PandaProtocolContext, calls: Call[]) {
       script([
         {
           to: String(voting.target),
-          data: voting.interface.encodeFunctionData("newVote(bytes,string)", [execution, "Panda verifier fixture"]),
+          data: voting.interface.encodeFunctionData("newVote(bytes,string)", [execution, "Chronix verifier fixture"]),
         },
       ]),
     ),
@@ -272,14 +272,14 @@ async function executeVote(ctx: PandaProtocolContext, calls: Call[]) {
   await recordTransaction(ctx, voting.vote(voteId, true, false));
   const voted = await voting.getVote(voteId);
   const target = voted.startDate + (await voting.voteTime());
-  const now = BigInt((await ctx.panda.status()).el.timestamp);
-  await ctx.panda.advanceSlots(Number((target - now + 11n) / 12n));
+  const now = BigInt((await ctx.chronix.status()).el.timestamp);
+  await ctx.chronix.advanceSlots(Number((target - now + 11n) / 12n));
   assert.equal(await voting.canExecute(voteId), true);
   await recordTransaction(ctx, voting.executeVote(voteId));
   assert.equal((await voting.getVote(voteId)).executed, true);
 }
 
-async function enableVerifierCalls(ctx: PandaProtocolContext) {
+async function enableVerifierCalls(ctx: ChronixProtocolContext) {
   const { topUpGateway, consolidationGateway, validatorsExitBusOracle, lido } = ctx.contracts;
   const agent = ctx.deployment.state[Sk.appAgent].proxy.address;
   const calls: Call[] = [];
@@ -318,12 +318,12 @@ async function enableVerifierCalls(ctx: PandaProtocolContext) {
 }
 
 /** Advance one slot to anchor the current canonical CL head in the real EL EIP-4788 contract. */
-export async function anchorHead(ctx: PandaProtocolContext, label: string): Promise<AnchoredState> {
-  const response = await ctx.panda.beacon<HeaderResponse>("/eth/v1/beacon/headers/head");
+export async function anchorHead(ctx: ChronixProtocolContext, label: string): Promise<AnchoredState> {
+  const response = await ctx.chronix.beacon<HeaderResponse>("/eth/v1/beacon/headers/head");
   assert.equal(response.execution_optimistic, false);
   assert.equal(response.data.canonical, true);
   const header = response.data.header.message;
-  const stateResponse = await ctx.panda.beacon<BeaconResponse<BeaconState>>(
+  const stateResponse = await ctx.chronix.beacon<BeaconResponse<BeaconState>>(
     `/eth/v2/debug/beacon/states/${header.state_root}`,
   );
   assert.equal(stateResponse.version, "gloas");
@@ -333,10 +333,10 @@ export async function anchorHead(ctx: PandaProtocolContext, label: string): Prom
   const tree = State.node(state);
   assert.equal(hex(tree.root), header.state_root, "Independent SSZ state root must equal Lighthouse");
   assert.equal(hex(Header.node(header).root), response.data.root, "Independent header root must equal Lighthouse");
-  const execution = await ctx.panda.assertExecution(response.data.root);
+  const execution = await ctx.chronix.assertExecution(response.data.root);
   assert.equal(execution.slot, header.slot, "Captured CL state and execution payload must belong to the same slot");
-  await ctx.panda.advanceSlots(1);
-  const child = await ctx.panda.rpc<ExecutionBlock>("eth_getBlockByNumber", ["latest", false]);
+  await ctx.chronix.advanceSlots(1);
+  const child = await ctx.chronix.rpc<ExecutionBlock>("eth_getBlockByNumber", ["latest", false]);
   assert.equal(child.parentBeaconBlockRoot, response.data.root, "EL child commits the actual CL parent");
   const timestamp = Number(BigInt(child.timestamp));
   const anchor = await ctx.signer.provider.call({
@@ -365,13 +365,13 @@ export async function anchorHead(ctx: PandaProtocolContext, label: string): Prom
     executionNumber: execution.executionNumber,
   });
   await writeFile(
-    path.join(ctx.panda.directory, `${label}.json`),
+    path.join(ctx.chronix.directory, `${label}.json`),
     JSON.stringify({ header: response, state: stateResponse, execution }),
   );
   return result;
 }
 export function buildDeposit(
-  ctx: PandaProtocolContext,
+  ctx: ChronixProtocolContext,
   { amount = 32n * 10n ** 18n, wrongDomain = false } = {},
 ): DepositFixture {
   const secret = SecretKey.fromKeygen(randomBytes(32));
@@ -406,7 +406,7 @@ export function buildDeposit(
     y: { pubkeyY: pkY, signatureY: { c0_a: c0.a, c0_b: c0.b, c1_a: c1.a, c1_b: c1.b } },
   };
 }
-export async function importValidator(ctx: PandaProtocolContext, fixture: DepositFixture) {
+export async function importValidator(ctx: ChronixProtocolContext, fixture: DepositFixture) {
   const password = randomBytes(32).toString("hex");
   const salt = randomBytes(32),
     iv = randomBytes(16);
@@ -414,7 +414,7 @@ export async function importValidator(ctx: PandaProtocolContext, fixture: Deposi
   const cipher = createCipheriv("aes-128-ctr", key.subarray(0, 16), iv);
   const ciphertext = Buffer.concat([cipher.update(fixture.secret.toBytes()), cipher.final()]);
   const checksum = createHash("sha256").update(key.subarray(16)).update(ciphertext).digest("hex");
-  await ctx.panda.importValidator(
+  await ctx.chronix.importValidator(
     JSON.stringify({
       version: 4,
       uuid: randomUUID(),
@@ -433,7 +433,7 @@ export async function importValidator(ctx: PandaProtocolContext, fixture: Deposi
     password,
   );
 }
-export function depositValidator(ctx: PandaProtocolContext, fixture: DepositFixture) {
+export function depositValidator(ctx: ChronixProtocolContext, fixture: DepositFixture) {
   return recordTransaction(
     ctx,
     ctx.contracts.depositContract.deposit(
@@ -446,17 +446,17 @@ export function depositValidator(ctx: PandaProtocolContext, fixture: DepositFixt
   );
 }
 export async function advanceUntilValidator(
-  ctx: PandaProtocolContext,
+  ctx: ChronixProtocolContext,
   pubkey: string,
   { active = false, maxSlots = 256 } = {},
 ): Promise<ValidatorRecord> {
   for (let slots = 0; slots <= maxSlots; slots += 32) {
-    const data = (await ctx.panda.beacon<BeaconResponse<ValidatorRecord[]>>("/eth/v1/beacon/states/head/validators"))
+    const data = (await ctx.chronix.beacon<BeaconResponse<ValidatorRecord[]>>("/eth/v1/beacon/states/head/validators"))
       .data;
     const found = data.find((v) => v.validator.pubkey === pubkey);
     if (found && (!active || found.status === "active_ongoing")) return found;
     if (slots === maxSlots) break;
-    await ctx.panda.advanceSlots(32);
+    await ctx.chronix.advanceSlots(32);
   }
   assert.fail(`Validator ${pubkey} did not become ${active ? "active" : "visible"} within ${maxSlots} slots`);
 }
@@ -474,7 +474,7 @@ export function buildTopUpInput(anchor: AnchoredState, index: number, module: Mo
 }
 
 export async function submitExitRequests(
-  ctx: PandaProtocolContext,
+  ctx: ChronixProtocolContext,
   anchor: AnchoredState,
   indices: number[],
   module: ModuleFixture,
@@ -501,17 +501,17 @@ export async function submitExitRequests(
     validators: indices.map((index) => anchor.state.validators[index]),
   };
 }
-export async function readFinalizedCheckpoint(ctx: PandaProtocolContext) {
-  const checkpoint = await ctx.panda.finalized();
+export async function readFinalizedCheckpoint(ctx: ChronixProtocolContext) {
+  const checkpoint = await ctx.chronix.finalized();
   assert.ok(checkpoint, "CL must finalize a non-genesis checkpoint");
   return checkpoint;
 }
-export async function advanceToHistoricalSummary(ctx: PandaProtocolContext, capture: AnchoredState) {
+export async function advanceToHistoricalSummary(ctx: ChronixProtocolContext, capture: AnchoredState) {
   const oldSlot = Number(capture.header.slot),
     boundary = (Math.floor(oldSlot / 8192) + 1) * 8192;
   // Explicit time-jump scenario: the current bake skips empty slots. This tests
   // real historical transitions, not complete validator duty/economics coverage.
-  await ctx.panda.advanceTo(Number(ctx.genesis.genesis_time) + boundary * 12 + 11.5, { mode: "fast" });
+  await ctx.chronix.advanceTo(Number(ctx.genesis.genesis_time) + boundary * 12 + 11.5, { mode: "fast" });
   const recent = await anchorHead(ctx, "historical-anchor");
   const index = Math.floor(oldSlot / 8192);
   const roots = State.fields.block_roots.node(recent.state.block_roots);
@@ -521,26 +521,26 @@ export async function advanceToHistoricalSummary(ctx: PandaProtocolContext, capt
   const oldProof = [...proof(roots, 8192n + BigInt(oldSlot % 8192)), ...proof(recent.tree, concatIndex(summaryGI, 2n))];
   return { recent, old: { header: headerInput(capture.header), proof: oldProof } };
 }
-export async function readValidator(ctx: PandaProtocolContext, index: number): Promise<ValidatorRecord> {
-  return (await ctx.panda.beacon<BeaconResponse<ValidatorRecord>>(`/eth/v1/beacon/states/head/validators/${index}`))
+export async function readValidator(ctx: ChronixProtocolContext, index: number): Promise<ValidatorRecord> {
+  return (await ctx.chronix.beacon<BeaconResponse<ValidatorRecord>>(`/eth/v1/beacon/states/head/validators/${index}`))
     .data;
 }
-export async function advanceUntilFinalized(ctx: PandaProtocolContext, number: number): Promise<void> {
+export async function advanceUntilFinalized(ctx: ChronixProtocolContext, number: number): Promise<void> {
   for (let slots = 0; slots <= 128; slots += 32) {
-    const finalized = await ctx.panda.finalized();
+    const finalized = await ctx.chronix.finalized();
     if (finalized && BigInt(finalized.executionNumber) >= BigInt(number)) return;
-    if (slots < 128) await ctx.panda.advanceSlots(32);
+    if (slots < 128) await ctx.chronix.advanceSlots(32);
   }
   assert.fail(`EL block ${number} was not confirmed by CL finality within 128 slots`);
 }
 export async function advanceUntilConsolidationRequest(
-  ctx: PandaProtocolContext,
+  ctx: ChronixProtocolContext,
   source: string,
   target: string,
 ): Promise<void> {
   for (let i = 0; i < 3; i++) {
-    await ctx.panda.advanceSlots(1);
-    const block = await ctx.panda.beacon<BeaconResponse<BeaconBlock>>("/eth/v2/beacon/blocks/head");
+    await ctx.chronix.advanceSlots(1);
+    const block = await ctx.chronix.beacon<BeaconResponse<BeaconBlock>>("/eth/v2/beacon/blocks/head");
     const found = block.data.message.body.parent_execution_requests.consolidations.find(
       (r) => r.source_pubkey === source && r.target_pubkey === target,
     );
@@ -552,7 +552,7 @@ export async function advanceUntilConsolidationRequest(
   assert.fail("Consolidation request never reached CL parent_execution_requests");
 }
 export function exitEligibilityTimestamp(
-  ctx: PandaProtocolContext,
+  ctx: ChronixProtocolContext,
   request: ExitRequestBatch,
   validator: BeaconValidator,
   committeePeriod: bigint,
@@ -562,7 +562,7 @@ export function exitEligibilityTimestamp(
   return request.deliveryTimestamp > earliest ? request.deliveryTimestamp : earliest;
 }
 
-export async function advancePastExitDeadline(ctx: PandaProtocolContext, request: ExitRequestBatch): Promise<void> {
+export async function advancePastExitDeadline(ctx: ChronixProtocolContext, request: ExitRequestBatch): Promise<void> {
   const { validatorExitDelayVerifier, nor } = ctx.contracts;
   const committeePeriod = await validatorExitDelayVerifier.SHARD_COMMITTEE_PERIOD_IN_SECONDS();
   const eligibility = request.validators.map((validator) =>
@@ -570,5 +570,5 @@ export async function advancePastExitDeadline(ctx: PandaProtocolContext, request
   );
   const latestEligibility = eligibility.reduce((latest, timestamp) => (timestamp > latest ? timestamp : latest));
   const deadline = latestEligibility + (await nor.exitDeadlineThreshold(request.module.operatorId)) + 24n;
-  await ctx.panda.advanceTo(Number(deadline) + 11.5, { mode: "fast" });
+  await ctx.chronix.advanceTo(Number(deadline) + 11.5, { mode: "fast" });
 }
