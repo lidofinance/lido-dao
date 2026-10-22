@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
-import { certainAddress, ether, impersonate } from "lib";
+import { certainAddress, ether, impersonate, log } from "lib";
 
 import { ProtocolContext } from "../types";
 
@@ -26,6 +26,24 @@ const PERMISSIONLESS_GATE_ABI = [
   "function CURVE_ID() view returns (uint256)",
   "function addNodeOperatorETH(uint256 keysCount, bytes publicKeys, bytes signatures, (address managerAddress, address rewardAddress, bool extendedManagerPermissions) managementProperties, address referrer) payable returns (uint256)",
 ];
+
+/**
+ * Missing modules fail by default. An explicit opt-out supports pre-activation
+ * forks only; scratch deployments and registered modules must always be tested.
+ * Never catch provisioning errors here: disabled queues, missing gates and failed
+ * deposits are regressions, not reasons to skip.
+ */
+export const csm0x02SuiteEnabled = (ctx: ProtocolContext, suiteName: string): boolean => {
+  if (ctx.modules.all.some(({ name }) => name === "Community Staking 0x02")) return true;
+  if (!ctx.isScratch && process.env.INTEGRATION_WITH_CSM0x02 === "off") {
+    log.warning(`Skipping ${suiteName}: CSM 0x02 is absent and INTEGRATION_WITH_CSM0x02=off`);
+    return false;
+  }
+  throw new Error(
+    "CSM 0x02 is not registered in StakingRouter; enact its governance proposal before running " +
+      `${suiteName}. Only pre-activation forks may use INTEGRATION_WITH_CSM0x02=off.`,
+  );
+};
 
 export const getCSM0x02Module = (ctx: ProtocolContext) => {
   const module = ctx.modules.all.find(({ name }) => name === "Community Staking 0x02");

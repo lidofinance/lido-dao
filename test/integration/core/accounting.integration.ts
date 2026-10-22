@@ -14,6 +14,7 @@ import { advanceChainTime, ether, impersonate, ONE_GWEI, updateBalance } from "l
 import { LIMITER_PRECISION_BASE } from "lib/constants";
 import {
   csm0x02EnsureDepositedKeys,
+  csm0x02SuiteEnabled,
   ensureFirstPostMigrationReport,
   finalizeWQViaElVault,
   getProtocolContext,
@@ -590,8 +591,12 @@ describe("Integration: Accounting", () => {
     const { lido, oracleReportSanityChecker } = ctx.contracts;
 
     // Exercise the existing fee-distribution checks with a non-empty CSM 0x02.
-    const { moduleId } = await csm0x02EnsureDepositedKeys(ctx, 1n);
-    expect(await ctx.contracts.stakingRouter.getModuleValidatorsBalance(moduleId)).to.be.gt(0n);
+    // On an explicitly opted-out pre-activation fork, keep the existing
+    // accounting assertions running without the additional CSM 0x02 fixture.
+    if (csm0x02SuiteEnabled(ctx, "CSM 0x02 fee-distribution coverage")) {
+      const { moduleId } = await csm0x02EnsureDepositedKeys(ctx, 1n);
+      expect(await ctx.contracts.stakingRouter.getModuleValidatorsBalance(moduleId)).to.be.gt(0n);
+    }
 
     const { clPendingBalanceAtLastReport: carriedPendingBeforeSeed } = await lido.getBalanceStats();
     await seedProtocolPendingBaseline(ctx, NOR_MODULE_ID);

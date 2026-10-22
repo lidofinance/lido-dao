@@ -7,6 +7,7 @@ import {
   buildModuleAccountingReportParams,
   buildTopUpData,
   csm0x02EnsureDepositedKeys,
+  csm0x02SuiteEnabled,
   depositEventAmountWei,
   depositEventInterface,
   getCSM0x02Module,
@@ -31,9 +32,10 @@ describe("Integration: TopUp Flow (TopUpGateway -> StakingRouter -> Real CSM 0x0
 
   const TOP_UP_PER_KEY = ether("50");
 
-  before(async () => {
+  before(async function () {
     ctx = await getProtocolContext();
     globalSnapshot = await Snapshot.take();
+    if (!csm0x02SuiteEnabled(ctx, "the CSM 0x02 top-up flow suite")) return this.skip();
     target = await csm0x02EnsureDepositedKeys(ctx, 2n);
     topUpCaller = await getTopUpRoleSigner(ctx);
     effectiveBalanceGwei = (await ctx.contracts.topUpGateway.getTargetBalanceGwei()) - TOP_UP_PER_KEY / ONE_GWEI;
